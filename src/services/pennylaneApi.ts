@@ -13,6 +13,12 @@ export interface PennylaneResultatComptable {
   charges: number
   resultat_net: number
   currency: string
+  // Détails par compte
+  prestations_services: number // Compte 706
+  ventes_biens: number // Compte 701
+  achats: number // Compte 601
+  charges_externes: number // Compte 622
+  charges_personnel: number // Compte 641
 }
 
 export interface PennylaneTresorerie {
@@ -22,6 +28,22 @@ export interface PennylaneTresorerie {
   decaissements: number
   solde_final: number
   currency: string
+}
+
+export interface PennylaneAccount {
+  id: string
+  code: string
+  name: string
+  balance: number
+  currency: string
+}
+
+export interface PennylaneMonthlyData {
+  period: string
+  accounts: PennylaneAccount[]
+  total_revenue: number
+  total_expenses: number
+  net_result: number
 }
 
 export interface PennylaneCompany {
@@ -109,40 +131,38 @@ export const pennylaneApi = {
     }
   },
 
-  // Récupérer le résultat comptable
+  // Récupérer le résultat comptable basé sur les comptes comptables
   async getResultatComptable(): Promise<PennylaneResultatComptable[]> {
     try {
       // D'abord, vérifier la connexion avec l'endpoint qui fonctionne
       const companyData = await apiCall<PennylaneCompany>('me')
       console.log('✅ Connexion API confirmée pour DIMO DIAGNOSTIC:', companyData.company.name)
       
-      // Essayer de récupérer les vraies données financières
-      console.log('📊 Tentative de récupération des données réelles Pennylane...')
+      // Essayer de récupérer les données des comptes comptables
+      console.log('📊 Tentative de récupération des données comptables par compte...')
       
-      // Essayer de récupérer des données financières simples
       try {
-        console.log('🔄 Tentative de récupération des données financières...')
+        // Essayer de récupérer les comptes comptables
+        const accountsData = await apiCall<any>('accounts')
+        if (accountsData && accountsData.data) {
+          console.log(`📊 Récupération de ${accountsData.data.length} comptes comptables`)
+          return this.processAccountsData(accountsData.data)
+        }
         
-        // Essayer d'abord les factures clients (échantillon)
+        // Fallback: essayer les factures si les comptes ne sont pas disponibles
+        console.log('🔄 Fallback: tentative avec les factures...')
         const customerData = await apiCall<any>('customer_invoices?page=1&per_page=100')
         if (customerData && customerData.invoices) {
-          console.log(`📊 Récupération de ${customerData.invoices.length} factures clients (échantillon)`)
+          console.log(`📊 Récupération de ${customerData.invoices.length} factures clients (fallback)`)
           return this.processSimpleFinancialData(customerData.invoices, 'customer')
         }
         
-        // Essayer les factures fournisseurs (échantillon)
-        const supplierData = await apiCall<any>('supplier_invoices?page=1&per_page=100')
-        if (supplierData && supplierData.invoices) {
-          console.log(`📊 Récupération de ${supplierData.invoices.length} factures fournisseurs (échantillon)`)
-          return this.processSimpleFinancialData(supplierData.invoices, 'supplier')
-        }
-        
       } catch (endpointError) {
-        console.log(`❌ Impossible de récupérer les données financières:`, endpointError)
+        console.log(`❌ Impossible de récupérer les données comptables:`, endpointError)
       }
       
       // Si aucun endpoint ne fonctionne, retourner des données vides
-      console.log('📊 Aucun endpoint financier disponible, retour de données vides')
+      console.log('📊 Aucun endpoint comptable disponible, retour de données vides')
       return []
       
     } catch (error) {
@@ -151,7 +171,60 @@ export const pennylaneApi = {
     }
   },
 
-  // Traiter les données financières de manière simple et compréhensible
+  // Traiter les données des comptes comptables
+  processAccountsData(accounts: any[]): PennylaneResultatComptable[] {
+    console.log(`📊 Traitement des ${accounts.length} comptes comptables`)
+    
+    // Créer les 12 derniers mois avec des données
+    const result: PennylaneResultatComptable[] = []
+    const currentDate = new Date()
+    
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+      const period = date.toISOString().substring(0, 7)
+      
+      // Calculer les montants par compte pour ce mois
+      const prestations_services = this.getAccountBalance(accounts, '706', period) // Prestations de services
+      const ventes_biens = this.getAccountBalance(accounts, '701', period) // Ventes de biens
+      const achats = this.getAccountBalance(accounts, '601', period) // Achats
+      const charges_externes = this.getAccountBalance(accounts, '622', period) // Charges externes
+      const charges_personnel = this.getAccountBalance(accounts, '641', period) // Charges de personnel
+      
+      const chiffre_affaires = prestations_services + ventes_biens
+      const charges = achats + charges_externes + charges_personnel
+      
+      result.push({
+        period,
+        chiffre_affaires,
+        charges,
+        resultat_net: chiffre_affaires - charges,
+        currency: 'EUR',
+        prestations_services,
+        ventes_biens,
+        achats,
+        charges_externes,
+        charges_personnel
+      })
+    }
+    
+    return result
+  },
+
+  // Obtenir le solde d'un compte pour une période donnée
+  getAccountBalance(accounts: any[], accountCode: string, period: string): number {
+    const account = accounts.find(acc => acc.code === accountCode)
+    if (!account) return 0
+    
+    // Si le compte a des données mensuelles, utiliser la période
+    if (account.monthly_balances && account.monthly_balances[period]) {
+      return parseFloat(account.monthly_balances[period]) || 0
+    }
+    
+    // Sinon, utiliser le solde total
+    return parseFloat(account.balance) || 0
+  },
+
+  // Traiter les données financières de manière simple et compréhensible (fallback)
   processSimpleFinancialData(invoices: any[], type: 'customer' | 'supplier'): PennylaneResultatComptable[] {
     console.log(`📊 Traitement simple des ${invoices.length} factures ${type}`)
     
@@ -192,7 +265,12 @@ export const pennylaneApi = {
         chiffre_affaires: data.ca,
         charges: data.charges,
         resultat_net: data.ca - data.charges,
-        currency: 'EUR'
+        currency: 'EUR',
+        prestations_services: type === 'customer' ? data.ca : 0,
+        ventes_biens: 0,
+        achats: type === 'supplier' ? data.charges : 0,
+        charges_externes: 0,
+        charges_personnel: 0
       })
     }
     
@@ -394,6 +472,38 @@ export const pennylaneApi = {
   },
 
 
+  // Récupérer les données mensuelles avec comparaison
+  async getMonthlyData(): Promise<PennylaneMonthlyData[]> {
+    try {
+      const resultatComptable = await this.getResultatComptable()
+      
+      return resultatComptable.map((data, index) => {
+        const previousMonth = index > 0 ? resultatComptable[index - 1] : null
+        
+        return {
+          period: data.period,
+          accounts: [
+            { id: '706', code: '706', name: 'Prestations de services', balance: data.prestations_services, currency: 'EUR' },
+            { id: '701', code: '701', name: 'Ventes de biens', balance: data.ventes_biens, currency: 'EUR' },
+            { id: '601', code: '601', name: 'Achats', balance: data.achats, currency: 'EUR' },
+            { id: '622', code: '622', name: 'Charges externes', balance: data.charges_externes, currency: 'EUR' },
+            { id: '641', code: '641', name: 'Charges de personnel', balance: data.charges_personnel, currency: 'EUR' }
+          ],
+          total_revenue: data.chiffre_affaires,
+          total_expenses: data.charges,
+          net_result: data.resultat_net,
+          // Comparaisons avec le mois précédent
+          revenue_growth: previousMonth ? ((data.chiffre_affaires - previousMonth.chiffre_affaires) / previousMonth.chiffre_affaires) * 100 : 0,
+          expenses_growth: previousMonth ? ((data.charges - previousMonth.charges) / previousMonth.charges) * 100 : 0,
+          net_growth: previousMonth ? ((data.resultat_net - previousMonth.resultat_net) / Math.abs(previousMonth.resultat_net)) * 100 : 0
+        }
+      })
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données mensuelles:', error)
+      return []
+    }
+  },
+
   // Récupérer les KPIs actuels
   async getKPIs() {
     try {
@@ -401,6 +511,21 @@ export const pennylaneApi = {
         this.getResultatComptable(),
         this.getTresorerie()
       ])
+
+      // Vérifier si nous avons des données
+      if (resultatComptable.length === 0 && tresorerie.length === 0) {
+        console.log('📊 Aucune donnée disponible pour les KPIs')
+        return {
+          chiffre_affaires: null,
+          charges: null,
+          resultat_net: null,
+          solde_tresorerie: null,
+          encaissements: null,
+          decaissements: null,
+          growth: null,
+          hasData: false
+        }
+      }
 
       const currentResultat = resultatComptable[resultatComptable.length - 1]
       const currentTresorerie = tresorerie[tresorerie.length - 1]
@@ -417,18 +542,20 @@ export const pennylaneApi = {
         solde_tresorerie: currentTresorerie?.solde_final || 0,
         encaissements: currentTresorerie?.encaissements || 0,
         decaissements: currentTresorerie?.decaissements || 0,
-        growth: growth
+        growth: growth,
+        hasData: true
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des KPIs:', error)
       return {
-        chiffre_affaires: 67000,
-        charges: 42000,
-        resultat_net: 25000,
-        solde_tresorerie: 121000,
-        encaissements: 67000,
-        decaissements: 42000,
-        growth: 18.7
+        chiffre_affaires: null,
+        charges: null,
+        resultat_net: null,
+        solde_tresorerie: null,
+        encaissements: null,
+        decaissements: null,
+        growth: null,
+        hasData: false
       }
     }
   }
