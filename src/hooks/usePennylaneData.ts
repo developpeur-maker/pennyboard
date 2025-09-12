@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react'
 import pennylaneApi, { PennylaneResultatComptable, PennylaneTresorerie } from '../services/pennylaneApi'
 
 interface KPIData {
-  chiffre_affaires: number
-  charges: number
-  resultat_net: number
-  solde_tresorerie: number
-  encaissements: number
-  decaissements: number
-  growth: number
+  chiffre_affaires: number | null
+  charges: number | null
+  resultat_net: number | null
+  solde_tresorerie: number | null
+  encaissements: number | null
+  decaissements: number | null
+  growth: number | null
+  hasData: boolean
 }
 
 interface UsePennylaneDataReturn {

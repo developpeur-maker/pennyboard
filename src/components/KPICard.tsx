@@ -5,7 +5,7 @@ interface KPICardProps {
   title: string
   value: string
   change: number
-  changeType: 'increase' | 'decrease'
+  changeType: 'increase' | 'decrease' | 'neutral'
   icon?: React.ReactNode
   color?: 'green' | 'turquoise' | 'blue'
 }
@@ -41,15 +41,22 @@ const KPICard: React.FC<KPICardProps> = ({
           <div className="flex items-center gap-1 mt-2">
             {changeType === 'increase' ? (
               <ArrowUpRight className="w-4 h-4 text-green-600" />
-            ) : (
+            ) : changeType === 'decrease' ? (
               <ArrowDownRight className="w-4 h-4 text-red-500" />
+            ) : null}
+            {changeType !== 'neutral' && (
+              <>
+                <span className={`text-sm font-medium ${
+                  changeType === 'increase' ? 'text-green-600' : 'text-red-500'
+                }`}>
+                  {Math.abs(change)}%
+                </span>
+                <span className="text-sm text-gray-500">vs mois dernier</span>
+              </>
             )}
-            <span className={`text-sm font-medium ${
-              changeType === 'increase' ? 'text-green-600' : 'text-red-500'
-            }`}>
-              {Math.abs(change)}%
-            </span>
-            <span className="text-sm text-gray-500">vs mois dernier</span>
+            {changeType === 'neutral' && (
+              <span className="text-sm text-gray-500">Données non disponibles</span>
+            )}
           </div>
         </div>
         {icon && (

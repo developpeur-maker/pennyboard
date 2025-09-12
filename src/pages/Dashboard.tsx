@@ -112,33 +112,33 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPICard
           title="Chiffre d'Affaires"
-          value={kpis ? formatCurrency(kpis.chiffre_affaires) : '0 €'}
-          change={kpis ? Math.abs(kpis.growth) : 0}
-          changeType={kpis && kpis.growth >= 0 ? 'increase' : 'decrease'}
+          value={kpis && kpis.hasData && kpis.chiffre_affaires !== null ? formatCurrency(kpis.chiffre_affaires) : 'Aucune donnée'}
+          change={kpis && kpis.hasData && kpis.growth !== null ? Math.abs(kpis.growth) : 0}
+          changeType={kpis && kpis.hasData && kpis.growth !== null && kpis.growth >= 0 ? 'increase' : 'decrease'}
           icon={<DollarSign className="w-6 h-6 text-green-600" />}
           color="green"
         />
         <KPICard
           title="Charges"
-          value={kpis ? formatCurrency(kpis.charges) : '0 €'}
-          change={8.2}
-          changeType="increase"
+          value={kpis && kpis.hasData && kpis.charges !== null ? formatCurrency(kpis.charges) : 'Aucune donnée'}
+          change={0}
+          changeType="neutral"
           icon={<CreditCard className="w-6 h-6 text-red-600" />}
           color="turquoise"
         />
         <KPICard
           title="Résultat Net"
-          value={kpis ? formatCurrency(kpis.resultat_net) : '0 €'}
-          change={25.3}
-          changeType="increase"
+          value={kpis && kpis.hasData && kpis.resultat_net !== null ? formatCurrency(kpis.resultat_net) : 'Aucune donnée'}
+          change={0}
+          changeType="neutral"
           icon={<Calculator className="w-6 h-6 text-blue-600" />}
           color="green"
         />
         <KPICard
           title="Trésorerie"
-          value={kpis ? formatCurrency(kpis.solde_tresorerie) : '0 €'}
-          change={5.1}
-          changeType="increase"
+          value={kpis && kpis.hasData && kpis.solde_tresorerie !== null ? formatCurrency(kpis.solde_tresorerie) : 'Aucune donnée'}
+          change={0}
+          changeType="neutral"
           icon={<PiggyBank className="w-6 h-6 text-cyan-600" />}
           color="blue"
         />
