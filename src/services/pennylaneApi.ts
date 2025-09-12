@@ -190,7 +190,7 @@ export const pennylaneApi = {
       console.log('📊 Récupération du résultat comptable depuis le trial balance...')
       
       // Récupérer le trial balance pour septembre 2025 (période avec activité)
-      const trialBalance = await getTrialBalance('2025-09-01', '2025-09-30', 1, 100)
+      const trialBalance = await getTrialBalance('2025-09-01', '2025-09-30', 1, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         console.log('⚠️ Aucune donnée de trial balance trouvée')
@@ -214,7 +214,7 @@ export const pennylaneApi = {
       console.log('💰 Récupération de la trésorerie depuis le trial balance...')
       
       // Récupérer le trial balance pour septembre 2025 (période avec activité)
-      const trialBalance = await getTrialBalance('2025-09-01', '2025-09-30', 1, 100)
+      const trialBalance = await getTrialBalance('2025-09-01', '2025-09-30', 1, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         console.log('⚠️ Aucune donnée de trial balance trouvée pour la trésorerie')

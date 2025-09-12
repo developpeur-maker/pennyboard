@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const periodStart = '2025-09-01';
     const periodEnd = '2025-09-30';
     const page = 1;
-    const perPage = 100;
+    const perPage = 1000; // Récupérer plus de comptes par page
     
     const baseUrl = 'https://app.pennylane.com/api/external/v2';
     const endpoint = `/trial_balance?period_start=${periodStart}&period_end=${periodEnd}&page=${page}&per_page=${perPage}`;
