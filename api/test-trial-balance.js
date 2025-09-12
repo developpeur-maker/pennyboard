@@ -8,9 +8,9 @@ export default async function handler(req, res) {
   try {
     console.log('🔍 Test de l\'endpoint trial_balance v2...');
     
-    // Paramètres requis pour l'endpoint trial_balance
-    const periodStart = '2024-01-01';
-    const periodEnd = '2024-12-31';
+    // Paramètres requis pour l'endpoint trial_balance - Test 2025 (janvier seulement)
+    const periodStart = '2025-01-01';
+    const periodEnd = '2025-01-31';
     const page = 1;
     const perPage = 100;
     
