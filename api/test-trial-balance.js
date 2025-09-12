@@ -8,12 +8,19 @@ export default async function handler(req, res) {
   try {
     console.log('🔍 Test de l\'endpoint trial_balance v2...');
     
+    // Paramètres requis pour l'endpoint trial_balance
+    const periodStart = '2024-01-01';
+    const periodEnd = '2024-12-31';
+    const page = 1;
+    const perPage = 100;
+    
     const baseUrl = 'https://app.pennylane.com/api/external/v2';
-    const endpoint = '/trial_balance';
+    const endpoint = `/trial_balance?period_start=${periodStart}&period_end=${periodEnd}&page=${page}&per_page=${perPage}`;
     const url = `${baseUrl}${endpoint}`;
     
     console.log(`📡 URL: ${url}`);
     console.log(`🔑 API Key: ${PENNYLANE_API_KEY ? 'Présente' : 'Manquante'}`);
+    console.log(`📅 Période: ${periodStart} à ${periodEnd}`);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -40,13 +47,17 @@ export default async function handler(req, res) {
     const data = await response.json();
     console.log(`✅ Données reçues: ${JSON.stringify(data, null, 2)}`);
     
-    // Analyser la structure des données
+    // Analyser la structure des données selon la documentation
     const analysis = {
-      total_accounts: Array.isArray(data) ? data.length : (data.data ? data.data.length : 0),
+      total_accounts: data.items ? data.items.length : 0,
       structure: data,
-      sample_account: Array.isArray(data) ? data[0] : (data.data ? data.data[0] : null),
-      has_pagination: data.pagination ? true : false,
-      pagination_info: data.pagination || null,
+      sample_account: data.items ? data.items[0] : null,
+      pagination: {
+        total_pages: data.total_pages || 0,
+        current_page: data.current_page || 0,
+        total_items: data.total_items || 0,
+        per_page: data.per_page || 0
+      },
       // Analyser les comptes par classe
       comptes_7: [],
       comptes_6: [],
@@ -57,10 +68,10 @@ export default async function handler(req, res) {
       comptes_1: []
     };
 
-    // Analyser les comptes par classe comptable
-    const accounts = Array.isArray(data) ? data : (data.data || []);
+    // Analyser les comptes par classe comptable selon la structure de la documentation
+    const accounts = data.items || [];
     accounts.forEach(account => {
-      const code = account.code || account.account_code || '';
+      const code = account.number || account.formatted_number || '';
       const firstDigit = code.charAt(0);
       
       if (firstDigit === '7') analysis.comptes_7.push(account);
