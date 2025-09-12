@@ -1,7 +1,7 @@
 // Route de test pour vérifier que les fonctions Vercel fonctionnent
 const { VercelRequest, VercelResponse } = require('@vercel/node')
 
-module.exports = async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async function handler(req, res) {
   console.log('🧪 Test route called')
   
   res.setHeader('Access-Control-Allow-Origin', '*')

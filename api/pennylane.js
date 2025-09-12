@@ -4,7 +4,7 @@ const { VercelRequest, VercelResponse } = require('@vercel/node')
 const PENNYLANE_API_KEY = process.env.VITE_PENNYLANE_API_KEY
 const PENNYLANE_BASE_URL = 'https://app.pennylane.com/api/external/v1'
 
-module.exports = async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async function handler(req, res) {
   console.log('🔗 API Route called:', req.url, req.method)
   console.log('🔑 API Key present:', !!PENNYLANE_API_KEY)
   // Configuration CORS
