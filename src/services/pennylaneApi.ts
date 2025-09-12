@@ -125,7 +125,7 @@ async function apiCall<T>(endpoint: string): Promise<T> {
 export async function getLedgerEntries(page: number = 1, perPage: number = 100): Promise<LedgerEntriesResponse> {
   try {
     console.log(`📊 Récupération des ledger entries (page ${page})...`)
-    const response = await apiCall(`test-ledger-entries?page=${page}&per_page=${perPage}`)
+    const response = await apiCall<{success: boolean, raw_data: LedgerEntriesResponse}>(`test-ledger-entries?page=${page}&per_page=${perPage}`)
     
     if (response.success && response.raw_data) {
       return response.raw_data
