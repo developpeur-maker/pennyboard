@@ -72,6 +72,7 @@ export const pennylaneApi = {
       return true
     } catch (error) {
       console.error('❌ Erreur de connexion:', error)
+      console.log('🔄 Utilisation de données simulées pour DIMO DIAGNOSTIC')
       return false
     }
   },
@@ -122,7 +123,7 @@ export const pennylaneApi = {
       throw new Error('Aucun endpoint valide trouvé pour le résultat comptable')
     } catch (error) {
       console.error('Erreur lors de la récupération du résultat comptable:', error)
-      // Retourner des données simulées
+      // Retourner des données simulées pour DIMO DIAGNOSTIC
       return [
         { period: '2024-01', chiffre_affaires: 45000, charges: 30000, resultat_net: 15000, currency: 'EUR' },
         { period: '2024-02', chiffre_affaires: 52000, charges: 34000, resultat_net: 18000, currency: 'EUR' },
@@ -130,6 +131,12 @@ export const pennylaneApi = {
         { period: '2024-04', chiffre_affaires: 61000, charges: 39000, resultat_net: 22000, currency: 'EUR' },
         { period: '2024-05', chiffre_affaires: 55000, charges: 36000, resultat_net: 19000, currency: 'EUR' },
         { period: '2024-06', chiffre_affaires: 67000, charges: 42000, resultat_net: 25000, currency: 'EUR' },
+        { period: '2024-07', chiffre_affaires: 72000, charges: 45000, resultat_net: 27000, currency: 'EUR' },
+        { period: '2024-08', chiffre_affaires: 68000, charges: 43000, resultat_net: 25000, currency: 'EUR' },
+        { period: '2024-09', chiffre_affaires: 75000, charges: 47000, resultat_net: 28000, currency: 'EUR' },
+        { period: '2024-10', chiffre_affaires: 82000, charges: 50000, resultat_net: 32000, currency: 'EUR' },
+        { period: '2024-11', chiffre_affaires: 78000, charges: 48000, resultat_net: 30000, currency: 'EUR' },
+        { period: '2024-12', chiffre_affaires: 85000, charges: 52000, resultat_net: 33000, currency: 'EUR' },
       ]
     }
   },
@@ -164,7 +171,7 @@ export const pennylaneApi = {
       throw new Error('Aucun endpoint valide trouvé pour la trésorerie')
     } catch (error) {
       console.error('Erreur lors de la récupération de la trésorerie:', error)
-      // Retourner des données simulées
+      // Retourner des données simulées pour DIMO DIAGNOSTIC
       return [
         { period: '2024-01', solde_initial: 10000, encaissements: 45000, decaissements: 30000, solde_final: 25000, currency: 'EUR' },
         { period: '2024-02', solde_initial: 25000, encaissements: 52000, decaissements: 34000, solde_final: 43000, currency: 'EUR' },
@@ -172,6 +179,12 @@ export const pennylaneApi = {
         { period: '2024-04', solde_initial: 55000, encaissements: 61000, decaissements: 39000, solde_final: 77000, currency: 'EUR' },
         { period: '2024-05', solde_initial: 77000, encaissements: 55000, decaissements: 36000, solde_final: 96000, currency: 'EUR' },
         { period: '2024-06', solde_initial: 96000, encaissements: 67000, decaissements: 42000, solde_final: 121000, currency: 'EUR' },
+        { period: '2024-07', solde_initial: 121000, encaissements: 72000, decaissements: 45000, solde_final: 148000, currency: 'EUR' },
+        { period: '2024-08', solde_initial: 148000, encaissements: 68000, decaissements: 43000, solde_final: 173000, currency: 'EUR' },
+        { period: '2024-09', solde_initial: 173000, encaissements: 75000, decaissements: 47000, solde_final: 201000, currency: 'EUR' },
+        { period: '2024-10', solde_initial: 201000, encaissements: 82000, decaissements: 50000, solde_final: 233000, currency: 'EUR' },
+        { period: '2024-11', solde_initial: 233000, encaissements: 78000, decaissements: 48000, solde_final: 263000, currency: 'EUR' },
+        { period: '2024-12', solde_initial: 263000, encaissements: 85000, decaissements: 52000, solde_final: 296000, currency: 'EUR' },
       ]
     }
   },
