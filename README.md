@@ -14,6 +14,7 @@ Un dashboard moderne et élégant pour visualiser les données comptables de DIM
   - Titres/Logo : Poppins Bold
   - Interface/Texte : Inter Regular
 
+<<<<<<< HEAD
 ## 🚀 Technologies Utilisées
 
 - **React 18** avec TypeScript
@@ -98,3 +99,5 @@ src/
 
 © 2024 DIMO DIAGNOSTIC - Tous droits réservés
 
+=======
+>>>>>>> 2d481c3437d40cb43efcfc7f9c3afda900be78f5
