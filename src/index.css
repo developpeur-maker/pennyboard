@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  body {
+    @apply bg-gray-50 text-gray-900;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl bg-white shadow-soft border border-gray-100;
+  }
+  
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200;
+  }
+  
+  .sidebar-item.active {
+    @apply text-white bg-white/20;
+  }
+  
+  .kpi-card {
+    @apply card p-6 hover:shadow-lg transition-shadow duration-200;
+  }
+  
+  .kpi-value {
+    @apply text-3xl font-bold font-poppins;
+  }
+  
+  .kpi-label {
+    @apply text-sm text-gray-600 font-inter;
+  }
+}
+
