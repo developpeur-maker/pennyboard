@@ -131,47 +131,44 @@ export const pennylaneApi = {
     }
   },
 
-  // Récupérer le résultat comptable à partir des données comptables réelles
+  // Récupérer le résultat comptable (adapté pour clé API en lecture seule)
   async getResultatComptable(): Promise<PennylaneResultatComptable[]> {
     try {
       // D'abord, vérifier la connexion avec l'endpoint qui fonctionne
       const companyData = await apiCall<PennylaneCompany>('me')
       console.log('✅ Connexion API confirmée pour DIMO DIAGNOSTIC:', companyData.company.name)
+      console.log('⚠️ Clé API en lecture seule détectée - test des endpoints disponibles...')
       
-      console.log('📊 Récupération des données comptables réelles...')
-      
-      // Essayer différents endpoints comptables dans l'ordre de priorité
-      const accountingEndpoints = [
-        'accounting/income-statement',
-        'financial-statements/income-statement',
-        'reports/income-statement',
-        'accounting/balance-sheet',
-        'financial-statements/balance-sheet',
+      // Essayer les endpoints qui devraient fonctionner avec une clé en lecture seule
+      const readonlyEndpoints = [
         'reports/balance-sheet',
-        'accounting/trial-balance',
-        'financial-statements/trial-balance',
+        'reports/income-statement',
         'reports/trial-balance',
-        'accounting/accounts',
-        'accounts',
-        'chart-of-accounts'
+        'reports/profit-loss',
+        'customer_invoices',
+        'supplier_invoices',
+        'transactions',
+        'bank-accounts',
+        'customers',
+        'suppliers'
       ]
       
-      for (const endpoint of accountingEndpoints) {
+      for (const endpoint of readonlyEndpoints) {
         try {
-          console.log(`🔄 Tentative avec l'endpoint: ${endpoint}`)
+          console.log(`🔄 Tentative avec l'endpoint en lecture seule: ${endpoint}`)
           const data = await apiCall<any>(endpoint)
           
-          if (data && (data.data || data.accounts || data.statements || data.balance)) {
+          if (data && (data.data || data.invoices || data.transactions || data.accounts)) {
             console.log(`✅ Données trouvées dans ${endpoint}`)
-            return this.processAccountingDataFromEndpoint(data, endpoint)
+            return this.processReadOnlyData(data, endpoint)
           }
         } catch (endpointError) {
           console.log(`❌ ${endpoint} non disponible:`, endpointError instanceof Error ? endpointError.message : String(endpointError))
         }
       }
       
-      // Si aucun endpoint ne fonctionne, retourner des données vides
-      console.log('📊 Aucun endpoint comptable disponible, retour de données vides')
+      // Si aucun endpoint ne fonctionne, retourner des données vides avec message informatif
+      console.log('📊 Aucun endpoint en lecture seule disponible - clé API limitée')
       return []
       
     } catch (error) {
@@ -180,9 +177,9 @@ export const pennylaneApi = {
     }
   },
 
-  // Traiter les données comptables réelles selon l'endpoint utilisé
-  processAccountingDataFromEndpoint(data: any, endpoint: string): PennylaneResultatComptable[] {
-    console.log(`📊 Traitement des données comptables depuis ${endpoint}`)
+  // Traiter les données en lecture seule selon l'endpoint utilisé
+  processReadOnlyData(data: any, endpoint: string): PennylaneResultatComptable[] {
+    console.log(`📊 Traitement des données en lecture seule depuis ${endpoint}`)
     
     // Créer les 12 derniers mois avec les données
     const result: PennylaneResultatComptable[] = []
@@ -192,7 +189,7 @@ export const pennylaneApi = {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
       const period = date.toISOString().substring(0, 7)
       
-      // Extraire les données selon le type d'endpoint
+      // Extraire les données selon le type d'endpoint en lecture seule
       let chiffre_affaires = 0
       let charges = 0
       let prestations_services = 0
@@ -201,16 +198,16 @@ export const pennylaneApi = {
       let charges_externes = 0
       let charges_personnel = 0
       
-      if (endpoint.includes('income-statement') || endpoint.includes('profit-loss')) {
-        // Compte de résultat
+      if (endpoint.includes('reports/income-statement') || endpoint.includes('reports/profit-loss')) {
+        // Rapport de compte de résultat
         chiffre_affaires = this.extractRevenueFromIncomeStatement(data)
         charges = this.extractExpensesFromIncomeStatement(data)
-      } else if (endpoint.includes('balance-sheet')) {
-        // Bilan comptable
+      } else if (endpoint.includes('reports/balance-sheet')) {
+        // Rapport de bilan
         chiffre_affaires = this.extractRevenueFromBalanceSheet(data)
         charges = this.extractExpensesFromBalanceSheet(data)
-      } else if (endpoint.includes('trial-balance')) {
-        // Balance des comptes
+      } else if (endpoint.includes('reports/trial-balance')) {
+        // Rapport de balance
         const trialData = this.extractDataFromTrialBalance(data)
         chiffre_affaires = trialData.revenue
         charges = trialData.expenses
@@ -219,16 +216,18 @@ export const pennylaneApi = {
         achats = trialData.achats
         charges_externes = trialData.charges_externes
         charges_personnel = trialData.charges_personnel
-      } else if (endpoint.includes('accounts') || endpoint.includes('chart-of-accounts')) {
-        // Plan comptable
-        const accountsData = this.extractDataFromAccounts(data)
-        chiffre_affaires = accountsData.revenue
-        charges = accountsData.expenses
-        prestations_services = accountsData.prestations_services
-        ventes_biens = accountsData.ventes_biens
-        achats = accountsData.achats
-        charges_externes = accountsData.charges_externes
-        charges_personnel = accountsData.charges_personnel
+      } else if (endpoint.includes('customer_invoices') || endpoint.includes('supplier_invoices')) {
+        // Factures (approximation pour lecture seule)
+        const invoiceData = this.extractDataFromInvoices(data, endpoint)
+        chiffre_affaires = invoiceData.revenue
+        charges = invoiceData.expenses
+        prestations_services = invoiceData.prestations_services
+        achats = invoiceData.achats
+      } else if (endpoint.includes('transactions')) {
+        // Transactions (approximation pour lecture seule)
+        const transactionData = this.extractDataFromTransactions(data)
+        chiffre_affaires = transactionData.revenue
+        charges = transactionData.expenses
       }
       
       const resultat_net = chiffre_affaires - charges
@@ -248,6 +247,57 @@ export const pennylaneApi = {
     }
     
     return result
+  },
+
+  // Extraire les données des factures (lecture seule)
+  extractDataFromInvoices(data: any, endpoint: string): any {
+    const invoices = data.invoices || data.data || []
+    let revenue = 0
+    let expenses = 0
+    let prestations_services = 0
+    let achats = 0
+    
+    invoices.forEach((invoice: any) => {
+      const amount = parseFloat(invoice.currency_amount || invoice.amount || 0)
+      
+      if (endpoint.includes('customer_invoices')) {
+        revenue += amount
+        prestations_services += amount // Approximation
+      } else if (endpoint.includes('supplier_invoices')) {
+        expenses += amount
+        achats += amount // Approximation
+      }
+    })
+    
+    return {
+      revenue,
+      expenses,
+      prestations_services,
+      achats
+    }
+  },
+
+  // Extraire les données des transactions (lecture seule)
+  extractDataFromTransactions(data: any): any {
+    const transactions = data.transactions || data.data || []
+    let revenue = 0
+    let expenses = 0
+    
+    transactions.forEach((transaction: any) => {
+      const amount = parseFloat(transaction.amount || 0)
+      
+      // Approximation basée sur le type de transaction
+      if (transaction.type === 'income' || transaction.direction === 'in') {
+        revenue += amount
+      } else if (transaction.type === 'expense' || transaction.direction === 'out') {
+        expenses += amount
+      }
+    })
+    
+    return {
+      revenue,
+      expenses
+    }
   },
 
   // Extraire les revenus d'un compte de résultat
