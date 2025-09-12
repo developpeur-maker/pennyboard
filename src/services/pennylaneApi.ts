@@ -25,10 +25,18 @@ export interface PennylaneTresorerie {
 }
 
 export interface PennylaneCompany {
-  id: string
-  name: string
-  currency: string
-  fiscal_year_end: string
+  user: {
+    id: number
+    first_name: string
+    last_name: string
+    email: string
+    locale: string
+  }
+  company: {
+    id: number
+    name: string
+    reg_no: string
+  }
 }
 
 // Fonction pour faire les appels API via proxy
@@ -67,7 +75,7 @@ export const pennylaneApi = {
   async testConnection(): Promise<boolean> {
     try {
       console.log('🧪 Test de connexion à l\'API Pennylane via proxy...')
-      const data = await apiCall<PennylaneCompany>('companies/me')
+      const data = await apiCall<PennylaneCompany>('me')
       console.log('✅ Connexion réussie:', data)
       return true
     } catch (error) {
@@ -80,15 +88,23 @@ export const pennylaneApi = {
   // Récupérer les informations de l'entreprise
   async getCompany(): Promise<PennylaneCompany> {
     try {
-      return await apiCall<PennylaneCompany>('companies/me')
+      return await apiCall<PennylaneCompany>('me')
     } catch (error) {
       console.error('Erreur lors de la récupération des données de l\'entreprise:', error)
       // Retourner des données par défaut
       return {
-        id: 'dimo-diagnostic',
-        name: 'DIMO DIAGNOSTIC',
-        currency: 'EUR',
-        fiscal_year_end: '12-31'
+        user: {
+          id: 0,
+          first_name: 'Utilisateur',
+          last_name: 'DIMO DIAGNOSTIC',
+          email: 'contact@dimo-diagnostic.net',
+          locale: 'fr'
+        },
+        company: {
+          id: 0,
+          name: 'DIMO DIAGNOSTIC',
+          reg_no: '829642370'
+        }
       }
     }
   },
