@@ -142,19 +142,29 @@ export const pennylaneApi = {
       console.log('📊 Tentative de récupération des données comptables par compte...')
       
       try {
-        // Essayer de récupérer les comptes comptables
+        // Utiliser la logique comptable française avec les factures
+        console.log('🔄 Récupération des factures pour la logique comptable française...')
+        
+        // Récupérer les factures clients (Comptes 7 - Produits)
+        const customerData = await apiCall<any>('customer_invoices?page=1&per_page=100')
+        const customerInvoices = customerData?.invoices || []
+        
+        // Récupérer les factures fournisseurs (Comptes 6 - Charges)
+        const supplierData = await apiCall<any>('supplier_invoices?page=1&per_page=100')
+        const supplierInvoices = supplierData?.invoices || []
+        
+        if (customerInvoices.length > 0 || supplierInvoices.length > 0) {
+          console.log(`📊 Logique comptable française: ${customerInvoices.length} factures clients (Comptes 7), ${supplierInvoices.length} factures fournisseurs (Comptes 6)`)
+          return this.processAccountingData(customerInvoices, supplierInvoices)
+        }
+        
+        // Fallback: essayer les comptes comptables directs
+        console.log('🔄 Fallback: tentative avec les comptes comptables...')
         const accountsData = await apiCall<any>('accounts')
         if (accountsData && accountsData.data) {
           console.log(`📊 Récupération de ${accountsData.data.length} comptes comptables`)
-          return this.processAccountsData(accountsData.data)
-        }
-        
-        // Fallback: essayer les factures si les comptes ne sont pas disponibles
-        console.log('🔄 Fallback: tentative avec les factures...')
-        const customerData = await apiCall<any>('customer_invoices?page=1&per_page=100')
-        if (customerData && customerData.invoices) {
-          console.log(`📊 Récupération de ${customerData.invoices.length} factures clients (fallback)`)
-          return this.processSimpleFinancialData(customerData.invoices, 'customer')
+          // Pour l'instant, retourner des données vides car nous n'avons pas de fonction processAccountsData
+          return []
         }
         
       } catch (endpointError) {
@@ -171,11 +181,40 @@ export const pennylaneApi = {
     }
   },
 
-  // Traiter les données des comptes comptables
-  processAccountsData(accounts: any[]): PennylaneResultatComptable[] {
-    console.log(`📊 Traitement des ${accounts.length} comptes comptables`)
+  // Traiter les données selon la logique comptable française
+  processAccountingData(customerInvoices: any[], supplierInvoices: any[]): PennylaneResultatComptable[] {
+    console.log(`📊 Traitement comptable français: ${customerInvoices.length} factures clients, ${supplierInvoices.length} factures fournisseurs`)
     
-    // Créer les 12 derniers mois avec des données
+    // Grouper par mois (derniers 12 mois)
+    const monthlyData: { [key: string]: { comptes7: number, comptes6: number } } = {}
+    
+    // Traiter les factures clients (Comptes 7 - Produits/Chiffre d'affaires)
+    customerInvoices.forEach(invoice => {
+      if (invoice.date) {
+        const month = invoice.date.substring(0, 7) // YYYY-MM
+        if (!monthlyData[month]) {
+          monthlyData[month] = { comptes7: 0, comptes6: 0 }
+        }
+        
+        const amount = parseFloat(invoice.currency_amount || invoice.amount || 0)
+        monthlyData[month].comptes7 += amount
+      }
+    })
+    
+    // Traiter les factures fournisseurs (Comptes 6 - Charges)
+    supplierInvoices.forEach(invoice => {
+      if (invoice.date) {
+        const month = invoice.date.substring(0, 7) // YYYY-MM
+        if (!monthlyData[month]) {
+          monthlyData[month] = { comptes7: 0, comptes6: 0 }
+        }
+        
+        const amount = parseFloat(invoice.currency_amount || invoice.amount || 0)
+        monthlyData[month].comptes6 += amount
+      }
+    })
+    
+    // Créer les 12 derniers mois avec les données
     const result: PennylaneResultatComptable[] = []
     const currentDate = new Date()
     
@@ -183,27 +222,25 @@ export const pennylaneApi = {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
       const period = date.toISOString().substring(0, 7)
       
-      // Calculer les montants par compte pour ce mois
-      const prestations_services = this.getAccountBalance(accounts, '706', period) // Prestations de services
-      const ventes_biens = this.getAccountBalance(accounts, '701', period) // Ventes de biens
-      const achats = this.getAccountBalance(accounts, '601', period) // Achats
-      const charges_externes = this.getAccountBalance(accounts, '622', period) // Charges externes
-      const charges_personnel = this.getAccountBalance(accounts, '641', period) // Charges de personnel
+      const data = monthlyData[period] || { comptes7: 0, comptes6: 0 }
       
-      const chiffre_affaires = prestations_services + ventes_biens
-      const charges = achats + charges_externes + charges_personnel
+      // Logique comptable française : Comptes 7 - Comptes 6 = Résultat comptable
+      const chiffre_affaires = data.comptes7 // Comptes 7 (Produits)
+      const charges = data.comptes6 // Comptes 6 (Charges)
+      const resultat_net = chiffre_affaires - charges
       
       result.push({
         period,
         chiffre_affaires,
         charges,
-        resultat_net: chiffre_affaires - charges,
+        resultat_net,
         currency: 'EUR',
-        prestations_services,
-        ventes_biens,
-        achats,
-        charges_externes,
-        charges_personnel
+        // Détail par type de compte (approximation basée sur les factures)
+        prestations_services: chiffre_affaires, // Principalement des services
+        ventes_biens: 0, // À ajuster selon vos données
+        achats: charges * 0.4, // Estimation des achats
+        charges_externes: charges * 0.3, // Estimation des charges externes
+        charges_personnel: charges * 0.3 // Estimation des charges de personnel
       })
     }
     
@@ -291,20 +328,19 @@ export const pennylaneApi = {
       
       // Essayer de récupérer des données de trésorerie simples
       try {
-        console.log('🔄 Tentative de récupération des données de trésorerie...')
+        console.log('🔄 Récupération des données de trésorerie avec logique comptable française...')
         
-        // Essayer d'abord les factures clients (échantillon)
+        // Récupérer les factures clients (encaissements)
         const customerData = await apiCall<any>('customer_invoices?page=1&per_page=100')
-        if (customerData && customerData.invoices) {
-          console.log(`💰 Récupération de ${customerData.invoices.length} factures clients pour la trésorerie`)
-          return this.processSimpleCashFlowData(customerData.invoices, 'customer')
-        }
+        const customerInvoices = customerData?.invoices || []
         
-        // Essayer les factures fournisseurs (échantillon)
+        // Récupérer les factures fournisseurs (décaissements)
         const supplierData = await apiCall<any>('supplier_invoices?page=1&per_page=100')
-        if (supplierData && supplierData.invoices) {
-          console.log(`💰 Récupération de ${supplierData.invoices.length} factures fournisseurs pour la trésorerie`)
-          return this.processSimpleCashFlowData(supplierData.invoices, 'supplier')
+        const supplierInvoices = supplierData?.invoices || []
+        
+        if (customerInvoices.length > 0 || supplierInvoices.length > 0) {
+          console.log(`💰 Trésorerie: ${customerInvoices.length} factures clients (encaissements), ${supplierInvoices.length} factures fournisseurs (décaissements)`)
+          return this.processAccountingCashFlowData(customerInvoices, supplierInvoices)
         }
         
       } catch (endpointError) {
@@ -321,7 +357,67 @@ export const pennylaneApi = {
     }
   },
 
-  // Traiter les données de trésorerie de manière simple
+  // Traiter les données de trésorerie avec logique comptable française
+  processAccountingCashFlowData(customerInvoices: any[], supplierInvoices: any[]): PennylaneTresorerie[] {
+    console.log(`💰 Traitement trésorerie comptable français: ${customerInvoices.length} factures clients, ${supplierInvoices.length} factures fournisseurs`)
+    
+    // Grouper par mois (derniers 12 mois)
+    const monthlyData: { [key: string]: { encaissements: number, decaissements: number } } = {}
+    
+    // Traiter les factures clients (encaissements)
+    customerInvoices.forEach(invoice => {
+      if (invoice.date) {
+        const month = invoice.date.substring(0, 7) // YYYY-MM
+        if (!monthlyData[month]) {
+          monthlyData[month] = { encaissements: 0, decaissements: 0 }
+        }
+        
+        const amount = parseFloat(invoice.currency_amount || invoice.amount || 0)
+        monthlyData[month].encaissements += amount
+      }
+    })
+    
+    // Traiter les factures fournisseurs (décaissements)
+    supplierInvoices.forEach(invoice => {
+      if (invoice.date) {
+        const month = invoice.date.substring(0, 7) // YYYY-MM
+        if (!monthlyData[month]) {
+          monthlyData[month] = { encaissements: 0, decaissements: 0 }
+        }
+        
+        const amount = parseFloat(invoice.currency_amount || invoice.amount || 0)
+        monthlyData[month].decaissements += amount
+      }
+    })
+    
+    // Créer les 12 derniers mois avec les données
+    const result: PennylaneTresorerie[] = []
+    const currentDate = new Date()
+    let soldeInitial = 10000 // Solde initial par défaut
+    
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+      const period = date.toISOString().substring(0, 7)
+      
+      const data = monthlyData[period] || { encaissements: 0, decaissements: 0 }
+      const soldeFinal = soldeInitial + data.encaissements - data.decaissements
+      
+      result.push({
+        period,
+        solde_initial: soldeInitial,
+        encaissements: data.encaissements,
+        decaissements: data.decaissements,
+        solde_final: soldeFinal,
+        currency: 'EUR'
+      })
+      
+      soldeInitial = soldeFinal
+    }
+    
+    return result
+  },
+
+  // Traiter les données de trésorerie de manière simple (fallback)
   processSimpleCashFlowData(invoices: any[], type: 'customer' | 'supplier'): PennylaneTresorerie[] {
     console.log(`💰 Traitement simple des ${invoices.length} factures ${type} pour la trésorerie`)
     
