@@ -1,5 +1,5 @@
-// Service pour l'API Pennylane
-const API_BASE_URL = import.meta.env.VITE_PENNYLANE_BASE_URL || 'https://app.pennylane.com/api/external/v1'
+// Service pour l'API Pennylane via proxy Vercel
+const API_BASE_URL = '/api/pennylane'
 const API_KEY = import.meta.env.VITE_PENNYLANE_API_KEY
 
 if (!API_KEY) {
@@ -31,42 +31,32 @@ export interface PennylaneCompany {
   fiscal_year_end: string
 }
 
-// Fonction pour faire les appels API
+// Fonction pour faire les appels API via proxy
 async function apiCall<T>(endpoint: string): Promise<T> {
-  if (!API_KEY) {
-    throw new Error('Clé API Pennylane non configurée')
-  }
-
-  console.log(`🔗 Appel API Pennylane: ${API_BASE_URL}${endpoint}`)
-  console.log(`🔑 Clé API: ${API_KEY.substring(0, 10)}...`)
+  console.log(`🔗 Appel API Pennylane via proxy: ${API_BASE_URL}/${endpoint}`)
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${API_KEY}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      mode: 'cors',
     })
 
     console.log(`📊 Réponse API: ${response.status} ${response.statusText}`)
 
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`❌ Erreur API: ${errorText}`)
-      throw new Error(`Erreur API Pennylane: ${response.status} ${response.statusText} - ${errorText}`)
+      const errorData = await response.json()
+      console.error(`❌ Erreur API:`, errorData)
+      throw new Error(`Erreur API Pennylane: ${response.status} ${response.statusText} - ${errorData.error || errorData.message}`)
     }
 
     const data = await response.json()
     console.log(`✅ Données reçues:`, data)
     return data
   } catch (error) {
-    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      console.error('❌ Erreur CORS ou réseau:', error.message)
-      throw new Error('Impossible de se connecter à l\'API Pennylane. Problème de CORS ou de réseau.')
-    }
+    console.error('❌ Erreur de connexion:', error)
     throw error
   }
 }
@@ -76,25 +66,10 @@ export const pennylaneApi = {
   // Test de connexion de base
   async testConnection(): Promise<boolean> {
     try {
-      console.log('🧪 Test de connexion à l\'API Pennylane...')
-      const response = await fetch(`${API_BASE_URL}/companies/me`, {
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      
-      console.log(`📊 Test connexion: ${response.status} ${response.statusText}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        console.log('✅ Connexion réussie:', data)
-        return true
-      } else {
-        const errorText = await response.text()
-        console.error('❌ Connexion échouée:', errorText)
-        return false
-      }
+      console.log('🧪 Test de connexion à l\'API Pennylane via proxy...')
+      const data = await apiCall<PennylaneCompany>('companies/me')
+      console.log('✅ Connexion réussie:', data)
+      return true
     } catch (error) {
       console.error('❌ Erreur de connexion:', error)
       return false
@@ -104,7 +79,7 @@ export const pennylaneApi = {
   // Récupérer les informations de l'entreprise
   async getCompany(): Promise<PennylaneCompany> {
     try {
-      return await apiCall<PennylaneCompany>('/companies/me')
+      return await apiCall<PennylaneCompany>('companies/me')
     } catch (error) {
       console.error('Erreur lors de la récupération des données de l\'entreprise:', error)
       // Retourner des données par défaut
@@ -122,14 +97,14 @@ export const pennylaneApi = {
     try {
       // Essayer différents endpoints possibles selon la doc Pennylane
       const endpoints = [
-        '/companies/me/financial-statements/income-statement',
-        '/financial-statements/income-statement',
-        '/companies/me/income-statement',
-        '/income-statement',
-        '/companies/me/financial-statements',
-        '/financial-statements'
+        'companies/me/financial-statements/income-statement',
+        'financial-statements/income-statement',
+        'companies/me/income-statement',
+        'income-statement',
+        'companies/me/financial-statements',
+        'financial-statements'
       ]
-      
+
       for (const endpoint of endpoints) {
         try {
           console.log(`🔄 Tentative avec endpoint: ${endpoint}`)
@@ -164,14 +139,14 @@ export const pennylaneApi = {
     try {
       // Essayer différents endpoints possibles selon la doc Pennylane
       const endpoints = [
-        '/companies/me/financial-statements/cash-flow',
-        '/financial-statements/cash-flow',
-        '/companies/me/cash-flow',
-        '/cash-flow',
-        '/companies/me/cashflow',
-        '/cashflow'
+        'companies/me/financial-statements/cash-flow',
+        'financial-statements/cash-flow',
+        'companies/me/cash-flow',
+        'cash-flow',
+        'companies/me/cashflow',
+        'cashflow'
       ]
-      
+
       for (const endpoint of endpoints) {
         try {
           console.log(`🔄 Tentative avec endpoint: ${endpoint}`)
