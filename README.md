@@ -31,12 +31,30 @@ Un dashboard moderne et élégant pour visualiser les données comptables de DIM
    npm install
    ```
 
-3. Lancez le serveur de développement :
+3. Configurez les variables d'environnement :
+   ```bash
+   # Copiez le fichier d'exemple
+   cp env.example .env.local
+   
+   # Éditez .env.local et ajoutez votre clé API Pennylane
+   VITE_PENNYLANE_API_KEY=votre_cle_api_ici
+   ```
+
+4. Lancez le serveur de développement :
    ```bash
    npm run dev
    ```
 
-4. Ouvrez votre navigateur sur `http://localhost:5173`
+5. Ouvrez votre navigateur sur `http://localhost:5173`
+
+## 🔐 Variables d'Environnement
+
+- `VITE_PENNYLANE_API_KEY` : Clé API Pennylane (obligatoire)
+- `VITE_PENNYLANE_BASE_URL` : URL de base de l'API (optionnel)
+- `VITE_COMPANY_NAME` : Nom de l'entreprise (optionnel)
+- `VITE_COMPANY_ID` : ID de l'entreprise (optionnel)
+
+⚠️ **IMPORTANT** : Ne committez jamais vos clés API dans le repository. Utilisez toujours des variables d'environnement.
 
 ## 🏗️ Structure du Projet
 

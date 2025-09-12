@@ -1,6 +1,6 @@
 // Service pour l'API Pennylane
 const API_BASE_URL = import.meta.env.VITE_PENNYLANE_BASE_URL || 'https://app.pennylane.com/api/external/v1'
-const API_KEY = import.meta.env.VITE_PENNYLANE_API_KEY || 'brXkiS5dv2JcXQSgszCMq9y0KcuRF9Xyv775ADqia-U'
+const API_KEY = import.meta.env.VITE_PENNYLANE_API_KEY
 
 if (!API_KEY) {
   console.warn('⚠️ VITE_PENNYLANE_API_KEY non configurée. Utilisation de données simulées.')
