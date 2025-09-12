@@ -6,10 +6,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log('🔍 Test de l\'endpoint ledger_entries v2 pour extraire les comptes...');
+    console.log('🔍 Test de l\'endpoint trial_balance v2...');
     
     const baseUrl = 'https://app.pennylane.com/api/external/v2';
-    const endpoint = '/ledger_entries';
+    const endpoint = '/trial_balance';
     const url = `${baseUrl}${endpoint}`;
     
     console.log(`📡 URL: ${url}`);
@@ -42,17 +42,39 @@ export default async function handler(req, res) {
     
     // Analyser la structure des données
     const analysis = {
-      total_entries: Array.isArray(data) ? data.length : (data.data ? data.data.length : 0),
+      total_accounts: Array.isArray(data) ? data.length : (data.data ? data.data.length : 0),
       structure: data,
-      sample_entry: Array.isArray(data) ? data[0] : (data.data ? data.data[0] : null),
+      sample_account: Array.isArray(data) ? data[0] : (data.data ? data.data[0] : null),
       has_pagination: data.pagination ? true : false,
       pagination_info: data.pagination || null,
-      message: 'L\'endpoint /accounts n\'existe pas. Utilisation des ledger_entries pour extraire les informations comptables.'
+      // Analyser les comptes par classe
+      comptes_7: [],
+      comptes_6: [],
+      comptes_5: [],
+      comptes_4: [],
+      comptes_3: [],
+      comptes_2: [],
+      comptes_1: []
     };
+
+    // Analyser les comptes par classe comptable
+    const accounts = Array.isArray(data) ? data : (data.data || []);
+    accounts.forEach(account => {
+      const code = account.code || account.account_code || '';
+      const firstDigit = code.charAt(0);
+      
+      if (firstDigit === '7') analysis.comptes_7.push(account);
+      else if (firstDigit === '6') analysis.comptes_6.push(account);
+      else if (firstDigit === '5') analysis.comptes_5.push(account);
+      else if (firstDigit === '4') analysis.comptes_4.push(account);
+      else if (firstDigit === '3') analysis.comptes_3.push(account);
+      else if (firstDigit === '2') analysis.comptes_2.push(account);
+      else if (firstDigit === '1') analysis.comptes_1.push(account);
+    });
 
     return res.status(200).json({
       success: true,
-      message: 'Test réussi de l\'endpoint ledger_entries v2 (remplacement de /accounts)',
+      message: 'Test réussi de l\'endpoint trial_balance v2',
       analysis: analysis,
       raw_data: data
     });
