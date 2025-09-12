@@ -5,6 +5,7 @@ const PENNYLANE_API_KEY = process.env.VITE_PENNYLANE_API_KEY
 const PENNYLANE_BASE_URL = 'https://app.pennylane.com/api/external/v1'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log('🔗 API Route called:', req.url, req.method)
   // Configuration CORS
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
