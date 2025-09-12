@@ -35,38 +35,38 @@ const KPICard: React.FC<KPICardProps> = ({
   }
 
   return (
-    <div className={`kpi-card ${bgColorClasses[color]} p-10 rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 min-h-[200px] flex flex-col justify-between`}>
-      <div className="flex items-start justify-between mb-6">
+    <div className={`kpi-card ${bgColorClasses[color]} p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300`}>
+      <div className="flex items-center justify-between mb-4">
         <div className="flex-1">
-          <p className="kpi-label text-xl font-semibold text-gray-700 mb-4">{title}</p>
-          <p className={`kpi-value ${colorClasses[color]} text-5xl font-bold mb-6`}>
+          <p className="kpi-label text-sm font-medium text-gray-600 mb-2">{title}</p>
+          <p className={`kpi-value ${colorClasses[color]} text-3xl font-bold mb-3`}>
             {value}
           </p>
         </div>
         {icon && (
-          <div className={`p-6 rounded-3xl ${bgColorClasses[color]} bg-opacity-60`}>
+          <div className={`p-3 rounded-xl ${bgColorClasses[color]} bg-opacity-50`}>
             {icon}
           </div>
         )}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {changeType === 'increase' ? (
-          <ArrowUpRight className="w-6 h-6 text-green-600" />
+          <ArrowUpRight className="w-4 h-4 text-green-600" />
         ) : changeType === 'decrease' ? (
-          <ArrowDownRight className="w-6 h-6 text-red-500" />
+          <ArrowDownRight className="w-4 h-4 text-red-500" />
         ) : null}
         {changeType !== 'neutral' && (
           <>
-            <span className={`text-lg font-bold ${
+            <span className={`text-sm font-semibold ${
               changeType === 'increase' ? 'text-green-600' : 'text-red-500'
             }`}>
               {Math.abs(change)}%
             </span>
-            <span className="text-lg text-gray-600">vs mois dernier</span>
+            <span className="text-sm text-gray-500">vs mois dernier</span>
           </>
         )}
         {changeType === 'neutral' && (
-          <span className="text-lg text-gray-500">Données non disponibles</span>
+          <span className="text-sm text-gray-400">Comparaison non disponible</span>
         )}
       </div>
     </div>

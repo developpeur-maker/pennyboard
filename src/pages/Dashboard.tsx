@@ -5,12 +5,17 @@ import {
   RefreshCw,
   Calculator,
   PiggyBank,
-  Calendar
+  Calendar,
+  FileText
 } from 'lucide-react'
 import KPICard from '../components/KPICard'
 import { usePennylaneData } from '../hooks/usePennylaneData'
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onNavigate?: (page: string) => void
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [selectedMonth, setSelectedMonth] = useState('2025-09')
   const { kpis, loading, error, refetch } = usePennylaneData(selectedMonth)
 
@@ -86,6 +91,13 @@ const Dashboard: React.FC = () => {
             </select>
           </div>
           <button
+            onClick={() => onNavigate?.('income-statement')}
+            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+          >
+            <FileText className="w-5 h-5" />
+            Compte de Résultat
+          </button>
+          <button
             onClick={refetch}
             className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
@@ -95,15 +107,23 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards - Layout centré et plus grand */}
-      <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      {/* KPI Cards - Layout centré et propre */}
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <KPICard
-            title="Chiffre d'Affaires"
+            title="CA Net"
             value={kpis && kpis.hasData && kpis.chiffre_affaires !== null ? formatCurrency(kpis.chiffre_affaires) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.growth !== null ? Math.abs(kpis.growth) : 0}
             changeType={kpis && kpis.hasData && kpis.growth !== null && kpis.growth >= 0 ? 'increase' : 'decrease'}
-            icon={<DollarSign className="w-8 h-8 text-green-600" />}
+            icon={<DollarSign className="w-5 h-5 text-green-600" />}
+            color="green"
+          />
+          <KPICard
+            title="Total Produits"
+            value={kpis && kpis.hasData && kpis.total_produits_exploitation !== null ? formatCurrency(kpis.total_produits_exploitation) : 'Aucune donnée'}
+            change={0}
+            changeType="neutral"
+            icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
             color="green"
           />
           <KPICard
@@ -111,7 +131,7 @@ const Dashboard: React.FC = () => {
             value={kpis && kpis.hasData && kpis.charges !== null ? formatCurrency(kpis.charges) : 'Aucune donnée'}
             change={0}
             changeType="neutral"
-            icon={<CreditCard className="w-8 h-8 text-red-600" />}
+            icon={<CreditCard className="w-5 h-5 text-red-600" />}
             color="red"
           />
           <KPICard
@@ -119,7 +139,7 @@ const Dashboard: React.FC = () => {
             value={kpis && kpis.hasData && kpis.resultat_net !== null ? formatCurrency(kpis.resultat_net) : 'Aucune donnée'}
             change={0}
             changeType="neutral"
-            icon={<Calculator className="w-8 h-8 text-blue-600" />}
+            icon={<Calculator className="w-5 h-5 text-blue-600" />}
             color="blue"
           />
           <KPICard
@@ -127,7 +147,7 @@ const Dashboard: React.FC = () => {
             value={kpis && kpis.hasData && kpis.solde_tresorerie !== null ? formatCurrency(kpis.solde_tresorerie) : 'Aucune donnée'}
             change={0}
             changeType="neutral"
-            icon={<PiggyBank className="w-8 h-8 text-cyan-600" />}
+            icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
             color="cyan"
           />
         </div>
