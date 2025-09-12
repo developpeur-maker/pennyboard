@@ -131,44 +131,43 @@ export const pennylaneApi = {
     }
   },
 
-  // Récupérer le résultat comptable basé sur les comptes comptables
+  // Récupérer le résultat comptable à partir des données comptables réelles
   async getResultatComptable(): Promise<PennylaneResultatComptable[]> {
     try {
       // D'abord, vérifier la connexion avec l'endpoint qui fonctionne
       const companyData = await apiCall<PennylaneCompany>('me')
       console.log('✅ Connexion API confirmée pour DIMO DIAGNOSTIC:', companyData.company.name)
       
-      // Essayer de récupérer les données des comptes comptables
-      console.log('📊 Tentative de récupération des données comptables par compte...')
+      console.log('📊 Récupération des données comptables réelles...')
       
-      try {
-        // Utiliser la logique comptable française avec les factures
-        console.log('🔄 Récupération des factures pour la logique comptable française...')
-        
-        // Récupérer les factures clients (Comptes 7 - Produits)
-        const customerData = await apiCall<any>('customer_invoices?page=1&per_page=100')
-        const customerInvoices = customerData?.invoices || []
-        
-        // Récupérer les factures fournisseurs (Comptes 6 - Charges)
-        const supplierData = await apiCall<any>('supplier_invoices?page=1&per_page=100')
-        const supplierInvoices = supplierData?.invoices || []
-        
-        if (customerInvoices.length > 0 || supplierInvoices.length > 0) {
-          console.log(`📊 Logique comptable française: ${customerInvoices.length} factures clients (Comptes 7), ${supplierInvoices.length} factures fournisseurs (Comptes 6)`)
-          return this.processAccountingData(customerInvoices, supplierInvoices)
+      // Essayer différents endpoints comptables dans l'ordre de priorité
+      const accountingEndpoints = [
+        'accounting/income-statement',
+        'financial-statements/income-statement',
+        'reports/income-statement',
+        'accounting/balance-sheet',
+        'financial-statements/balance-sheet',
+        'reports/balance-sheet',
+        'accounting/trial-balance',
+        'financial-statements/trial-balance',
+        'reports/trial-balance',
+        'accounting/accounts',
+        'accounts',
+        'chart-of-accounts'
+      ]
+      
+      for (const endpoint of accountingEndpoints) {
+        try {
+          console.log(`🔄 Tentative avec l'endpoint: ${endpoint}`)
+          const data = await apiCall<any>(endpoint)
+          
+          if (data && (data.data || data.accounts || data.statements || data.balance)) {
+            console.log(`✅ Données trouvées dans ${endpoint}`)
+            return this.processAccountingDataFromEndpoint(data, endpoint)
+          }
+        } catch (endpointError) {
+          console.log(`❌ ${endpoint} non disponible:`, endpointError instanceof Error ? endpointError.message : String(endpointError))
         }
-        
-        // Fallback: essayer les comptes comptables directs
-        console.log('🔄 Fallback: tentative avec les comptes comptables...')
-        const accountsData = await apiCall<any>('accounts')
-        if (accountsData && accountsData.data) {
-          console.log(`📊 Récupération de ${accountsData.data.length} comptes comptables`)
-          // Pour l'instant, retourner des données vides car nous n'avons pas de fonction processAccountsData
-          return []
-        }
-        
-      } catch (endpointError) {
-        console.log(`❌ Impossible de récupérer les données comptables:`, endpointError)
       }
       
       // Si aucun endpoint ne fonctionne, retourner des données vides
@@ -181,38 +180,9 @@ export const pennylaneApi = {
     }
   },
 
-  // Traiter les données selon la logique comptable française
-  processAccountingData(customerInvoices: any[], supplierInvoices: any[]): PennylaneResultatComptable[] {
-    console.log(`📊 Traitement comptable français: ${customerInvoices.length} factures clients, ${supplierInvoices.length} factures fournisseurs`)
-    
-    // Grouper par mois (derniers 12 mois)
-    const monthlyData: { [key: string]: { comptes7: number, comptes6: number } } = {}
-    
-    // Traiter les factures clients (Comptes 7 - Produits/Chiffre d'affaires)
-    customerInvoices.forEach(invoice => {
-      if (invoice.date) {
-        const month = invoice.date.substring(0, 7) // YYYY-MM
-        if (!monthlyData[month]) {
-          monthlyData[month] = { comptes7: 0, comptes6: 0 }
-        }
-        
-        const amount = parseFloat(invoice.currency_amount || invoice.amount || 0)
-        monthlyData[month].comptes7 += amount
-      }
-    })
-    
-    // Traiter les factures fournisseurs (Comptes 6 - Charges)
-    supplierInvoices.forEach(invoice => {
-      if (invoice.date) {
-        const month = invoice.date.substring(0, 7) // YYYY-MM
-        if (!monthlyData[month]) {
-          monthlyData[month] = { comptes7: 0, comptes6: 0 }
-        }
-        
-        const amount = parseFloat(invoice.currency_amount || invoice.amount || 0)
-        monthlyData[month].comptes6 += amount
-      }
-    })
+  // Traiter les données comptables réelles selon l'endpoint utilisé
+  processAccountingDataFromEndpoint(data: any, endpoint: string): PennylaneResultatComptable[] {
+    console.log(`📊 Traitement des données comptables depuis ${endpoint}`)
     
     // Créer les 12 derniers mois avec les données
     const result: PennylaneResultatComptable[] = []
@@ -222,11 +192,45 @@ export const pennylaneApi = {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
       const period = date.toISOString().substring(0, 7)
       
-      const data = monthlyData[period] || { comptes7: 0, comptes6: 0 }
+      // Extraire les données selon le type d'endpoint
+      let chiffre_affaires = 0
+      let charges = 0
+      let prestations_services = 0
+      let ventes_biens = 0
+      let achats = 0
+      let charges_externes = 0
+      let charges_personnel = 0
       
-      // Logique comptable française : Comptes 7 - Comptes 6 = Résultat comptable
-      const chiffre_affaires = data.comptes7 // Comptes 7 (Produits)
-      const charges = data.comptes6 // Comptes 6 (Charges)
+      if (endpoint.includes('income-statement') || endpoint.includes('profit-loss')) {
+        // Compte de résultat
+        chiffre_affaires = this.extractRevenueFromIncomeStatement(data)
+        charges = this.extractExpensesFromIncomeStatement(data)
+      } else if (endpoint.includes('balance-sheet')) {
+        // Bilan comptable
+        chiffre_affaires = this.extractRevenueFromBalanceSheet(data)
+        charges = this.extractExpensesFromBalanceSheet(data)
+      } else if (endpoint.includes('trial-balance')) {
+        // Balance des comptes
+        const trialData = this.extractDataFromTrialBalance(data)
+        chiffre_affaires = trialData.revenue
+        charges = trialData.expenses
+        prestations_services = trialData.prestations_services
+        ventes_biens = trialData.ventes_biens
+        achats = trialData.achats
+        charges_externes = trialData.charges_externes
+        charges_personnel = trialData.charges_personnel
+      } else if (endpoint.includes('accounts') || endpoint.includes('chart-of-accounts')) {
+        // Plan comptable
+        const accountsData = this.extractDataFromAccounts(data)
+        chiffre_affaires = accountsData.revenue
+        charges = accountsData.expenses
+        prestations_services = accountsData.prestations_services
+        ventes_biens = accountsData.ventes_biens
+        achats = accountsData.achats
+        charges_externes = accountsData.charges_externes
+        charges_personnel = accountsData.charges_personnel
+      }
+      
       const resultat_net = chiffre_affaires - charges
       
       result.push({
@@ -235,16 +239,103 @@ export const pennylaneApi = {
         charges,
         resultat_net,
         currency: 'EUR',
-        // Détail par type de compte (approximation basée sur les factures)
-        prestations_services: chiffre_affaires, // Principalement des services
-        ventes_biens: 0, // À ajuster selon vos données
-        achats: charges * 0.4, // Estimation des achats
-        charges_externes: charges * 0.3, // Estimation des charges externes
-        charges_personnel: charges * 0.3 // Estimation des charges de personnel
+        prestations_services,
+        ventes_biens,
+        achats,
+        charges_externes,
+        charges_personnel
       })
     }
     
     return result
+  },
+
+  // Extraire les revenus d'un compte de résultat
+  extractRevenueFromIncomeStatement(data: any): number {
+    // Chercher les sections de revenus dans le compte de résultat
+    const revenueFields = ['revenue', 'sales', 'income', 'chiffre_affaires', 'produits', 'comptes_7']
+    let totalRevenue = 0
+    
+    for (const field of revenueFields) {
+      if (data[field] && typeof data[field] === 'number') {
+        totalRevenue += data[field]
+      }
+    }
+    
+    return totalRevenue
+  },
+
+  // Extraire les charges d'un compte de résultat
+  extractExpensesFromIncomeStatement(data: any): number {
+    // Chercher les sections de charges dans le compte de résultat
+    const expenseFields = ['expenses', 'charges', 'costs', 'comptes_6']
+    let totalExpenses = 0
+    
+    for (const field of expenseFields) {
+      if (data[field] && typeof data[field] === 'number') {
+        totalExpenses += data[field]
+      }
+    }
+    
+    return totalExpenses
+  },
+
+  // Extraire les données d'un bilan comptable
+  extractRevenueFromBalanceSheet(data: any): number {
+    // Dans un bilan, les revenus peuvent être dans les capitaux propres ou en résultat
+    return data.result || data.profit || data.retained_earnings || 0
+  },
+
+  extractExpensesFromBalanceSheet(data: any): number {
+    // Dans un bilan, les charges sont généralement dans les dettes ou provisions
+    return data.provisions || data.liabilities || 0
+  },
+
+  // Extraire les données d'une balance des comptes
+  extractDataFromTrialBalance(data: any): any {
+    const accounts = data.accounts || data.data || []
+    let revenue = 0
+    let expenses = 0
+    let prestations_services = 0
+    let ventes_biens = 0
+    let achats = 0
+    let charges_externes = 0
+    let charges_personnel = 0
+    
+    accounts.forEach((account: any) => {
+      const code = account.code || account.account_code || ''
+      const balance = parseFloat(account.balance || account.solde || 0)
+      
+      // Comptes 7 (Produits)
+      if (code.startsWith('7')) {
+        revenue += balance
+        if (code === '706') prestations_services = balance
+        if (code === '701') ventes_biens = balance
+      }
+      
+      // Comptes 6 (Charges)
+      if (code.startsWith('6')) {
+        expenses += balance
+        if (code === '601') achats = balance
+        if (code === '622') charges_externes = balance
+        if (code === '641') charges_personnel = balance
+      }
+    })
+    
+    return {
+      revenue,
+      expenses,
+      prestations_services,
+      ventes_biens,
+      achats,
+      charges_externes,
+      charges_personnel
+    }
+  },
+
+  // Extraire les données d'un plan comptable
+  extractDataFromAccounts(data: any): any {
+    return this.extractDataFromTrialBalance(data) // Même logique que la balance
   },
 
   // Obtenir le solde d'un compte pour une période donnée
@@ -316,35 +407,40 @@ export const pennylaneApi = {
 
 
 
-  // Récupérer la trésorerie
+  // Récupérer la trésorerie à partir des données comptables réelles
   async getTresorerie(): Promise<PennylaneTresorerie[]> {
     try {
       // D'abord, vérifier la connexion avec l'endpoint qui fonctionne
       const companyData = await apiCall<PennylaneCompany>('me')
       console.log('✅ Connexion API confirmée pour DIMO DIAGNOSTIC:', companyData.company.name)
       
-      // Essayer de récupérer les vraies données de trésorerie
-      console.log('💰 Tentative de récupération des données de trésorerie réelles...')
+      console.log('💰 Récupération des données de trésorerie comptables...')
       
-      // Essayer de récupérer des données de trésorerie simples
-      try {
-        console.log('🔄 Récupération des données de trésorerie avec logique comptable française...')
-        
-        // Récupérer les factures clients (encaissements)
-        const customerData = await apiCall<any>('customer_invoices?page=1&per_page=100')
-        const customerInvoices = customerData?.invoices || []
-        
-        // Récupérer les factures fournisseurs (décaissements)
-        const supplierData = await apiCall<any>('supplier_invoices?page=1&per_page=100')
-        const supplierInvoices = supplierData?.invoices || []
-        
-        if (customerInvoices.length > 0 || supplierInvoices.length > 0) {
-          console.log(`💰 Trésorerie: ${customerInvoices.length} factures clients (encaissements), ${supplierInvoices.length} factures fournisseurs (décaissements)`)
-          return this.processAccountingCashFlowData(customerInvoices, supplierInvoices)
+      // Essayer différents endpoints de trésorerie dans l'ordre de priorité
+      const treasuryEndpoints = [
+        'accounting/cash-flow',
+        'financial-statements/cash-flow',
+        'reports/cash-flow',
+        'accounting/bank-accounts',
+        'bank-accounts',
+        'treasury',
+        'cash-flow',
+        'accounting/balance-sheet',
+        'financial-statements/balance-sheet'
+      ]
+      
+      for (const endpoint of treasuryEndpoints) {
+        try {
+          console.log(`🔄 Tentative trésorerie avec l'endpoint: ${endpoint}`)
+          const data = await apiCall<any>(endpoint)
+          
+          if (data && (data.data || data.accounts || data.cash_flow || data.bank_accounts)) {
+            console.log(`✅ Données de trésorerie trouvées dans ${endpoint}`)
+            return this.processTreasuryDataFromEndpoint(data, endpoint)
+          }
+        } catch (endpointError) {
+          console.log(`❌ ${endpoint} non disponible:`, endpointError instanceof Error ? endpointError.message : String(endpointError))
         }
-        
-      } catch (endpointError) {
-        console.log(`❌ Impossible de récupérer les données de trésorerie:`, endpointError)
       }
       
       // Si aucun endpoint ne fonctionne, retourner des données vides
@@ -357,38 +453,9 @@ export const pennylaneApi = {
     }
   },
 
-  // Traiter les données de trésorerie avec logique comptable française
-  processAccountingCashFlowData(customerInvoices: any[], supplierInvoices: any[]): PennylaneTresorerie[] {
-    console.log(`💰 Traitement trésorerie comptable français: ${customerInvoices.length} factures clients, ${supplierInvoices.length} factures fournisseurs`)
-    
-    // Grouper par mois (derniers 12 mois)
-    const monthlyData: { [key: string]: { encaissements: number, decaissements: number } } = {}
-    
-    // Traiter les factures clients (encaissements)
-    customerInvoices.forEach(invoice => {
-      if (invoice.date) {
-        const month = invoice.date.substring(0, 7) // YYYY-MM
-        if (!monthlyData[month]) {
-          monthlyData[month] = { encaissements: 0, decaissements: 0 }
-        }
-        
-        const amount = parseFloat(invoice.currency_amount || invoice.amount || 0)
-        monthlyData[month].encaissements += amount
-      }
-    })
-    
-    // Traiter les factures fournisseurs (décaissements)
-    supplierInvoices.forEach(invoice => {
-      if (invoice.date) {
-        const month = invoice.date.substring(0, 7) // YYYY-MM
-        if (!monthlyData[month]) {
-          monthlyData[month] = { encaissements: 0, decaissements: 0 }
-        }
-        
-        const amount = parseFloat(invoice.currency_amount || invoice.amount || 0)
-        monthlyData[month].decaissements += amount
-      }
-    })
+  // Traiter les données de trésorerie selon l'endpoint utilisé
+  processTreasuryDataFromEndpoint(data: any, endpoint: string): PennylaneTresorerie[] {
+    console.log(`💰 Traitement des données de trésorerie depuis ${endpoint}`)
     
     // Créer les 12 derniers mois avec les données
     const result: PennylaneTresorerie[] = []
@@ -399,14 +466,34 @@ export const pennylaneApi = {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
       const period = date.toISOString().substring(0, 7)
       
-      const data = monthlyData[period] || { encaissements: 0, decaissements: 0 }
-      const soldeFinal = soldeInitial + data.encaissements - data.decaissements
+      // Extraire les données selon le type d'endpoint
+      let encaissements = 0
+      let decaissements = 0
+      
+      if (endpoint.includes('cash-flow')) {
+        // Tableau de flux de trésorerie
+        const cashFlowData = this.extractCashFlowData(data)
+        encaissements = cashFlowData.inflows
+        decaissements = cashFlowData.outflows
+      } else if (endpoint.includes('bank-accounts')) {
+        // Comptes bancaires
+        const bankData = this.extractBankAccountData(data)
+        encaissements = bankData.inflows
+        decaissements = bankData.outflows
+      } else if (endpoint.includes('balance-sheet')) {
+        // Bilan comptable (comptes de trésorerie)
+        const balanceData = this.extractTreasuryFromBalanceSheet(data)
+        encaissements = balanceData.inflows
+        decaissements = balanceData.outflows
+      }
+      
+      const soldeFinal = soldeInitial + encaissements - decaissements
       
       result.push({
         period,
         solde_initial: soldeInitial,
-        encaissements: data.encaissements,
-        decaissements: data.decaissements,
+        encaissements,
+        decaissements,
         solde_final: soldeFinal,
         currency: 'EUR'
       })
@@ -415,6 +502,54 @@ export const pennylaneApi = {
     }
     
     return result
+  },
+
+  // Extraire les données de flux de trésorerie
+  extractCashFlowData(data: any): any {
+    const cashFlow = data.cash_flow || data.data || {}
+    return {
+      inflows: cashFlow.inflows || cashFlow.incoming || cashFlow.receipts || 0,
+      outflows: cashFlow.outflows || cashFlow.outgoing || cashFlow.payments || 0
+    }
+  },
+
+  // Extraire les données des comptes bancaires
+  extractBankAccountData(data: any): any {
+    const accounts = data.bank_accounts || data.accounts || data.data || []
+    let totalInflows = 0
+    let totalOutflows = 0
+    
+    accounts.forEach((account: any) => {
+      const balance = parseFloat(account.balance || account.solde || 0)
+      if (balance > 0) {
+        totalInflows += balance
+      } else {
+        totalOutflows += Math.abs(balance)
+      }
+    })
+    
+    return {
+      inflows: totalInflows,
+      outflows: totalOutflows
+    }
+  },
+
+  // Extraire les données de trésorerie du bilan
+  extractTreasuryFromBalanceSheet(data: any): any {
+    // Chercher les comptes de trésorerie dans le bilan (comptes 5)
+    const treasuryFields = ['cash', 'bank', 'treasury', 'liquidities', 'comptes_5']
+    let totalTreasury = 0
+    
+    for (const field of treasuryFields) {
+      if (data[field] && typeof data[field] === 'number') {
+        totalTreasury += data[field]
+      }
+    }
+    
+    return {
+      inflows: totalTreasury > 0 ? totalTreasury : 0,
+      outflows: totalTreasury < 0 ? Math.abs(totalTreasury) : 0
+    }
   },
 
   // Traiter les données de trésorerie de manière simple (fallback)
