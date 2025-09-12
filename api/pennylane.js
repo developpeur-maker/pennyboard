@@ -1,6 +1,4 @@
 // API route pour proxy Pennylane
-const { VercelRequest, VercelResponse } = require('@vercel/node')
-
 const PENNYLANE_API_KEY = process.env.VITE_PENNYLANE_API_KEY
 const PENNYLANE_BASE_URL = 'https://app.pennylane.com/api/external/v1'
 
