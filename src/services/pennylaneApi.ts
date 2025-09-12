@@ -337,7 +337,7 @@ export const pennylaneApi = {
     const sortedMonths = Object.keys(monthlyData).sort()
     const result: PennylaneTresorerie[] = []
     
-    sortedMonths.forEach((month, index) => {
+    sortedMonths.forEach((month) => {
       const data = monthlyData[month]
       const soldeFinal = soldeInitial + data.encaissements - data.decaissements
       
