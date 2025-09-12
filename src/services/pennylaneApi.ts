@@ -1,5 +1,5 @@
 // Service pour l'API Pennylane via proxy Vercel
-const API_BASE_URL = '/api/pennylane'
+const API_BASE_URL = '/api'
 const API_KEY = import.meta.env.VITE_PENNYLANE_API_KEY
 
 if (!API_KEY) {
