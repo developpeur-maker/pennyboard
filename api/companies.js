@@ -9,12 +9,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Extraire l'endpoint de l'URL
-    const urlParts = req.url.split('/')
-    const endpoint = urlParts.slice(3).join('/') || 'companies/me'
-    const url = `${PENNYLANE_BASE_URL}/${endpoint}`
-
-    console.log('🔗 Pennylane API call:', url)
+    const url = `${PENNYLANE_BASE_URL}/companies/me`
+    console.log('🔗 Companies API call:', url)
 
     const response = await fetch(url, {
       method: 'GET',
@@ -25,12 +21,12 @@ module.exports = async (req, res) => {
     })
 
     const data = await response.json()
-    console.log('📊 Pennylane response:', response.status)
+    console.log('📊 Companies response:', response.status)
     
     res.status(response.status).json(data)
 
   } catch (error) {
-    console.error('❌ Pennylane error:', error)
+    console.error('❌ Companies error:', error)
     res.status(500).json({ 
       error: 'Internal server error',
       message: error.message
