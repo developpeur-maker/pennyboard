@@ -88,7 +88,7 @@ src/
 
 ## 🎯 Prochaines Étapes
 
-- Intégration avec l'API Pennylane
+- ✅ Intégration avec l'API Pennylane
 - Ajout des pages Rapports, Dépenses, Revenus
 - Authentification utilisateur
 - Export des données
