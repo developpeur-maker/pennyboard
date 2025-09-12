@@ -185,12 +185,17 @@ export const pennylaneApi = {
   },
 
   // Récupérer le résultat comptable basé sur le trial balance
-  async getResultatComptable(): Promise<PennylaneResultatComptable[]> {
+  async getResultatComptable(selectedMonth: string = '2025-09'): Promise<PennylaneResultatComptable[]> {
     try {
-      console.log('📊 Récupération du résultat comptable depuis le trial balance...')
+      console.log(`📊 Récupération du résultat comptable pour ${selectedMonth}...`)
       
-      // Récupérer le trial balance pour septembre 2025 (période avec activité)
-      const trialBalance = await getTrialBalance('2025-09-01', '2025-09-30', 1, 1000)
+      // Convertir le mois sélectionné en dates
+      const [year, month] = selectedMonth.split('-')
+      const startDate = `${year}-${month}-01`
+      const endDate = `${year}-${month}-31`
+      
+      // Récupérer le trial balance pour le mois sélectionné
+      const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         console.log('⚠️ Aucune donnée de trial balance trouvée')
@@ -199,8 +204,8 @@ export const pennylaneApi = {
       
       console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance`)
       
-      // Traiter les données pour les 12 derniers mois
-      return this.processTrialBalanceData(trialBalance)
+      // Traiter les données pour le mois sélectionné
+      return this.processTrialBalanceData(trialBalance, selectedMonth)
       
     } catch (error) {
       console.error('Erreur lors de la récupération du résultat comptable:', error)
@@ -209,12 +214,17 @@ export const pennylaneApi = {
   },
 
   // Récupérer la trésorerie basée sur le trial balance
-  async getTresorerie(): Promise<PennylaneTresorerie[]> {
+  async getTresorerie(selectedMonth: string = '2025-09'): Promise<PennylaneTresorerie[]> {
     try {
-      console.log('💰 Récupération de la trésorerie depuis le trial balance...')
+      console.log(`💰 Récupération de la trésorerie pour ${selectedMonth}...`)
       
-      // Récupérer le trial balance pour septembre 2025 (période avec activité)
-      const trialBalance = await getTrialBalance('2025-09-01', '2025-09-30', 1, 1000)
+      // Convertir le mois sélectionné en dates
+      const [year, month] = selectedMonth.split('-')
+      const startDate = `${year}-${month}-01`
+      const endDate = `${year}-${month}-31`
+      
+      // Récupérer le trial balance pour le mois sélectionné
+      const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         console.log('⚠️ Aucune donnée de trial balance trouvée pour la trésorerie')
@@ -223,8 +233,8 @@ export const pennylaneApi = {
       
       console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance pour la trésorerie`)
       
-      // Traiter les données pour les 12 derniers mois
-      return this.processTreasuryFromTrialBalance(trialBalance)
+      // Traiter les données pour le mois sélectionné
+      return this.processTreasuryFromTrialBalance(trialBalance, selectedMonth)
       
     } catch (error) {
       console.error('Erreur lors de la récupération de la trésorerie:', error)
@@ -233,7 +243,7 @@ export const pennylaneApi = {
   },
 
   // Traiter les données du trial balance pour calculer les métriques
-  processTrialBalanceData(trialBalance: TrialBalanceResponse): PennylaneResultatComptable[] {
+  processTrialBalanceData(trialBalance: TrialBalanceResponse, selectedMonth: string = '2025-09'): PennylaneResultatComptable[] {
     console.log(`📊 Traitement de ${trialBalance.items.length} comptes du trial balance...`)
     
     // Analyser les comptes par classe
@@ -264,29 +274,21 @@ export const pennylaneApi = {
     
     console.log(`💰 Calculs: CA=${chiffreAffaires.toFixed(2)}€, Charges=${charges.toFixed(2)}€, Trésorerie=${tresorerie.toFixed(2)}€`)
     
-    // Créer les 12 derniers mois avec les vraies données
+    // Créer un seul résultat pour le mois sélectionné
     const result: PennylaneResultatComptable[] = []
-    const currentDate = new Date()
     
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
-      const period = date.toISOString().slice(0, 7) // Format YYYY-MM
-      
-      // Pour l'instant, on utilise les mêmes données pour tous les mois
-      // Dans une vraie implémentation, on récupérerait les données par mois
-      result.push({
-        period,
-        chiffre_affaires: chiffreAffaires,
-        charges: charges,
-        resultat_net: chiffreAffaires - charges,
-        currency: 'EUR',
-        prestations_services: chiffreAffaires, // Tous les revenus sont des prestations
-        ventes_biens: 0, // Pas de vente de biens pour DIMO DIAGNOSTIC
-        achats: 0, // À calculer séparément si nécessaire
-        charges_externes: charges * 0.8, // Estimation
-        charges_personnel: charges * 0.2 // Estimation
-      })
-    }
+    result.push({
+      period: selectedMonth,
+      chiffre_affaires: chiffreAffaires,
+      charges: charges,
+      resultat_net: chiffreAffaires - charges,
+      currency: 'EUR',
+      prestations_services: chiffreAffaires, // Tous les revenus sont des prestations
+      ventes_biens: 0, // Pas de vente de biens pour DIMO DIAGNOSTIC
+      achats: 0, // À calculer séparément si nécessaire
+      charges_externes: charges * 0.8, // Estimation
+      charges_personnel: charges * 0.2 // Estimation
+    })
     
     return result
   },
@@ -337,7 +339,7 @@ export const pennylaneApi = {
   },
 
   // Traiter les données de trésorerie à partir du trial balance
-  processTreasuryFromTrialBalance(trialBalance: TrialBalanceResponse): PennylaneTresorerie[] {
+  processTreasuryFromTrialBalance(trialBalance: TrialBalanceResponse, selectedMonth: string = '2025-09'): PennylaneTresorerie[] {
     console.log(`💰 Traitement de ${trialBalance.items.length} comptes pour la trésorerie...`)
     
     // Analyser les comptes de trésorerie (classe 5)
@@ -354,25 +356,17 @@ export const pennylaneApi = {
     
     console.log(`💰 Solde total de trésorerie: ${soldeTotal.toFixed(2)}€`)
     
-    // Créer les 12 derniers mois
+    // Créer un seul résultat pour le mois sélectionné
     const result: PennylaneTresorerie[] = []
-    const currentDate = new Date()
     
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
-      const period = date.toISOString().slice(0, 7) // Format YYYY-MM
-      
-      // Pour l'instant, on utilise le même solde pour tous les mois
-      // Dans une vraie implémentation, on récupérerait les données par mois
-      result.push({
-        period,
-        solde_initial: soldeTotal,
-        encaissements: soldeTotal * 0.6, // Estimation
-        decaissements: soldeTotal * 0.4, // Estimation
-        solde_final: soldeTotal,
-        currency: 'EUR'
-      })
-    }
+    result.push({
+      period: selectedMonth,
+      solde_initial: soldeTotal,
+      encaissements: soldeTotal * 0.6, // Estimation
+      decaissements: soldeTotal * 0.4, // Estimation
+      solde_final: soldeTotal,
+      currency: 'EUR'
+    })
     
     return result
   },
@@ -415,7 +409,7 @@ export const pennylaneApi = {
   },
 
   // Récupérer les KPIs consolidés
-  async getKPIs(): Promise<{
+  async getKPIs(selectedMonth: string = '2025-09'): Promise<{
     chiffre_affaires: number | null
     charges: number | null
     resultat_net: number | null
@@ -424,11 +418,11 @@ export const pennylaneApi = {
     hasData: boolean
   }> {
     try {
-      console.log('📊 Récupération des KPIs...')
+      console.log(`📊 Récupération des KPIs pour ${selectedMonth}...`)
       
       const [resultatData, tresorerieData] = await Promise.all([
-        this.getResultatComptable(),
-        this.getTresorerie()
+        this.getResultatComptable(selectedMonth),
+        this.getTresorerie(selectedMonth)
       ])
       
       if (resultatData.length === 0 || tresorerieData.length === 0) {
@@ -442,24 +436,38 @@ export const pennylaneApi = {
         }
       }
       
-      // Prendre les données du mois le plus récent
-      const dernierResultat = resultatData[resultatData.length - 1]
-      const derniereTresorerie = tresorerieData[tresorerieData.length - 1]
+      // Prendre les données du mois sélectionné
+      const currentResultat = resultatData[0] // Premier (et seul) élément pour le mois sélectionné
+      const currentTresorerie = tresorerieData[0] // Premier (et seul) élément pour le mois sélectionné
       
       // Calculer la croissance (comparaison avec le mois précédent)
       let growth = null
-      if (resultatData.length > 1) {
-        const moisPrecedent = resultatData[resultatData.length - 2]
-        if (moisPrecedent.chiffre_affaires > 0) {
-          growth = ((dernierResultat.chiffre_affaires - moisPrecedent.chiffre_affaires) / moisPrecedent.chiffre_affaires) * 100
+      try {
+        const [year, month] = selectedMonth.split('-')
+        const prevMonth = parseInt(month) - 1
+        const prevYear = prevMonth === 0 ? parseInt(year) - 1 : parseInt(year)
+        const prevMonthStr = `${prevYear}-${String(prevMonth || 12).padStart(2, '0')}`
+        
+        // Récupérer les données du mois précédent pour comparaison
+        const [prevResultatData] = await Promise.all([
+          this.getResultatComptable(prevMonthStr)
+        ])
+        
+        if (prevResultatData.length > 0) {
+          const prevResultat = prevResultatData[0]
+          if (prevResultat.chiffre_affaires > 0) {
+            growth = ((currentResultat.chiffre_affaires - prevResultat.chiffre_affaires) / prevResultat.chiffre_affaires) * 100
+          }
         }
+      } catch (error) {
+        console.log('⚠️ Impossible de calculer la croissance:', error)
       }
       
       return {
-        chiffre_affaires: dernierResultat.chiffre_affaires,
-        charges: dernierResultat.charges,
-        resultat_net: dernierResultat.resultat_net,
-        solde_tresorerie: derniereTresorerie.solde_final,
+        chiffre_affaires: currentResultat.chiffre_affaires,
+        charges: currentResultat.charges,
+        resultat_net: currentResultat.resultat_net,
+        solde_tresorerie: currentTresorerie.solde_final,
         growth,
         hasData: true
       }

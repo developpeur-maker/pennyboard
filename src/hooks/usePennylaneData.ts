@@ -19,7 +19,7 @@ interface UsePennylaneDataReturn {
   refetch: () => void
 }
 
-export const usePennylaneData = (): UsePennylaneDataReturn => {
+export const usePennylaneData = (selectedMonth: string = '2025-09'): UsePennylaneDataReturn => {
   const [kpis, setKpis] = useState<KPIData | null>(null)
   const [resultatComptable, setResultatComptable] = useState<PennylaneResultatComptable[]>([])
   const [tresorerie, setTresorerie] = useState<PennylaneTresorerie[]>([])
@@ -43,9 +43,9 @@ export const usePennylaneData = (): UsePennylaneDataReturn => {
 
       // Charger toutes les données en parallèle
       const [kpisData, resultatData, tresorerieData] = await Promise.all([
-        pennylaneApi.getKPIs(),
-        pennylaneApi.getResultatComptable(),
-        pennylaneApi.getTresorerie()
+        pennylaneApi.getKPIs(selectedMonth),
+        pennylaneApi.getResultatComptable(selectedMonth),
+        pennylaneApi.getTresorerie(selectedMonth)
       ])
 
       setKpis(kpisData)
@@ -61,7 +61,7 @@ export const usePennylaneData = (): UsePennylaneDataReturn => {
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [selectedMonth])
 
   return {
     kpis,

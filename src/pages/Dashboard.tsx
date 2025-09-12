@@ -1,16 +1,18 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { 
   DollarSign, 
   CreditCard,
   RefreshCw,
   Calculator,
-  PiggyBank
+  PiggyBank,
+  Calendar
 } from 'lucide-react'
 import KPICard from '../components/KPICard'
 import { usePennylaneData } from '../hooks/usePennylaneData'
 
 const Dashboard: React.FC = () => {
-  const { kpis, loading, error, refetch } = usePennylaneData()
+  const [selectedMonth, setSelectedMonth] = useState('2025-09')
+  const { kpis, loading, error, refetch } = usePennylaneData(selectedMonth)
 
   // Fonction pour formater les montants
   const formatCurrency = (amount: number) => {
@@ -63,13 +65,34 @@ const Dashboard: React.FC = () => {
             Tableau de bord DIMO DIAGNOSTIC
           </p>
         </div>
-        <button
-          onClick={refetch}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-        >
-          <RefreshCw className="w-5 h-5" />
-          Actualiser
-        </button>
+        <div className="flex items-center gap-4">
+          {/* Sélecteur de mois */}
+          <div className="flex items-center gap-3">
+            <Calendar className="w-5 h-5 text-gray-600" />
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
+            >
+              <option value="2025-09">Septembre 2025</option>
+              <option value="2025-08">Août 2025</option>
+              <option value="2025-07">Juillet 2025</option>
+              <option value="2025-06">Juin 2025</option>
+              <option value="2025-05">Mai 2025</option>
+              <option value="2025-04">Avril 2025</option>
+              <option value="2025-03">Mars 2025</option>
+              <option value="2025-02">Février 2025</option>
+              <option value="2025-01">Janvier 2025</option>
+            </select>
+          </div>
+          <button
+            onClick={refetch}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            <RefreshCw className="w-5 h-5" />
+            Actualiser
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards - Layout centré et plus grand */}
