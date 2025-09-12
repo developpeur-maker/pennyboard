@@ -11,17 +11,37 @@ module.exports = async (req, res) => {
   try {
     const url = `${PENNYLANE_BASE_URL}/companies/me`
     console.log('🔗 Companies API call:', url)
+    console.log('🔑 API Key:', PENNYLANE_API_KEY ? 'Present' : 'Missing')
 
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${PENNYLANE_API_KEY}`,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
     })
 
+    console.log('📊 Response status:', response.status)
+    console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()))
+
+    // Vérifier le type de contenu
+    const contentType = response.headers.get('content-type')
+    console.log('📊 Content-Type:', contentType)
+
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text()
+      console.log('📊 Non-JSON response:', text.substring(0, 500))
+      return res.status(response.status).json({
+        error: 'Non-JSON response from Pennylane API',
+        status: response.status,
+        contentType: contentType,
+        response: text.substring(0, 500)
+      })
+    }
+
     const data = await response.json()
-    console.log('📊 Companies response:', response.status)
+    console.log('📊 Companies data:', data)
     
     res.status(response.status).json(data)
 
@@ -29,7 +49,8 @@ module.exports = async (req, res) => {
     console.error('❌ Companies error:', error)
     res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message
+      message: error.message,
+      stack: error.stack
     })
   }
 }
