@@ -119,51 +119,43 @@ export const pennylaneApi = {
       // Essayer de récupérer les vraies données financières
       console.log('📊 Tentative de récupération des données réelles Pennylane...')
       
-      // Utiliser les endpoints qui fonctionnent réellement
-      const workingEndpoints = [
-        'customer_invoices', // ✅ Fonctionne - 47,679 factures
-        'supplier_invoices', // ✅ Fonctionne
-        'transactions', // À tester
-        'accounting/transactions' // À tester
-      ]
-
-      for (const endpoint of workingEndpoints) {
-        try {
-          console.log(`🔄 Test endpoint: ${endpoint}`)
-          const data = await apiCall<any>(endpoint)
-          console.log(`✅ Données récupérées depuis ${endpoint}:`, data)
-          
-          // Traiter les données selon le type d'endpoint
-          if (endpoint === 'customer_invoices' && data.invoices) {
-            console.log(`📊 Traitement de ${data.total_invoices} factures clients`)
-            return this.processCustomerInvoicesData(data.invoices)
-          } else if (endpoint === 'supplier_invoices' && data.invoices) {
-            console.log(`📊 Traitement de ${data.total_invoices} factures fournisseurs`)
-            return this.processSupplierInvoicesData(data.invoices)
-          } else if (endpoint.includes('transaction') && data.data) {
-            return this.processTransactionData(data.data)
-          }
-        } catch (endpointError) {
-          console.log(`❌ Endpoint ${endpoint} non disponible:`, endpointError)
-          continue
+      // Essayer de récupérer des données financières simples
+      try {
+        console.log('🔄 Tentative de récupération des données financières...')
+        
+        // Essayer d'abord les factures clients (échantillon)
+        const customerData = await apiCall<any>('customer_invoices?page=1&per_page=100')
+        if (customerData && customerData.invoices) {
+          console.log(`📊 Récupération de ${customerData.invoices.length} factures clients (échantillon)`)
+          return this.processSimpleFinancialData(customerData.invoices, 'customer')
         }
+        
+        // Essayer les factures fournisseurs (échantillon)
+        const supplierData = await apiCall<any>('supplier_invoices?page=1&per_page=100')
+        if (supplierData && supplierData.invoices) {
+          console.log(`📊 Récupération de ${supplierData.invoices.length} factures fournisseurs (échantillon)`)
+          return this.processSimpleFinancialData(supplierData.invoices, 'supplier')
+        }
+        
+      } catch (endpointError) {
+        console.log(`❌ Impossible de récupérer les données financières:`, endpointError)
       }
       
-      // Si aucun endpoint ne fonctionne, utiliser des données simulées
-      console.log('📊 Aucun endpoint financier disponible, utilisation de données simulées')
-      return this.getSimulatedFinancialData()
+      // Si aucun endpoint ne fonctionne, retourner des données vides
+      console.log('📊 Aucun endpoint financier disponible, retour de données vides')
+      return []
       
     } catch (error) {
       console.error('Erreur lors de la récupération du résultat comptable:', error)
-      return this.getSimulatedFinancialData()
+      return []
     }
   },
 
-  // Traiter les données de factures clients
-  processCustomerInvoicesData(invoices: any[]): PennylaneResultatComptable[] {
-    console.log('📊 Traitement des factures clients:', invoices.length, 'factures')
+  // Traiter les données financières de manière simple et compréhensible
+  processSimpleFinancialData(invoices: any[], type: 'customer' | 'supplier'): PennylaneResultatComptable[] {
+    console.log(`📊 Traitement simple des ${invoices.length} factures ${type}`)
     
-    // Grouper les factures par mois
+    // Grouper les factures par mois (derniers 12 mois)
     const monthlyData: { [key: string]: { ca: number, charges: number } } = {}
     
     invoices.forEach(invoice => {
@@ -173,109 +165,41 @@ export const pennylaneApi = {
           monthlyData[month] = { ca: 0, charges: 0 }
         }
         
-        // Chiffre d'affaires pour les factures clients
-        if (invoice.currency_amount) {
-          monthlyData[month].ca += parseFloat(invoice.currency_amount)
-        }
-      }
-    })
-    
-    // Convertir en format attendu
-    return Object.entries(monthlyData).map(([period, data]) => ({
-      period,
-      chiffre_affaires: data.ca,
-      charges: data.charges,
-      resultat_net: data.ca - data.charges,
-      currency: 'EUR'
-    })).sort((a, b) => a.period.localeCompare(b.period))
-  },
-
-  // Traiter les données de factures fournisseurs
-  processSupplierInvoicesData(invoices: any[]): PennylaneResultatComptable[] {
-    console.log('📊 Traitement des factures fournisseurs:', invoices.length, 'factures')
-    
-    // Grouper les factures par mois
-    const monthlyData: { [key: string]: { ca: number, charges: number } } = {}
-    
-    invoices.forEach(invoice => {
-      if (invoice.date) {
-        const month = invoice.date.substring(0, 7) // YYYY-MM
-        if (!monthlyData[month]) {
-          monthlyData[month] = { ca: 0, charges: 0 }
-        }
+        const amount = parseFloat(invoice.currency_amount || 0)
         
-        // Charges pour les factures fournisseurs
-        if (invoice.currency_amount) {
-          monthlyData[month].charges += parseFloat(invoice.currency_amount)
-        }
-      }
-    })
-    
-    // Convertir en format attendu
-    return Object.entries(monthlyData).map(([period, data]) => ({
-      period,
-      chiffre_affaires: data.ca,
-      charges: data.charges,
-      resultat_net: data.ca - data.charges,
-      currency: 'EUR'
-    })).sort((a, b) => a.period.localeCompare(b.period))
-  },
-
-  // Traiter les données de transactions
-  processTransactionData(transactions: any[]): PennylaneResultatComptable[] {
-    console.log('📊 Traitement des données de transactions:', transactions.length, 'transactions')
-    
-    const monthlyData: { [key: string]: { ca: number, charges: number } } = {}
-    
-    transactions.forEach(transaction => {
-      if (transaction.date) {
-        const month = transaction.date.substring(0, 7)
-        if (!monthlyData[month]) {
-          monthlyData[month] = { ca: 0, charges: 0 }
-        }
-        
-        const amount = parseFloat(transaction.amount || 0)
-        if (transaction.type === 'income' || transaction.direction === 'in') {
+        if (type === 'customer') {
+          // Chiffre d'affaires pour les factures clients
           monthlyData[month].ca += amount
-        } else if (transaction.type === 'expense' || transaction.direction === 'out') {
+        } else {
+          // Charges pour les factures fournisseurs
           monthlyData[month].charges += amount
         }
       }
     })
     
-    return Object.entries(monthlyData).map(([period, data]) => ({
-      period,
-      chiffre_affaires: data.ca,
-      charges: data.charges,
-      resultat_net: data.ca - data.charges,
-      currency: 'EUR'
-    })).sort((a, b) => a.period.localeCompare(b.period))
+    // Créer les 12 derniers mois avec des données
+    const result: PennylaneResultatComptable[] = []
+    const currentDate = new Date()
+    
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+      const period = date.toISOString().substring(0, 7)
+      
+      const data = monthlyData[period] || { ca: 0, charges: 0 }
+      
+      result.push({
+        period,
+        chiffre_affaires: data.ca,
+        charges: data.charges,
+        resultat_net: data.ca - data.charges,
+        currency: 'EUR'
+      })
+    }
+    
+    return result
   },
 
-  // Traiter les données financières
-  processFinancialData(financialData: any[]): PennylaneResultatComptable[] {
-    console.log('📊 Traitement des données financières:', financialData)
-    // Implémentation selon la structure des données financières
-    return this.getSimulatedFinancialData()
-  },
 
-  // Données simulées de fallback
-  getSimulatedFinancialData(): PennylaneResultatComptable[] {
-    return [
-      { period: '2024-01', chiffre_affaires: 45000, charges: 30000, resultat_net: 15000, currency: 'EUR' },
-      { period: '2024-02', chiffre_affaires: 52000, charges: 34000, resultat_net: 18000, currency: 'EUR' },
-      { period: '2024-03', chiffre_affaires: 48000, charges: 36000, resultat_net: 12000, currency: 'EUR' },
-      { period: '2024-04', chiffre_affaires: 61000, charges: 39000, resultat_net: 22000, currency: 'EUR' },
-      { period: '2024-05', chiffre_affaires: 55000, charges: 36000, resultat_net: 19000, currency: 'EUR' },
-      { period: '2024-06', chiffre_affaires: 67000, charges: 42000, resultat_net: 25000, currency: 'EUR' },
-      { period: '2024-07', chiffre_affaires: 72000, charges: 45000, resultat_net: 27000, currency: 'EUR' },
-      { period: '2024-08', chiffre_affaires: 68000, charges: 43000, resultat_net: 25000, currency: 'EUR' },
-      { period: '2024-09', chiffre_affaires: 75000, charges: 47000, resultat_net: 28000, currency: 'EUR' },
-      { period: '2024-10', chiffre_affaires: 82000, charges: 50000, resultat_net: 32000, currency: 'EUR' },
-      { period: '2024-11', chiffre_affaires: 78000, charges: 48000, resultat_net: 30000, currency: 'EUR' },
-      { period: '2024-12', chiffre_affaires: 85000, charges: 52000, resultat_net: 33000, currency: 'EUR' },
-    ]
-  },
 
   // Récupérer la trésorerie
   async getTresorerie(): Promise<PennylaneTresorerie[]> {
@@ -287,52 +211,44 @@ export const pennylaneApi = {
       // Essayer de récupérer les vraies données de trésorerie
       console.log('💰 Tentative de récupération des données de trésorerie réelles...')
       
-      // Utiliser les endpoints qui fonctionnent pour la trésorerie
-      const workingEndpoints = [
-        'customer_invoices', // ✅ Fonctionne - pour les encaissements
-        'supplier_invoices', // ✅ Fonctionne - pour les décaissements
-        'transactions', // À tester
-        'accounting/transactions' // À tester
-      ]
-
-      for (const endpoint of workingEndpoints) {
-        try {
-          console.log(`🔄 Test endpoint trésorerie: ${endpoint}`)
-          const data = await apiCall<any>(endpoint)
-          console.log(`✅ Données trésorerie récupérées depuis ${endpoint}:`, data)
-          
-          // Traiter les données selon le type d'endpoint
-          if (endpoint === 'customer_invoices' && data.invoices) {
-            console.log(`💰 Traitement de ${data.total_invoices} factures clients pour la trésorerie`)
-            return this.processCustomerInvoicesCashFlowData(data.invoices)
-          } else if (endpoint === 'supplier_invoices' && data.invoices) {
-            console.log(`💰 Traitement de ${data.total_invoices} factures fournisseurs pour la trésorerie`)
-            return this.processSupplierInvoicesCashFlowData(data.invoices)
-          } else if (endpoint.includes('transaction') && data.data) {
-            return this.processTransactionCashFlowData(data.data)
-          }
-        } catch (endpointError) {
-          console.log(`❌ Endpoint trésorerie ${endpoint} non disponible:`, endpointError)
-          continue
+      // Essayer de récupérer des données de trésorerie simples
+      try {
+        console.log('🔄 Tentative de récupération des données de trésorerie...')
+        
+        // Essayer d'abord les factures clients (échantillon)
+        const customerData = await apiCall<any>('customer_invoices?page=1&per_page=100')
+        if (customerData && customerData.invoices) {
+          console.log(`💰 Récupération de ${customerData.invoices.length} factures clients pour la trésorerie`)
+          return this.processSimpleCashFlowData(customerData.invoices, 'customer')
         }
+        
+        // Essayer les factures fournisseurs (échantillon)
+        const supplierData = await apiCall<any>('supplier_invoices?page=1&per_page=100')
+        if (supplierData && supplierData.invoices) {
+          console.log(`💰 Récupération de ${supplierData.invoices.length} factures fournisseurs pour la trésorerie`)
+          return this.processSimpleCashFlowData(supplierData.invoices, 'supplier')
+        }
+        
+      } catch (endpointError) {
+        console.log(`❌ Impossible de récupérer les données de trésorerie:`, endpointError)
       }
       
-      // Si aucun endpoint ne fonctionne, utiliser des données simulées
-      console.log('💰 Aucun endpoint trésorerie disponible, utilisation de données simulées')
-      return this.getSimulatedCashFlowData()
+      // Si aucun endpoint ne fonctionne, retourner des données vides
+      console.log('💰 Aucun endpoint trésorerie disponible, retour de données vides')
+      return []
       
     } catch (error) {
       console.error('Erreur lors de la récupération de la trésorerie:', error)
-      return this.getSimulatedCashFlowData()
+      return []
     }
   },
 
-  // Traiter les factures clients pour la trésorerie
-  processCustomerInvoicesCashFlowData(invoices: any[]): PennylaneTresorerie[] {
-    console.log('💰 Traitement des factures clients pour la trésorerie:', invoices.length, 'factures')
+  // Traiter les données de trésorerie de manière simple
+  processSimpleCashFlowData(invoices: any[], type: 'customer' | 'supplier'): PennylaneTresorerie[] {
+    console.log(`💰 Traitement simple des ${invoices.length} factures ${type} pour la trésorerie`)
     
+    // Grouper les factures par mois (derniers 12 mois)
     const monthlyData: { [key: string]: { encaissements: number, decaissements: number } } = {}
-    let soldeInitial = 10000 // Solde initial par défaut
     
     invoices.forEach(invoice => {
       if (invoice.date) {
@@ -341,23 +257,32 @@ export const pennylaneApi = {
           monthlyData[month] = { encaissements: 0, decaissements: 0 }
         }
         
-        // Encaissements pour les factures clients
-        if (invoice.currency_amount) {
-          monthlyData[month].encaissements += parseFloat(invoice.currency_amount)
+        const amount = parseFloat(invoice.currency_amount || 0)
+        
+        if (type === 'customer') {
+          // Encaissements pour les factures clients
+          monthlyData[month].encaissements += amount
+        } else {
+          // Décaissements pour les factures fournisseurs
+          monthlyData[month].decaissements += amount
         }
       }
     })
     
-    // Calculer les soldes finaux
-    const sortedMonths = Object.keys(monthlyData).sort()
+    // Créer les 12 derniers mois avec des données
     const result: PennylaneTresorerie[] = []
+    const currentDate = new Date()
+    let soldeInitial = 10000 // Solde initial par défaut
     
-    sortedMonths.forEach((month) => {
-      const data = monthlyData[month]
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+      const period = date.toISOString().substring(0, 7)
+      
+      const data = monthlyData[period] || { encaissements: 0, decaissements: 0 }
       const soldeFinal = soldeInitial + data.encaissements - data.decaissements
       
       result.push({
-        period: month,
+        period,
         solde_initial: soldeInitial,
         encaissements: data.encaissements,
         decaissements: data.decaissements,
@@ -366,7 +291,7 @@ export const pennylaneApi = {
       })
       
       soldeInitial = soldeFinal
-    })
+    }
     
     return result
   },
@@ -465,26 +390,9 @@ export const pennylaneApi = {
   processCashFlowData(cashFlowData: any[]): PennylaneTresorerie[] {
     console.log('💰 Traitement des données de flux de trésorerie:', cashFlowData)
     // Implémentation selon la structure des données de flux de trésorerie
-    return this.getSimulatedCashFlowData()
+    return []
   },
 
-  // Données simulées de trésorerie de fallback
-  getSimulatedCashFlowData(): PennylaneTresorerie[] {
-    return [
-      { period: '2024-01', solde_initial: 10000, encaissements: 45000, decaissements: 30000, solde_final: 25000, currency: 'EUR' },
-      { period: '2024-02', solde_initial: 25000, encaissements: 52000, decaissements: 34000, solde_final: 43000, currency: 'EUR' },
-      { period: '2024-03', solde_initial: 43000, encaissements: 48000, decaissements: 36000, solde_final: 55000, currency: 'EUR' },
-      { period: '2024-04', solde_initial: 55000, encaissements: 61000, decaissements: 39000, solde_final: 77000, currency: 'EUR' },
-      { period: '2024-05', solde_initial: 77000, encaissements: 55000, decaissements: 36000, solde_final: 96000, currency: 'EUR' },
-      { period: '2024-06', solde_initial: 96000, encaissements: 67000, decaissements: 42000, solde_final: 121000, currency: 'EUR' },
-      { period: '2024-07', solde_initial: 121000, encaissements: 72000, decaissements: 45000, solde_final: 148000, currency: 'EUR' },
-      { period: '2024-08', solde_initial: 148000, encaissements: 68000, decaissements: 43000, solde_final: 173000, currency: 'EUR' },
-      { period: '2024-09', solde_initial: 173000, encaissements: 75000, decaissements: 47000, solde_final: 201000, currency: 'EUR' },
-      { period: '2024-10', solde_initial: 201000, encaissements: 82000, decaissements: 50000, solde_final: 233000, currency: 'EUR' },
-      { period: '2024-11', solde_initial: 233000, encaissements: 78000, decaissements: 48000, solde_final: 263000, currency: 'EUR' },
-      { period: '2024-12', solde_initial: 263000, encaissements: 85000, decaissements: 52000, solde_final: 296000, currency: 'EUR' },
-    ]
-  },
 
   // Récupérer les KPIs actuels
   async getKPIs() {
