@@ -560,28 +560,64 @@ export const pennylaneApi = {
     }
   },
 
-  // Calculer le compte de résultat complet avec comparaisons
+  // Récupérer les détails des comptes pour une classe donnée
+  getAccountDetails(trialBalance: TrialBalanceResponse, accountPrefixes: string[]): Array<{
+    number: string
+    name: string
+    current: number
+    previous: number
+    variation: number
+  }> {
+    const details: Array<{
+      number: string
+      name: string
+      current: number
+      previous: number
+      variation: number
+    }> = []
+
+    accountPrefixes.forEach(prefix => {
+      const accounts = trialBalance.items.filter(account => account.number.startsWith(prefix))
+      accounts.forEach(account => {
+        const credits = parseFloat(account.credits) || 0
+        const debits = parseFloat(account.debits) || 0
+        const current = credits - debits
+        
+        details.push({
+          number: account.number,
+          name: account.label || `Compte ${account.number}`,
+          current,
+          previous: 0, // Sera mis à jour si on a les données du mois précédent
+          variation: current
+        })
+      })
+    })
+
+    return details.sort((a, b) => a.number.localeCompare(b.number))
+  },
+
+  // Calculer le compte de résultat complet avec comparaisons et détails
   calculateIncomeStatement(trialBalance: TrialBalanceResponse, previousTrialBalance?: TrialBalanceResponse | null): {
     produits: {
-      vente_marchandises: { current: number, previous: number, variation: number }
-      production_vendue_biens: { current: number, previous: number, variation: number }
-      production_vendue_services: { current: number, previous: number, variation: number }
+      vente_marchandises: { current: number, previous: number, variation: number, details?: any[] }
+      production_vendue_biens: { current: number, previous: number, variation: number, details?: any[] }
+      production_vendue_services: { current: number, previous: number, variation: number, details?: any[] }
       montant_net_ca: { current: number, previous: number, variation: number }
-      production_stockee: { current: number, previous: number, variation: number }
-      production_immobilisee: { current: number, previous: number, variation: number }
-      subventions: { current: number, previous: number, variation: number }
-      reprises_amortissements: { current: number, previous: number, variation: number }
-      autres_produits: { current: number, previous: number, variation: number }
+      production_stockee: { current: number, previous: number, variation: number, details?: any[] }
+      production_immobilisee: { current: number, previous: number, variation: number, details?: any[] }
+      subventions: { current: number, previous: number, variation: number, details?: any[] }
+      reprises_amortissements: { current: number, previous: number, variation: number, details?: any[] }
+      autres_produits: { current: number, previous: number, variation: number, details?: any[] }
       total_produits_exploitation: { current: number, previous: number, variation: number }
     }
     charges: {
-      achats_marchandises: { current: number, previous: number, variation: number }
-      autres_achats_charges_externes: { current: number, previous: number, variation: number }
-      impots_taxes: { current: number, previous: number, variation: number }
-      salaires: { current: number, previous: number, variation: number }
-      cotisations_sociales: { current: number, previous: number, variation: number }
-      dotations_amortissements: { current: number, previous: number, variation: number }
-      autres_charges: { current: number, previous: number, variation: number }
+      achats_marchandises: { current: number, previous: number, variation: number, details?: any[] }
+      autres_achats_charges_externes: { current: number, previous: number, variation: number, details?: any[] }
+      impots_taxes: { current: number, previous: number, variation: number, details?: any[] }
+      salaires: { current: number, previous: number, variation: number, details?: any[] }
+      cotisations_sociales: { current: number, previous: number, variation: number, details?: any[] }
+      dotations_amortissements: { current: number, previous: number, variation: number, details?: any[] }
+      autres_charges: { current: number, previous: number, variation: number, details?: any[] }
       total_charges_exploitation: { current: number, previous: number, variation: number }
     }
     resultat_exploitation: { current: number, previous: number, variation: number }
@@ -642,7 +678,31 @@ export const pennylaneApi = {
 
     // CHARGES D'EXPLOITATION - Mois actuel
     const achats_marchandises_current = getAccountBalance('607', trialBalance)
-    const autres_achats_charges_externes_current = getClassBalance('622', trialBalance)
+    // Autres achats et charges externes : comptes 604 à 628 (sauf 607 déjà compté)
+    const autres_achats_charges_externes_current = getClassBalance('604', trialBalance) + 
+      getClassBalance('605', trialBalance) + 
+      getClassBalance('606', trialBalance) + 
+      getClassBalance('608', trialBalance) + 
+      getClassBalance('609', trialBalance) + 
+      getClassBalance('610', trialBalance) + 
+      getClassBalance('611', trialBalance) + 
+      getClassBalance('612', trialBalance) + 
+      getClassBalance('613', trialBalance) + 
+      getClassBalance('614', trialBalance) + 
+      getClassBalance('615', trialBalance) + 
+      getClassBalance('616', trialBalance) + 
+      getClassBalance('617', trialBalance) + 
+      getClassBalance('618', trialBalance) + 
+      getClassBalance('619', trialBalance) + 
+      getClassBalance('620', trialBalance) + 
+      getClassBalance('621', trialBalance) + 
+      getClassBalance('622', trialBalance) + 
+      getClassBalance('623', trialBalance) + 
+      getClassBalance('624', trialBalance) + 
+      getClassBalance('625', trialBalance) + 
+      getClassBalance('626', trialBalance) + 
+      getClassBalance('627', trialBalance) + 
+      getClassBalance('628', trialBalance)
     const impots_taxes_current = getClassBalance('635', trialBalance)
     const salaires_current = getClassBalance('641', trialBalance)
     const cotisations_sociales_current = getClassBalance('645', trialBalance)
@@ -652,7 +712,32 @@ export const pennylaneApi = {
 
     // CHARGES D'EXPLOITATION - Mois précédent
     const achats_marchandises_previous = previousTrialBalance ? getAccountBalance('607', previousTrialBalance) : 0
-    const autres_achats_charges_externes_previous = previousTrialBalance ? getClassBalance('622', previousTrialBalance) : 0
+    // Autres achats et charges externes : comptes 604 à 628 (sauf 607 déjà compté)
+    const autres_achats_charges_externes_previous = previousTrialBalance ? 
+      getClassBalance('604', previousTrialBalance) + 
+      getClassBalance('605', previousTrialBalance) + 
+      getClassBalance('606', previousTrialBalance) + 
+      getClassBalance('608', previousTrialBalance) + 
+      getClassBalance('609', previousTrialBalance) + 
+      getClassBalance('610', previousTrialBalance) + 
+      getClassBalance('611', previousTrialBalance) + 
+      getClassBalance('612', previousTrialBalance) + 
+      getClassBalance('613', previousTrialBalance) + 
+      getClassBalance('614', previousTrialBalance) + 
+      getClassBalance('615', previousTrialBalance) + 
+      getClassBalance('616', previousTrialBalance) + 
+      getClassBalance('617', previousTrialBalance) + 
+      getClassBalance('618', previousTrialBalance) + 
+      getClassBalance('619', previousTrialBalance) + 
+      getClassBalance('620', previousTrialBalance) + 
+      getClassBalance('621', previousTrialBalance) + 
+      getClassBalance('622', previousTrialBalance) + 
+      getClassBalance('623', previousTrialBalance) + 
+      getClassBalance('624', previousTrialBalance) + 
+      getClassBalance('625', previousTrialBalance) + 
+      getClassBalance('626', previousTrialBalance) + 
+      getClassBalance('627', previousTrialBalance) + 
+      getClassBalance('628', previousTrialBalance) : 0
     const impots_taxes_previous = previousTrialBalance ? getClassBalance('635', previousTrialBalance) : 0
     const salaires_previous = previousTrialBalance ? getClassBalance('641', previousTrialBalance) : 0
     const cotisations_sociales_previous = previousTrialBalance ? getClassBalance('645', previousTrialBalance) : 0
@@ -664,10 +749,31 @@ export const pennylaneApi = {
     const resultat_exploitation_current = total_produits_exploitation_current - total_charges_exploitation_current
     const resultat_exploitation_previous = total_produits_exploitation_previous - total_charges_exploitation_previous
 
+    // Récupérer les détails des comptes pour les charges externes
+    const autres_achats_charges_externes_details = this.getAccountDetails(trialBalance, [
+      '604', '605', '606', '608', '609', '610', '611', '612', '613', '614', '615', '616', '617', '618', '619', '620', '621', '622', '623', '624', '625', '626', '627', '628'
+    ])
+
+    // Mettre à jour les détails avec les données du mois précédent si disponibles
+    if (previousTrialBalance) {
+      const previousDetails = this.getAccountDetails(previousTrialBalance, [
+        '604', '605', '606', '608', '609', '610', '611', '612', '613', '614', '615', '616', '617', '618', '619', '620', '621', '622', '623', '624', '625', '626', '627', '628'
+      ])
+      
+      autres_achats_charges_externes_details.forEach(detail => {
+        const prevDetail = previousDetails.find(p => p.number === detail.number)
+        if (prevDetail) {
+          detail.previous = prevDetail.current
+          detail.variation = detail.current - detail.previous
+        }
+      })
+    }
+
     console.log(`💰 Compte de résultat calculé avec comparaisons:`)
     console.log(`   - CA Net: ${montant_net_ca_current.toFixed(2)}€ (${montant_net_ca_previous.toFixed(2)}€ mois précédent)`)
     console.log(`   - Total Produits: ${total_produits_exploitation_current.toFixed(2)}€ (${total_produits_exploitation_previous.toFixed(2)}€ mois précédent)`)
     console.log(`   - Total Charges: ${total_charges_exploitation_current.toFixed(2)}€ (${total_charges_exploitation_previous.toFixed(2)}€ mois précédent)`)
+    console.log(`   - Autres achats et charges externes: ${autres_achats_charges_externes_current.toFixed(2)}€ (${autres_achats_charges_externes_previous.toFixed(2)}€ mois précédent)`)
     console.log(`   - Résultat Exploitation: ${resultat_exploitation_current.toFixed(2)}€ (${resultat_exploitation_previous.toFixed(2)}€ mois précédent)`)
 
     return {
@@ -685,7 +791,10 @@ export const pennylaneApi = {
       },
       charges: {
         achats_marchandises: createComparison(achats_marchandises_current, achats_marchandises_previous),
-        autres_achats_charges_externes: createComparison(autres_achats_charges_externes_current, autres_achats_charges_externes_previous),
+        autres_achats_charges_externes: {
+          ...createComparison(autres_achats_charges_externes_current, autres_achats_charges_externes_previous),
+          details: autres_achats_charges_externes_details
+        },
         impots_taxes: createComparison(impots_taxes_current, impots_taxes_previous),
         salaires: createComparison(salaires_current, salaires_previous),
         cotisations_sociales: createComparison(cotisations_sociales_current, cotisations_sociales_previous),

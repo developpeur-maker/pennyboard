@@ -13,6 +13,7 @@ interface IncomeStatementProps {
 
 const IncomeStatement: React.FC<IncomeStatementProps> = ({ onNavigate }) => {
   const [selectedMonth, setSelectedMonth] = useState('2025-09')
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const { loading, error, refetch, incomeStatement } = usePennylaneData(selectedMonth)
 
   // Fonction pour formater les montants sans devise (pour les tableaux)
@@ -49,8 +50,19 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ onNavigate }) => {
     return `${monthNames[parseInt(month) - 1]} ${year}`
   }
 
+  // Fonction pour basculer l'expansion d'une ligne
+  const toggleRowExpansion = (rowId: string) => {
+    const newExpandedRows = new Set(expandedRows)
+    if (newExpandedRows.has(rowId)) {
+      newExpandedRows.delete(rowId)
+    } else {
+      newExpandedRows.add(rowId)
+    }
+    setExpandedRows(newExpandedRows)
+  }
+
   // Fonction helper pour rendre une ligne du tableau avec comparaisons
-  const renderTableRow = (label: string, data: any, isTotal: boolean = false) => {
+  const renderTableRow = (label: string, data: any, isTotal: boolean = false, rowId?: string, hasDetails: boolean = false) => {
     if (!incomeStatement || !data) {
       return (
         <tr>
@@ -65,22 +77,59 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ onNavigate }) => {
     }
 
     const variationColor = data.variation > 0 ? 'text-green-600' : data.variation < 0 ? 'text-red-600' : 'text-gray-900'
+    const isExpanded = rowId ? expandedRows.has(rowId) : false
 
     return (
-      <tr>
-        <td className={`px-6 py-4 ${isTotal ? 'pl-4' : 'pl-8'} text-sm ${isTotal ? 'font-bold' : ''} text-gray-700`}>
-          {label}
-        </td>
-        <td className={`px-6 py-4 text-sm ${isTotal ? 'font-bold' : ''} text-gray-900 text-right`}>
-          {formatAmount(data.current)}
-        </td>
-        <td className={`px-6 py-4 text-sm ${isTotal ? 'font-bold' : ''} text-gray-900 text-right`}>
-          {formatAmount(data.previous)}
-        </td>
-        <td className={`px-6 py-4 text-sm ${isTotal ? 'font-bold' : ''} text-right font-medium ${variationColor}`}>
-          {formatAmount(data.variation)}
-        </td>
-      </tr>
+      <>
+        <tr 
+          className={`${hasDetails ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+          onClick={hasDetails && rowId ? () => toggleRowExpansion(rowId) : undefined}
+        >
+          <td className={`px-6 py-4 ${isTotal ? 'pl-4' : 'pl-8'} text-sm ${isTotal ? 'font-bold' : ''} text-gray-700`}>
+            <div className="flex items-center">
+              {hasDetails && (
+                <span className="mr-2 text-gray-400">
+                  {isExpanded ? '▼' : '▶'}
+                </span>
+              )}
+              {label}
+            </div>
+          </td>
+          <td className={`px-6 py-4 text-sm ${isTotal ? 'font-bold' : ''} text-gray-900 text-right`}>
+            {formatAmount(data.current)}
+          </td>
+          <td className={`px-6 py-4 text-sm ${isTotal ? 'font-bold' : ''} text-gray-900 text-right`}>
+            {formatAmount(data.previous)}
+          </td>
+          <td className={`px-6 py-4 text-sm ${isTotal ? 'font-bold' : ''} text-right font-medium ${variationColor}`}>
+            {formatAmount(data.variation)}
+          </td>
+        </tr>
+        
+        {/* Lignes de détail si expandées */}
+        {hasDetails && isExpanded && data.details && data.details.length > 0 && (
+          <>
+            {data.details.map((detail: any, index: number) => (
+              <tr key={`${rowId}-detail-${index}`} className="bg-gray-50">
+                <td className="px-6 py-2 pl-16 text-xs text-gray-600">
+                  {detail.number} - {detail.name}
+                </td>
+                <td className="px-6 py-2 text-xs text-gray-900 text-right">
+                  {formatAmount(detail.current)}
+                </td>
+                <td className="px-6 py-2 text-xs text-gray-900 text-right">
+                  {formatAmount(detail.previous)}
+                </td>
+                <td className={`px-6 py-2 text-xs text-right font-medium ${
+                  detail.variation > 0 ? 'text-green-600' : detail.variation < 0 ? 'text-red-600' : 'text-gray-900'
+                }`}>
+                  {formatAmount(detail.variation)}
+                </td>
+              </tr>
+            ))}
+          </>
+        )}
+      </>
     )
   }
 
@@ -225,7 +274,13 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ onNavigate }) => {
                 </tr>
 
                 {renderTableRow('Achats de marchandises', incomeStatement?.charges.achats_marchandises)}
-                {renderTableRow('Autres achats et charges externes', incomeStatement?.charges.autres_achats_charges_externes)}
+                {renderTableRow(
+                  'Autres achats et charges externes', 
+                  incomeStatement?.charges.autres_achats_charges_externes, 
+                  false, 
+                  'autres-achats-charges-externes',
+                  true
+                )}
                 {renderTableRow('Impôts, taxes, et versements assimilés', incomeStatement?.charges.impots_taxes)}
                 {renderTableRow('Salaires', incomeStatement?.charges.salaires)}
                 {renderTableRow('Cotisations sociales', incomeStatement?.charges.cotisations_sociales)}
