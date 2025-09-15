@@ -185,28 +185,23 @@ export const pennylaneApi = {
     }
   },
 
-  // Récupérer le résultat comptable basé sur le trial balance
+  // Récupérer le résultat comptable basé sur les écritures comptables filtrées par mois
   async getResultatComptable(selectedMonth: string = '2025-09'): Promise<PennylaneResultatComptable[]> {
     try {
       console.log(`📊 Récupération du résultat comptable pour ${selectedMonth}...`)
       
-      // Convertir le mois sélectionné en dates
-      const [year, month] = selectedMonth.split('-')
-      const startDate = `${year}-${month}-01`
-      const endDate = `${year}-${month}-31`
+      // Récupérer toutes les écritures comptables
+      const ledgerEntries = await getLedgerEntries(1, 1000)
       
-      // Récupérer le trial balance pour le mois sélectionné
-      const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
-      
-      if (!trialBalance.items || trialBalance.items.length === 0) {
-        console.log('⚠️ Aucune donnée de trial balance trouvée')
+      if (!ledgerEntries || !ledgerEntries.items || ledgerEntries.items.length === 0) {
+        console.log('⚠️ Aucune écriture comptable trouvée')
         return []
       }
       
-      console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance`)
+      console.log(`📋 ${ledgerEntries.items.length} écritures comptables récupérées`)
       
-      // Traiter les données pour le mois sélectionné
-      return this.processTrialBalanceData(trialBalance, selectedMonth)
+      // Filtrer les écritures par mois et traiter les données
+      return this.processLedgerEntriesByMonth(ledgerEntries, selectedMonth)
       
     } catch (error) {
       console.error('Erreur lors de la récupération du résultat comptable:', error)
@@ -214,33 +209,92 @@ export const pennylaneApi = {
     }
   },
 
-  // Récupérer la trésorerie basée sur le trial balance
+  // Récupérer la trésorerie basée sur les écritures comptables filtrées par mois
   async getTresorerie(selectedMonth: string = '2025-09'): Promise<PennylaneTresorerie[]> {
     try {
       console.log(`💰 Récupération de la trésorerie pour ${selectedMonth}...`)
       
-      // Convertir le mois sélectionné en dates
-      const [year, month] = selectedMonth.split('-')
-      const startDate = `${year}-${month}-01`
-      const endDate = `${year}-${month}-31`
+      // Récupérer toutes les écritures comptables
+      const ledgerEntries = await getLedgerEntries(1, 1000)
       
-      // Récupérer le trial balance pour le mois sélectionné
-      const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
-      
-      if (!trialBalance.items || trialBalance.items.length === 0) {
-        console.log('⚠️ Aucune donnée de trial balance trouvée pour la trésorerie')
+      if (!ledgerEntries || !ledgerEntries.items || ledgerEntries.items.length === 0) {
+        console.log('⚠️ Aucune écriture comptable trouvée pour la trésorerie')
         return []
       }
       
-      console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance pour la trésorerie`)
+      console.log(`📋 ${ledgerEntries.items.length} écritures comptables récupérées pour la trésorerie`)
       
-      // Traiter les données pour le mois sélectionné
-      return this.processTreasuryFromTrialBalance(trialBalance, selectedMonth)
+      // Filtrer les écritures par mois et traiter les données
+      return this.processTreasuryFromLedgerEntries(ledgerEntries, selectedMonth)
       
     } catch (error) {
       console.error('Erreur lors de la récupération de la trésorerie:', error)
       return []
     }
+  },
+
+  // Traiter les écritures comptables filtrées par mois pour calculer les métriques
+  processLedgerEntriesByMonth(ledgerEntries: any, selectedMonth: string = '2025-09'): PennylaneResultatComptable[] {
+    console.log(`📊 Traitement des écritures comptables pour ${selectedMonth}...`)
+    
+    // Convertir le mois sélectionné en dates
+    const [year, month] = selectedMonth.split('-')
+    const startDate = new Date(parseInt(year), parseInt(month) - 1, 1)
+    const endDate = new Date(parseInt(year), parseInt(month), 0) // Dernier jour du mois
+    
+    console.log(`📅 Filtrage des écritures du ${startDate.toISOString().split('T')[0]} au ${endDate.toISOString().split('T')[0]}`)
+    
+    // Filtrer les écritures par mois
+    const entriesForMonth = ledgerEntries.items.filter((entry: any) => {
+      if (!entry.date) return false
+      const entryDate = new Date(entry.date)
+      return entryDate >= startDate && entryDate <= endDate
+    })
+    
+    console.log(`📋 ${entriesForMonth.length} écritures trouvées pour ${selectedMonth} (sur ${ledgerEntries.items.length} total)`)
+    
+    // Calculer les soldes des comptes pour le mois
+    const accountBalances: { [key: string]: { debits: number, credits: number } } = {}
+    
+    entriesForMonth.forEach((entry: any) => {
+      if (entry.lines && Array.isArray(entry.lines)) {
+        entry.lines.forEach((line: any) => {
+          if (line.account_number) {
+            const accountNum = line.account_number
+            if (!accountBalances[accountNum]) {
+              accountBalances[accountNum] = { debits: 0, credits: 0 }
+            }
+            
+            const amount = parseFloat(line.amount) || 0
+            if (amount > 0) {
+              accountBalances[accountNum].credits += amount
+            } else {
+              accountBalances[accountNum].debits += Math.abs(amount)
+            }
+          }
+        })
+      }
+    })
+    
+    console.log(`📊 Soldes calculés pour ${Object.keys(accountBalances).length} comptes`)
+    
+    // Créer un objet similaire au trial balance pour la compatibilité
+    const trialBalanceData: TrialBalanceResponse = {
+      items: Object.entries(accountBalances).map(([number, balances]) => ({
+        number,
+        formatted_number: number,
+        label: `Compte ${number}`,
+        debits: balances.debits.toString(),
+        credits: balances.credits.toString()
+      })),
+      total_pages: 1,
+      current_page: 1,
+      per_page: 1000,
+      total_items: Object.keys(accountBalances).length
+    }
+    
+    // Utiliser la logique existante de processTrialBalanceData
+    return this.processTrialBalanceData(trialBalanceData, selectedMonth)
   },
 
   // Traiter les données du trial balance pour calculer les métriques
@@ -367,6 +421,70 @@ export const pennylaneApi = {
     return result
   },
 
+  // Traiter les écritures comptables filtrées par mois pour calculer la trésorerie
+  processTreasuryFromLedgerEntries(ledgerEntries: any, selectedMonth: string = '2025-09'): PennylaneTresorerie[] {
+    console.log(`💰 Traitement des écritures comptables pour la trésorerie de ${selectedMonth}...`)
+    
+    // Convertir le mois sélectionné en dates
+    const [year, month] = selectedMonth.split('-')
+    const startDate = new Date(parseInt(year), parseInt(month) - 1, 1)
+    const endDate = new Date(parseInt(year), parseInt(month), 0) // Dernier jour du mois
+    
+    console.log(`📅 Filtrage des écritures du ${startDate.toISOString().split('T')[0]} au ${endDate.toISOString().split('T')[0]}`)
+    
+    // Filtrer les écritures par mois
+    const entriesForMonth = ledgerEntries.items.filter((entry: any) => {
+      if (!entry.date) return false
+      const entryDate = new Date(entry.date)
+      return entryDate >= startDate && entryDate <= endDate
+    })
+    
+    console.log(`📋 ${entriesForMonth.length} écritures trouvées pour ${selectedMonth} (sur ${ledgerEntries.items.length} total)`)
+    
+    // Calculer les soldes des comptes de trésorerie (classe 5) pour le mois
+    const treasuryBalances: { [key: string]: { debits: number, credits: number } } = {}
+    
+    entriesForMonth.forEach((entry: any) => {
+      if (entry.lines && Array.isArray(entry.lines)) {
+        entry.lines.forEach((line: any) => {
+          if (line.account_number && line.account_number.startsWith('5')) {
+            const accountNum = line.account_number
+            if (!treasuryBalances[accountNum]) {
+              treasuryBalances[accountNum] = { debits: 0, credits: 0 }
+            }
+            
+            const amount = parseFloat(line.amount) || 0
+            if (amount > 0) {
+              treasuryBalances[accountNum].credits += amount
+            } else {
+              treasuryBalances[accountNum].debits += Math.abs(amount)
+            }
+          }
+        })
+      }
+    })
+    
+    console.log(`💰 Soldes de trésorerie calculés pour ${Object.keys(treasuryBalances).length} comptes`)
+    
+    // Créer un objet similaire au trial balance pour la compatibilité
+    const trialBalanceData: TrialBalanceResponse = {
+      items: Object.entries(treasuryBalances).map(([number, balances]) => ({
+        number,
+        formatted_number: number,
+        label: `Compte ${number}`,
+        debits: balances.debits.toString(),
+        credits: balances.credits.toString()
+      })),
+      total_pages: 1,
+      current_page: 1,
+      per_page: 1000,
+      total_items: Object.keys(treasuryBalances).length
+    }
+    
+    // Utiliser la logique existante de processTreasuryFromTrialBalance
+    return this.processTreasuryFromTrialBalance(trialBalanceData, selectedMonth)
+  },
+
   // Traiter les données de trésorerie à partir du trial balance
   processTreasuryFromTrialBalance(trialBalance: TrialBalanceResponse, selectedMonth: string = '2025-09'): PennylaneTresorerie[] {
     console.log(`💰 Traitement de ${trialBalance.items.length} comptes pour la trésorerie...`)
@@ -396,43 +514,6 @@ export const pennylaneApi = {
       solde_final: soldeTotal,
       currency: 'EUR'
     })
-    
-    return result
-  },
-
-  // Traiter les données de trésorerie à partir des ledger entries (fallback)
-  processTreasuryFromLedgerEntries(ledgerEntries: any[]): PennylaneTresorerie[] {
-    console.log(`💰 Traitement de ${ledgerEntries.length} écritures pour la trésorerie...`)
-    
-    // Pour l'instant, nous utilisons une approche simplifiée
-    // Dans une vraie implémentation, nous analyserions les écritures pour identifier les flux de trésorerie
-    
-    console.log(`📋 Écritures comptables trouvées: ${ledgerEntries.length}`)
-    console.log(`⚠️ Note: Les montants de trésorerie sont estimés`)
-    
-    // Estimation basée sur le nombre d'écritures
-    const soldeEstime = ledgerEntries.length * 100 // Estimation 100€ par écriture
-    
-    // Créer les 12 derniers mois
-    const result: PennylaneTresorerie[] = []
-    const currentDate = new Date()
-    
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
-      const period = date.toISOString().slice(0, 7) // Format YYYY-MM
-      
-      // Répartir le solde estimé sur 12 mois
-      const soldeMensuel = soldeEstime / 12
-      
-      result.push({
-        period,
-        solde_initial: soldeMensuel,
-        encaissements: soldeMensuel * 0.6, // Estimation
-        decaissements: soldeMensuel * 0.4, // Estimation
-        solde_final: soldeMensuel,
-        currency: 'EUR'
-      })
-    }
     
     return result
   },
@@ -478,19 +559,71 @@ export const pennylaneApi = {
       
       console.log(`📊 Récupération des données du mois précédent: ${prevMonthStr}...`)
       
-      const startDate = `${prevYear}-${prevMonth}-01`
-      const endDate = `${prevYear}-${prevMonth}-31`
+      // Récupérer toutes les écritures comptables
+      const ledgerEntries = await getLedgerEntries(1, 1000)
       
-      // Récupérer le trial balance pour le mois précédent
-      const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
-      
-      if (!trialBalance.items || trialBalance.items.length === 0) {
-        console.log(`⚠️ Aucune donnée trouvée pour le mois précédent ${prevMonthStr}`)
+      if (!ledgerEntries || !ledgerEntries.items || ledgerEntries.items.length === 0) {
+        console.log(`⚠️ Aucune écriture comptable trouvée pour le mois précédent ${prevMonthStr}`)
         return null
       }
       
-      console.log(`📋 ${trialBalance.items.length} comptes récupérés du mois précédent`)
-      return trialBalance
+      // Filtrer les écritures par mois précédent
+      const startDate = new Date(prevYear, parseInt(prevMonth) - 1, 1)
+      const endDate = new Date(prevYear, parseInt(prevMonth), 0) // Dernier jour du mois
+      
+      const entriesForPrevMonth = ledgerEntries.items.filter((entry: any) => {
+        if (!entry.date) return false
+        const entryDate = new Date(entry.date)
+        return entryDate >= startDate && entryDate <= endDate
+      })
+      
+      if (entriesForPrevMonth.length === 0) {
+        console.log(`⚠️ Aucune écriture trouvée pour le mois précédent ${prevMonthStr}`)
+        return null
+      }
+      
+      console.log(`📋 ${entriesForPrevMonth.length} écritures trouvées pour le mois précédent ${prevMonthStr}`)
+      
+      // Calculer les soldes des comptes pour le mois précédent
+      const accountBalances: { [key: string]: { debits: number, credits: number } } = {}
+      
+      entriesForPrevMonth.forEach((entry: any) => {
+        if (entry.lines && Array.isArray(entry.lines)) {
+          entry.lines.forEach((line: any) => {
+            if (line.account_number) {
+              const accountNum = line.account_number
+              if (!accountBalances[accountNum]) {
+                accountBalances[accountNum] = { debits: 0, credits: 0 }
+              }
+              
+              const amount = parseFloat(line.amount) || 0
+              if (amount > 0) {
+                accountBalances[accountNum].credits += amount
+              } else {
+                accountBalances[accountNum].debits += Math.abs(amount)
+              }
+            }
+          })
+        }
+      })
+      
+      // Créer un objet similaire au trial balance pour la compatibilité
+      const trialBalanceData: TrialBalanceResponse = {
+        items: Object.entries(accountBalances).map(([number, balances]) => ({
+          number,
+          formatted_number: number,
+          label: `Compte ${number}`,
+          debits: balances.debits.toString(),
+          credits: balances.credits.toString()
+        })),
+        total_pages: 1,
+        current_page: 1,
+        per_page: 1000,
+        total_items: Object.keys(accountBalances).length
+      }
+      
+      console.log(`📊 ${trialBalanceData.items.length} comptes calculés pour le mois précédent`)
+      return trialBalanceData
       
     } catch (error) {
       console.error('Erreur lors de la récupération des données du mois précédent:', error)

@@ -3,6 +3,7 @@ import { ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 interface KPICardProps {
   title: string
+  subtitle?: string
   value: string
   change: number
   changeType: 'increase' | 'decrease' | 'neutral'
@@ -12,6 +13,7 @@ interface KPICardProps {
 
 const KPICard: React.FC<KPICardProps> = ({ 
   title, 
+  subtitle,
   value, 
   change, 
   changeType, 
@@ -38,7 +40,10 @@ const KPICard: React.FC<KPICardProps> = ({
     <div className={`kpi-card ${bgColorClasses[color]} p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex-1">
-          <p className="kpi-label text-sm font-medium text-gray-600 mb-2">{title}</p>
+          <p className="kpi-label text-sm font-medium text-gray-600 mb-1">{title}</p>
+          {subtitle && (
+            <p className="kpi-subtitle text-xs text-gray-500 mb-2">{subtitle}</p>
+          )}
           <p className={`kpi-value ${colorClasses[color]} text-3xl font-bold mb-3`}>
             {value}
           </p>

@@ -111,7 +111,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <KPICard
-            title="CA Net"
+            title="Ventes"
+            subtitle="Chiffre d'affaires net"
             value={kpis && kpis.hasData && kpis.chiffre_affaires !== null ? formatCurrency(kpis.chiffre_affaires) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.growth !== null ? Math.abs(kpis.growth) : 0}
             changeType={kpis && kpis.hasData && kpis.growth !== null && kpis.growth >= 0 ? 'increase' : 'decrease'}
@@ -119,7 +120,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color="green"
           />
           <KPICard
-            title="Total Produits"
+            title="Revenus Totaux"
+            subtitle="Tous les produits"
             value={kpis && kpis.hasData && kpis.total_produits_exploitation !== null ? formatCurrency(kpis.total_produits_exploitation) : 'Aucune donnée'}
             change={0}
             changeType="neutral"
@@ -127,7 +129,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color="green"
           />
           <KPICard
-            title="Charges"
+            title="Achats & Charges"
+            subtitle="Coûts d'exploitation"
             value={kpis && kpis.hasData && kpis.charges !== null ? formatCurrency(kpis.charges) : 'Aucune donnée'}
             change={0}
             changeType="neutral"
@@ -135,7 +138,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             color="red"
           />
           <KPICard
-            title="Résultat Net"
+            title="Bénéfice"
+            subtitle="Résultat net"
             value={kpis && kpis.hasData && kpis.resultat_net !== null ? formatCurrency(kpis.resultat_net) : 'Aucune donnée'}
             change={0}
             changeType="neutral"
@@ -144,6 +148,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           />
           <KPICard
             title="Trésorerie"
+            subtitle="Liquidités disponibles"
             value={kpis && kpis.hasData && kpis.solde_tresorerie !== null ? formatCurrency(kpis.solde_tresorerie) : 'Aucune donnée'}
             change={0}
             changeType="neutral"
