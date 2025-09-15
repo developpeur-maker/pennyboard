@@ -8,11 +8,11 @@ export default async function handler(req, res) {
   try {
     console.log('🔍 Test de l\'endpoint trial_balance v2...');
     
-    // Paramètres requis pour l'endpoint trial_balance - Test 2025 (septembre avec activité)
-    const periodStart = '2025-09-01';
-    const periodEnd = '2025-09-30';
-    const page = 1;
-    const perPage = 1000; // Récupérer plus de comptes par page
+    // Récupérer les paramètres depuis la requête (avec valeurs par défaut)
+    const periodStart = req.query.period_start || '2025-09-01';
+    const periodEnd = req.query.period_end || '2025-09-30';
+    const page = parseInt(req.query.page) || 1;
+    const perPage = parseInt(req.query.per_page) || 1000;
     
     const baseUrl = 'https://app.pennylane.com/api/external/v2';
     const endpoint = `/trial_balance?period_start=${periodStart}&period_end=${periodEnd}&page=${page}&per_page=${perPage}`;

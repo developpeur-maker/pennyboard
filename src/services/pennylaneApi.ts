@@ -185,23 +185,28 @@ export const pennylaneApi = {
     }
   },
 
-  // Récupérer le résultat comptable basé sur les écritures filtrées par mois
+  // Récupérer le résultat comptable basé sur le trial balance
   async getResultatComptable(selectedMonth: string = '2025-09'): Promise<PennylaneResultatComptable[]> {
     try {
       console.log(`📊 Récupération du résultat comptable pour ${selectedMonth}...`)
       
-      // Récupérer toutes les écritures comptables
-      const ledgerEntries = await getLedgerEntries(1, 1000)
+      // Convertir le mois sélectionné en dates
+      const [year, month] = selectedMonth.split('-')
+      const startDate = `${year}-${month}-01`
+      const endDate = `${year}-${month}-31`
       
-      if (!ledgerEntries || !ledgerEntries.items || ledgerEntries.items.length === 0) {
-        console.log('⚠️ Aucune écriture comptable trouvée')
+      // Récupérer le trial balance pour le mois sélectionné
+      const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
+      
+      if (!trialBalance.items || trialBalance.items.length === 0) {
+        console.log('⚠️ Aucune donnée de trial balance trouvée')
         return []
       }
       
-      console.log(`📋 ${ledgerEntries.items.length} écritures comptables récupérées`)
+      console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance`)
       
-      // Filtrer les écritures par mois et traiter les données
-      return this.processLedgerEntriesByMonth(ledgerEntries, selectedMonth)
+      // Traiter les données pour le mois sélectionné
+      return this.processTrialBalanceData(trialBalance, selectedMonth)
       
     } catch (error) {
       console.error('Erreur lors de la récupération du résultat comptable:', error)
@@ -493,83 +498,19 @@ export const pennylaneApi = {
       
       console.log(`📊 Récupération des données du mois précédent: ${prevMonthStr}...`)
       
-      // Récupérer toutes les écritures comptables
-      const ledgerEntries = await getLedgerEntries(1, 1000)
+      const startDate = `${prevYear}-${prevMonth}-01`
+      const endDate = `${prevYear}-${prevMonth}-31`
       
-      if (!ledgerEntries || !ledgerEntries.items || ledgerEntries.items.length === 0) {
-        console.log(`⚠️ Aucune écriture comptable trouvée pour le mois précédent ${prevMonthStr}`)
+      // Récupérer le trial balance pour le mois précédent
+      const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
+      
+      if (!trialBalance.items || trialBalance.items.length === 0) {
+        console.log(`⚠️ Aucune donnée trouvée pour le mois précédent ${prevMonthStr}`)
         return null
       }
       
-      // Filtrer les écritures par mois précédent
-      const startDate = new Date(prevYear, parseInt(prevMonth) - 1, 1)
-      const endDate = new Date(prevYear, parseInt(prevMonth), 0) // Dernier jour du mois
-      
-      const entriesForPrevMonth = ledgerEntries.items.filter((entry: any) => {
-        if (!entry.date) return false
-        const entryDate = new Date(entry.date)
-        return entryDate >= startDate && entryDate <= endDate
-      })
-      
-      if (entriesForPrevMonth.length === 0) {
-        console.log(`⚠️ Aucune écriture trouvée pour le mois précédent ${prevMonthStr}`)
-        return null
-      }
-      
-      console.log(`📋 ${entriesForPrevMonth.length} écritures trouvées pour le mois précédent ${prevMonthStr}`)
-      
-      // Créer un objet similaire au trial balance pour la compatibilité
-      // Estimation basée sur le nombre d'écritures
-      const baseAmount = entriesForPrevMonth.length * 1000
-      
-      const trialBalanceData: TrialBalanceResponse = {
-        items: [
-          // Comptes de produits (classe 7)
-          {
-            number: '7010000',
-            formatted_number: '7010000',
-            label: 'Vente de marchandises',
-            debits: '0',
-            credits: (baseAmount * 0.1).toString()
-          },
-          {
-            number: '7060000',
-            formatted_number: '7060000',
-            label: 'Production vendue de services',
-            debits: '0',
-            credits: (baseAmount * 0.7).toString()
-          },
-          // Comptes de charges (classe 6)
-          {
-            number: '6070000',
-            formatted_number: '6070000',
-            label: 'Achats de marchandises',
-            debits: (baseAmount * 0.2).toString(),
-            credits: '0'
-          },
-          {
-            number: '6250000',
-            formatted_number: '6250000',
-            label: 'Autres achats et charges externes',
-            debits: (baseAmount * 0.3).toString(),
-            credits: '0'
-          },
-          {
-            number: '6410000',
-            formatted_number: '6410000',
-            label: 'Salaires',
-            debits: (baseAmount * 0.1).toString(),
-            credits: '0'
-          }
-        ],
-        total_pages: 1,
-        current_page: 1,
-        per_page: 1000,
-        total_items: 5
-      }
-      
-      console.log(`📊 ${trialBalanceData.items.length} comptes simulés pour le mois précédent`)
-      return trialBalanceData
+      console.log(`📋 ${trialBalance.items.length} comptes récupérés du mois précédent`)
+      return trialBalance
       
     } catch (error) {
       console.error('Erreur lors de la récupération des données du mois précédent:', error)
