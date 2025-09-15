@@ -498,6 +498,86 @@ export const pennylaneApi = {
     }
   },
 
+  // Récupérer les exercices fiscaux disponibles
+  async getFiscalYears(): Promise<Array<{id: string, name: string, start_date: string, end_date: string}>> {
+    try {
+      console.log('📅 Récupération des exercices fiscaux...')
+      const response = await apiCall<{success: boolean, raw_data: any}>(`fiscal_years`)
+      
+      if (response.success && response.raw_data) {
+        const fiscalYears = response.raw_data.items || response.raw_data
+        console.log(`📋 ${fiscalYears.length} exercices fiscaux trouvés`)
+        return fiscalYears.map((fy: any) => ({
+          id: fy.id || fy.name,
+          name: fy.name || `${fy.start_date} - ${fy.end_date}`,
+          start_date: fy.start_date,
+          end_date: fy.end_date
+        }))
+      }
+      
+      // Fallback : créer des exercices par défaut
+      const currentYear = new Date().getFullYear()
+      return [
+        {
+          id: `${currentYear}`,
+          name: `Exercice ${currentYear}`,
+          start_date: `${currentYear}-01-01`,
+          end_date: `${currentYear}-12-31`
+        },
+        {
+          id: `${currentYear - 1}`,
+          name: `Exercice ${currentYear - 1}`,
+          start_date: `${currentYear - 1}-01-01`,
+          end_date: `${currentYear - 1}-12-31`
+        }
+      ]
+      
+    } catch (error) {
+      console.error('Erreur lors de la récupération des exercices fiscaux:', error)
+      // Fallback en cas d'erreur
+      const currentYear = new Date().getFullYear()
+      return [
+        {
+          id: `${currentYear}`,
+          name: `Exercice ${currentYear}`,
+          start_date: `${currentYear}-01-01`,
+          end_date: `${currentYear}-12-31`
+        }
+      ]
+    }
+  },
+
+  // Récupérer les données du trial balance pour un exercice complet
+  async getTrialBalanceForFiscalYear(fiscalYearId: string): Promise<TrialBalanceResponse> {
+    try {
+      console.log(`📊 Récupération des données trial balance pour l'exercice ${fiscalYearId}...`)
+      
+      // Récupérer les exercices fiscaux pour obtenir les dates
+      const fiscalYears = await this.getFiscalYears()
+      const fiscalYear = fiscalYears.find(fy => fy.id === fiscalYearId)
+      
+      if (!fiscalYear) {
+        throw new Error(`Exercice fiscal ${fiscalYearId} non trouvé`)
+      }
+      
+      console.log(`📅 Période: ${fiscalYear.start_date} à ${fiscalYear.end_date}`)
+      
+      // Récupérer le trial balance pour l'exercice complet
+      const trialBalance = await getTrialBalance(fiscalYear.start_date, fiscalYear.end_date, 1, 1000)
+      
+      if (!trialBalance.items || trialBalance.items.length === 0) {
+        throw new Error('Aucune donnée de trial balance trouvée pour cet exercice')
+      }
+      
+      console.log(`📋 ${trialBalance.items.length} comptes récupérés pour l'exercice ${fiscalYearId}`)
+      return trialBalance
+      
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données trial balance pour l\'exercice:', error)
+      throw error
+    }
+  },
+
   // Récupérer les KPIs consolidés
   async getKPIs(selectedMonth: string = '2025-09'): Promise<{
     chiffre_affaires: number | null
@@ -703,11 +783,43 @@ export const pennylaneApi = {
       getClassBalance('626', trialBalance) + 
       getClassBalance('627', trialBalance) + 
       getClassBalance('628', trialBalance)
-    const impots_taxes_current = getClassBalance('635', trialBalance)
-    const salaires_current = getClassBalance('641', trialBalance)
-    const cotisations_sociales_current = getClassBalance('645', trialBalance)
+    // Impôts, taxes : comptes 631 à 637
+    const impots_taxes_current = getClassBalance('631', trialBalance) + 
+      getClassBalance('632', trialBalance) + 
+      getClassBalance('633', trialBalance) + 
+      getClassBalance('634', trialBalance) + 
+      getClassBalance('635', trialBalance) + 
+      getClassBalance('636', trialBalance) + 
+      getClassBalance('637', trialBalance)
+    
+    // Salaires : comptes 641 à 644
+    const salaires_current = getClassBalance('641', trialBalance) + 
+      getClassBalance('642', trialBalance) + 
+      getClassBalance('643', trialBalance) + 
+      getClassBalance('644', trialBalance)
+    
+    // Cotisations sociales : comptes 645 à 647
+    const cotisations_sociales_current = getClassBalance('645', trialBalance) + 
+      getClassBalance('646', trialBalance) + 
+      getClassBalance('647', trialBalance)
+    
     const dotations_amortissements_current = getClassBalance('681', trialBalance)
-    const autres_charges_current = getClassBalance('67', trialBalance)
+    
+    // Autres charges : comptes 654 à 667
+    const autres_charges_current = getClassBalance('654', trialBalance) + 
+      getClassBalance('655', trialBalance) + 
+      getClassBalance('656', trialBalance) + 
+      getClassBalance('657', trialBalance) + 
+      getClassBalance('658', trialBalance) + 
+      getClassBalance('659', trialBalance) + 
+      getClassBalance('660', trialBalance) + 
+      getClassBalance('661', trialBalance) + 
+      getClassBalance('662', trialBalance) + 
+      getClassBalance('663', trialBalance) + 
+      getClassBalance('664', trialBalance) + 
+      getClassBalance('665', trialBalance) + 
+      getClassBalance('666', trialBalance) + 
+      getClassBalance('667', trialBalance)
     const total_charges_exploitation_current = getClassBalance('6', trialBalance)
 
     // CHARGES D'EXPLOITATION - Mois précédent
@@ -738,30 +850,131 @@ export const pennylaneApi = {
       getClassBalance('626', previousTrialBalance) + 
       getClassBalance('627', previousTrialBalance) + 
       getClassBalance('628', previousTrialBalance) : 0
-    const impots_taxes_previous = previousTrialBalance ? getClassBalance('635', previousTrialBalance) : 0
-    const salaires_previous = previousTrialBalance ? getClassBalance('641', previousTrialBalance) : 0
-    const cotisations_sociales_previous = previousTrialBalance ? getClassBalance('645', previousTrialBalance) : 0
+    // Impôts, taxes : comptes 631 à 637
+    const impots_taxes_previous = previousTrialBalance ? 
+      getClassBalance('631', previousTrialBalance) + 
+      getClassBalance('632', previousTrialBalance) + 
+      getClassBalance('633', previousTrialBalance) + 
+      getClassBalance('634', previousTrialBalance) + 
+      getClassBalance('635', previousTrialBalance) + 
+      getClassBalance('636', previousTrialBalance) + 
+      getClassBalance('637', previousTrialBalance) : 0
+    
+    // Salaires : comptes 641 à 644
+    const salaires_previous = previousTrialBalance ? 
+      getClassBalance('641', previousTrialBalance) + 
+      getClassBalance('642', previousTrialBalance) + 
+      getClassBalance('643', previousTrialBalance) + 
+      getClassBalance('644', previousTrialBalance) : 0
+    
+    // Cotisations sociales : comptes 645 à 647
+    const cotisations_sociales_previous = previousTrialBalance ? 
+      getClassBalance('645', previousTrialBalance) + 
+      getClassBalance('646', previousTrialBalance) + 
+      getClassBalance('647', previousTrialBalance) : 0
+    
     const dotations_amortissements_previous = previousTrialBalance ? getClassBalance('681', previousTrialBalance) : 0
-    const autres_charges_previous = previousTrialBalance ? getClassBalance('67', previousTrialBalance) : 0
+    
+    // Autres charges : comptes 654 à 667
+    const autres_charges_previous = previousTrialBalance ? 
+      getClassBalance('654', previousTrialBalance) + 
+      getClassBalance('655', previousTrialBalance) + 
+      getClassBalance('656', previousTrialBalance) + 
+      getClassBalance('657', previousTrialBalance) + 
+      getClassBalance('658', previousTrialBalance) + 
+      getClassBalance('659', previousTrialBalance) + 
+      getClassBalance('660', previousTrialBalance) + 
+      getClassBalance('661', previousTrialBalance) + 
+      getClassBalance('662', previousTrialBalance) + 
+      getClassBalance('663', previousTrialBalance) + 
+      getClassBalance('664', previousTrialBalance) + 
+      getClassBalance('665', previousTrialBalance) + 
+      getClassBalance('666', previousTrialBalance) + 
+      getClassBalance('667', previousTrialBalance) : 0
     const total_charges_exploitation_previous = previousTrialBalance ? getClassBalance('6', previousTrialBalance) : 0
 
     // RÉSULTAT D'EXPLOITATION
     const resultat_exploitation_current = total_produits_exploitation_current - total_charges_exploitation_current
     const resultat_exploitation_previous = total_produits_exploitation_previous - total_charges_exploitation_previous
 
-    // Récupérer les détails des comptes pour les charges externes
+    // Récupérer les détails des comptes pour tous les postes
     const autres_achats_charges_externes_details = this.getAccountDetails(trialBalance, [
       '604', '605', '606', '608', '609', '610', '611', '612', '613', '614', '615', '616', '617', '618', '619', '620', '621', '622', '623', '624', '625', '626', '627', '628'
+    ])
+    
+    const impots_taxes_details = this.getAccountDetails(trialBalance, [
+      '631', '632', '633', '634', '635', '636', '637'
+    ])
+    
+    const salaires_details = this.getAccountDetails(trialBalance, [
+      '641', '642', '643', '644'
+    ])
+    
+    const cotisations_sociales_details = this.getAccountDetails(trialBalance, [
+      '645', '646', '647'
+    ])
+    
+    const autres_charges_details = this.getAccountDetails(trialBalance, [
+      '654', '655', '656', '657', '658', '659', '660', '661', '662', '663', '664', '665', '666', '667'
     ])
 
     // Mettre à jour les détails avec les données du mois précédent si disponibles
     if (previousTrialBalance) {
-      const previousDetails = this.getAccountDetails(previousTrialBalance, [
+      const previousAutresAchatsDetails = this.getAccountDetails(previousTrialBalance, [
         '604', '605', '606', '608', '609', '610', '611', '612', '613', '614', '615', '616', '617', '618', '619', '620', '621', '622', '623', '624', '625', '626', '627', '628'
       ])
       
+      const previousImpotsDetails = this.getAccountDetails(previousTrialBalance, [
+        '631', '632', '633', '634', '635', '636', '637'
+      ])
+      
+      const previousSalairesDetails = this.getAccountDetails(previousTrialBalance, [
+        '641', '642', '643', '644'
+      ])
+      
+      const previousCotisationsDetails = this.getAccountDetails(previousTrialBalance, [
+        '645', '646', '647'
+      ])
+      
+      const previousAutresChargesDetails = this.getAccountDetails(previousTrialBalance, [
+        '654', '655', '656', '657', '658', '659', '660', '661', '662', '663', '664', '665', '666', '667'
+      ])
+      
+      // Mettre à jour les variations pour chaque poste
       autres_achats_charges_externes_details.forEach(detail => {
-        const prevDetail = previousDetails.find(p => p.number === detail.number)
+        const prevDetail = previousAutresAchatsDetails.find(p => p.number === detail.number)
+        if (prevDetail) {
+          detail.previous = prevDetail.current
+          detail.variation = detail.current - detail.previous
+        }
+      })
+      
+      impots_taxes_details.forEach(detail => {
+        const prevDetail = previousImpotsDetails.find(p => p.number === detail.number)
+        if (prevDetail) {
+          detail.previous = prevDetail.current
+          detail.variation = detail.current - detail.previous
+        }
+      })
+      
+      salaires_details.forEach(detail => {
+        const prevDetail = previousSalairesDetails.find(p => p.number === detail.number)
+        if (prevDetail) {
+          detail.previous = prevDetail.current
+          detail.variation = detail.current - detail.previous
+        }
+      })
+      
+      cotisations_sociales_details.forEach(detail => {
+        const prevDetail = previousCotisationsDetails.find(p => p.number === detail.number)
+        if (prevDetail) {
+          detail.previous = prevDetail.current
+          detail.variation = detail.current - detail.previous
+        }
+      })
+      
+      autres_charges_details.forEach(detail => {
+        const prevDetail = previousAutresChargesDetails.find(p => p.number === detail.number)
         if (prevDetail) {
           detail.previous = prevDetail.current
           detail.variation = detail.current - detail.previous
@@ -795,11 +1008,23 @@ export const pennylaneApi = {
           ...createComparison(autres_achats_charges_externes_current, autres_achats_charges_externes_previous),
           details: autres_achats_charges_externes_details
         },
-        impots_taxes: createComparison(impots_taxes_current, impots_taxes_previous),
-        salaires: createComparison(salaires_current, salaires_previous),
-        cotisations_sociales: createComparison(cotisations_sociales_current, cotisations_sociales_previous),
+        impots_taxes: {
+          ...createComparison(impots_taxes_current, impots_taxes_previous),
+          details: impots_taxes_details
+        },
+        salaires: {
+          ...createComparison(salaires_current, salaires_previous),
+          details: salaires_details
+        },
+        cotisations_sociales: {
+          ...createComparison(cotisations_sociales_current, cotisations_sociales_previous),
+          details: cotisations_sociales_details
+        },
         dotations_amortissements: createComparison(dotations_amortissements_current, dotations_amortissements_previous),
-        autres_charges: createComparison(autres_charges_current, autres_charges_previous),
+        autres_charges: {
+          ...createComparison(autres_charges_current, autres_charges_previous),
+          details: autres_charges_details
+        },
         total_charges_exploitation: createComparison(total_charges_exploitation_current, total_charges_exploitation_previous)
       },
       resultat_exploitation: createComparison(resultat_exploitation_current, resultat_exploitation_previous)

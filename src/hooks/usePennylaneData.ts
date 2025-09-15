@@ -16,16 +16,18 @@ interface UsePennylaneDataReturn {
   resultatComptable: PennylaneResultatComptable[]
   tresorerie: PennylaneTresorerie[]
   incomeStatement: any | null
+  fiscalYears: Array<{id: string, name: string, start_date: string, end_date: string}>
   loading: boolean
   error: string | null
   refetch: () => void
 }
 
-export const usePennylaneData = (selectedMonth: string = '2025-09'): UsePennylaneDataReturn => {
+export const usePennylaneData = (selectedMonth: string = '2025-09', selectedFiscalYear?: string): UsePennylaneDataReturn => {
   const [kpis, setKpis] = useState<KPIData | null>(null)
   const [resultatComptable, setResultatComptable] = useState<PennylaneResultatComptable[]>([])
   const [tresorerie, setTresorerie] = useState<PennylaneTresorerie[]>([])
   const [incomeStatement, setIncomeStatement] = useState<any | null>(null)
+  const [fiscalYears, setFiscalYears] = useState<Array<{id: string, name: string, start_date: string, end_date: string}>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -44,13 +46,17 @@ export const usePennylaneData = (selectedMonth: string = '2025-09'): UsePennylan
 
       console.log('✅ Connexion réussie, chargement des données...')
 
+      // Charger les exercices fiscaux d'abord
+      const fiscalYearsData = await pennylaneApi.getFiscalYears()
+      setFiscalYears(fiscalYearsData)
+
       // Charger toutes les données en parallèle
       const [kpisData, resultatData, tresorerieData, trialBalanceData, previousTrialBalanceData] = await Promise.all([
         pennylaneApi.getKPIs(selectedMonth),
         pennylaneApi.getResultatComptable(selectedMonth),
         pennylaneApi.getTresorerie(selectedMonth),
-        pennylaneApi.getTrialBalanceData(selectedMonth),
-        pennylaneApi.getPreviousMonthData(selectedMonth)
+        selectedFiscalYear ? pennylaneApi.getTrialBalanceForFiscalYear(selectedFiscalYear) : pennylaneApi.getTrialBalanceData(selectedMonth),
+        selectedFiscalYear ? null : pennylaneApi.getPreviousMonthData(selectedMonth)
       ])
 
       // Calculer le compte de résultat avec comparaisons
@@ -70,13 +76,14 @@ export const usePennylaneData = (selectedMonth: string = '2025-09'): UsePennylan
 
   useEffect(() => {
     fetchData()
-  }, [selectedMonth])
+  }, [selectedMonth, selectedFiscalYear])
 
   return {
     kpis,
     resultatComptable,
     tresorerie,
     incomeStatement,
+    fiscalYears,
     loading,
     error,
     refetch: fetchData

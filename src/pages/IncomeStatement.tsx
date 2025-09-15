@@ -13,8 +13,10 @@ interface IncomeStatementProps {
 
 const IncomeStatement: React.FC<IncomeStatementProps> = ({ onNavigate }) => {
   const [selectedMonth, setSelectedMonth] = useState('2025-09')
+  const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>('')
+  const [viewMode, setViewMode] = useState<'month' | 'fiscal-year'>('month')
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
-  const { loading, error, refetch, incomeStatement } = usePennylaneData(selectedMonth)
+  const { loading, error, refetch, incomeStatement, fiscalYears } = usePennylaneData(selectedMonth, selectedFiscalYear)
 
   // Fonction pour formater les montants sans devise (pour les tableaux)
   const formatAmount = (amount: number) => {
@@ -184,25 +186,71 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ onNavigate }) => {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {/* Sélecteur de mois */}
-          <div className="flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-gray-600" />
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
-            >
-              <option value="2025-09">Septembre 2025</option>
-              <option value="2025-08">Août 2025</option>
-              <option value="2025-07">Juillet 2025</option>
-              <option value="2025-06">Juin 2025</option>
-              <option value="2025-05">Mai 2025</option>
-              <option value="2025-04">Avril 2025</option>
-              <option value="2025-03">Mars 2025</option>
-              <option value="2025-02">Février 2025</option>
-              <option value="2025-01">Janvier 2025</option>
-            </select>
+          {/* Mode de vue */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Vue :</span>
+            <div className="flex rounded-lg shadow-sm">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-3 py-2 text-sm font-medium rounded-l-lg border ${
+                  viewMode === 'month'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Mensuel
+              </button>
+              <button
+                onClick={() => setViewMode('fiscal-year')}
+                className={`px-3 py-2 text-sm font-medium rounded-r-lg border ${
+                  viewMode === 'fiscal-year'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Exercice
+              </button>
+            </div>
           </div>
+
+          {/* Sélecteur selon le mode */}
+          {viewMode === 'month' ? (
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-gray-600" />
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
+              >
+                <option value="2025-09">Septembre 2025</option>
+                <option value="2025-08">Août 2025</option>
+                <option value="2025-07">Juillet 2025</option>
+                <option value="2025-06">Juin 2025</option>
+                <option value="2025-05">Mai 2025</option>
+                <option value="2025-04">Avril 2025</option>
+                <option value="2025-03">Mars 2025</option>
+                <option value="2025-02">Février 2025</option>
+                <option value="2025-01">Janvier 2025</option>
+              </select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-gray-600" />
+              <select
+                value={selectedFiscalYear}
+                onChange={(e) => setSelectedFiscalYear(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
+              >
+                <option value="">Sélectionner un exercice</option>
+                {fiscalYears.map((fy) => (
+                  <option key={fy.id} value={fy.id}>
+                    {fy.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <button
             onClick={refetch}
             className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -218,7 +266,15 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ onNavigate }) => {
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           {/* En-tête du tableau */}
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">Compte de Résultat - {getCurrentMonthName(selectedMonth)}</h2>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Compte de Résultat - {
+                viewMode === 'month' 
+                  ? getCurrentMonthName(selectedMonth)
+                  : selectedFiscalYear 
+                    ? fiscalYears.find(fy => fy.id === selectedFiscalYear)?.name || 'Exercice sélectionné'
+                    : 'Période sélectionnée'
+              }
+            </h2>
           </div>
 
           {/* Tableau du compte de résultat */}
@@ -230,10 +286,18 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ onNavigate }) => {
                     Postes
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {getCurrentMonthName(selectedMonth)}
+                    {viewMode === 'month' 
+                      ? getCurrentMonthName(selectedMonth)
+                      : selectedFiscalYear 
+                        ? fiscalYears.find(fy => fy.id === selectedFiscalYear)?.name || 'Exercice actuel'
+                        : 'Période actuelle'
+                    }
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {getPreviousMonthName(selectedMonth)}
+                    {viewMode === 'month' 
+                      ? getPreviousMonthName(selectedMonth)
+                      : 'Exercice précédent'
+                    }
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Variation (€)
@@ -281,11 +345,35 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({ onNavigate }) => {
                   'autres-achats-charges-externes',
                   true
                 )}
-                {renderTableRow('Impôts, taxes, et versements assimilés', incomeStatement?.charges.impots_taxes)}
-                {renderTableRow('Salaires', incomeStatement?.charges.salaires)}
-                {renderTableRow('Cotisations sociales', incomeStatement?.charges.cotisations_sociales)}
+                {renderTableRow(
+                  'Impôts, taxes, et versements assimilés', 
+                  incomeStatement?.charges.impots_taxes,
+                  false,
+                  'impots-taxes',
+                  true
+                )}
+                {renderTableRow(
+                  'Salaires', 
+                  incomeStatement?.charges.salaires,
+                  false,
+                  'salaires',
+                  true
+                )}
+                {renderTableRow(
+                  'Cotisations sociales', 
+                  incomeStatement?.charges.cotisations_sociales,
+                  false,
+                  'cotisations-sociales',
+                  true
+                )}
                 {renderTableRow('Dotations aux amortissements et aux provisions', incomeStatement?.charges.dotations_amortissements)}
-                {renderTableRow('Autres charges', incomeStatement?.charges.autres_charges)}
+                {renderTableRow(
+                  'Autres charges', 
+                  incomeStatement?.charges.autres_charges,
+                  false,
+                  'autres-charges',
+                  true
+                )}
                 {renderTableRow('TOTAL DES CHARGES D\'EXPLOITATION (II)', incomeStatement?.charges.total_charges_exploitation, true)}
                 {renderTableRow('RÉSULTAT D\'EXPLOITATION (I - II)', incomeStatement?.resultat_exploitation, true)}
               </tbody>
