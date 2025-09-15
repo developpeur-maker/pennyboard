@@ -116,7 +116,14 @@ async function apiCall<T>(endpoint: string): Promise<T> {
 export async function getLedgerEntries(page: number = 1, perPage: number = 100): Promise<any> {
   try {
     console.log(`📊 Récupération des ledger entries (page ${page})...`)
-    const response = await apiCall<{success: boolean, raw_data: any}>(`test-accounts?page=${page}&per_page=${perPage}`)
+    
+    // Construire les paramètres de requête de manière sécurisée
+    const params = new URLSearchParams({
+      page: page.toString(),
+      per_page: perPage.toString()
+    })
+    
+    const response = await apiCall<{success: boolean, raw_data: any}>(`test-accounts?${params.toString()}`)
     
     if (response.success && response.raw_data) {
       return response.raw_data
@@ -133,7 +140,16 @@ export async function getLedgerEntries(page: number = 1, perPage: number = 100):
 export async function getTrialBalance(periodStart: string = '2025-01-01', periodEnd: string = '2025-01-31', page: number = 1, perPage: number = 100): Promise<TrialBalanceResponse> {
   try {
     console.log(`📊 Récupération du trial balance (${periodStart} à ${periodEnd})...`)
-    const response = await apiCall<{success: boolean, raw_data: TrialBalanceResponse}>(`test-trial-balance?period_start=${periodStart}&period_end=${periodEnd}&page=${page}&per_page=${perPage}`)
+    
+    // Construire les paramètres de requête de manière sécurisée
+    const params = new URLSearchParams({
+      period_start: periodStart,
+      period_end: periodEnd,
+      page: page.toString(),
+      per_page: perPage.toString()
+    })
+    
+    const response = await apiCall<{success: boolean, raw_data: TrialBalanceResponse}>(`test-trial-balance?${params.toString()}`)
     
     if (response.success && response.raw_data) {
       return response.raw_data
