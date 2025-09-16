@@ -25,6 +25,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   }
   
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
+  const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
+  const [selectedYear, setSelectedYear] = useState('2025')
   const { kpis, loading, error, refetch } = usePennylaneData(selectedMonth)
 
   // Fonction pour obtenir le message de santé financière
@@ -96,24 +98,60 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          {/* Sélecteur de mois */}
+          {/* Toggle Vue mensuelle / annuelle */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'month'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Mois
+            </button>
+            <button
+              onClick={() => setViewMode('year')}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'year'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Année
+            </button>
+          </div>
+
+          {/* Sélecteur conditionnel */}
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-gray-600" />
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
-            >
-              <option value="2025-09">Septembre 2025</option>
-              <option value="2025-08">Août 2025</option>
-              <option value="2025-07">Juillet 2025</option>
-              <option value="2025-06">Juin 2025</option>
-              <option value="2025-05">Mai 2025</option>
-              <option value="2025-04">Avril 2025</option>
-              <option value="2025-03">Mars 2025</option>
-              <option value="2025-02">Février 2025</option>
-              <option value="2025-01">Janvier 2025</option>
-            </select>
+            {viewMode === 'month' ? (
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
+              >
+                <option value="2025-09">Septembre 2025</option>
+                <option value="2025-08">Août 2025</option>
+                <option value="2025-07">Juillet 2025</option>
+                <option value="2025-06">Juin 2025</option>
+                <option value="2025-05">Mai 2025</option>
+                <option value="2025-04">Avril 2025</option>
+                <option value="2025-03">Mars 2025</option>
+                <option value="2025-02">Février 2025</option>
+                <option value="2025-01">Janvier 2025</option>
+              </select>
+            ) : (
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
+              >
+                <option value="2025">Année 2025</option>
+                <option value="2024">Année 2024</option>
+                <option value="2023">Année 2023</option>
+              </select>
+            )}
           </div>
           <button
             onClick={() => onNavigate?.('income-statement')}
@@ -148,9 +186,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* KPI Cards - Layout centré et propre */}
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+      {/* KPI Cards - Layout élargi pour mieux remplir l'écran */}
+      <div className="w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <KPICard
             title="Ventes"
             subtitle="Chiffre d'affaires net"

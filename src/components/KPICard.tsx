@@ -37,19 +37,19 @@ const KPICard: React.FC<KPICardProps> = ({
   }
 
   return (
-    <div className={`kpi-card ${bgColorClasses[color]} p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300`}>
-      <div className="flex items-center justify-between mb-4">
+    <div className={`kpi-card ${bgColorClasses[color]} p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 min-h-[220px] flex flex-col justify-between`}>
+      <div className="flex items-start justify-between mb-6">
         <div className="flex-1">
-          <p className="kpi-label text-sm font-medium text-gray-600 mb-1">{title}</p>
+          <p className="kpi-label text-lg font-semibold text-gray-700 mb-2">{title}</p>
           {subtitle && (
-            <p className="kpi-subtitle text-xs text-gray-500 mb-2">{subtitle}</p>
+            <p className="kpi-subtitle text-sm text-gray-500 mb-4">{subtitle}</p>
           )}
-          <p className={`kpi-value ${colorClasses[color]} text-3xl font-bold mb-3`}>
+          <p className={`kpi-value ${colorClasses[color]} text-4xl font-bold mb-4 leading-tight`}>
             {value}
           </p>
         </div>
         {icon && (
-          <div className={`p-3 rounded-xl ${bgColorClasses[color]} bg-opacity-50`}>
+          <div className={`p-4 rounded-xl ${bgColorClasses[color]} bg-opacity-50 ml-4`}>
             {icon}
           </div>
         )}
