@@ -113,7 +113,7 @@ async function apiCall<T>(endpoint: string): Promise<T> {
 }
 
 // Fonction pour récupérer les ledger entries (qui contiennent les informations comptables)
-export async function getLedgerEntries(page: number = 1, perPage: number = 100): Promise<any> {
+export async function getLedgerEntries(page: number = 1, perPage: number = 1000): Promise<any> {
   try {
     console.log(`📊 Récupération des ledger entries (page ${page})...`)
     
@@ -137,7 +137,7 @@ export async function getLedgerEntries(page: number = 1, perPage: number = 100):
 }
 
 // Fonction pour récupérer le trial balance (balance des comptes)
-export async function getTrialBalance(periodStart: string = '2025-01-01', periodEnd: string = '2025-01-31', page: number = 1, perPage: number = 100): Promise<TrialBalanceResponse> {
+export async function getTrialBalance(periodStart: string = '2025-01-01', periodEnd: string = '2025-01-31', page: number = 1, perPage: number = 1000): Promise<TrialBalanceResponse> {
   try {
     console.log(`📊 Récupération du trial balance (${periodStart} à ${periodEnd})...`)
     
@@ -160,6 +160,23 @@ export async function getTrialBalance(periodStart: string = '2025-01-01', period
     console.error('❌ Erreur lors de la récupération du trial balance:', error)
     throw error
   }
+}
+
+// Fonctions utilitaires pour les calculs
+function calculateProfitabilityRatio(ca: number, resultat: number): { ratio: number, message: string } {
+  if (ca === 0) return { ratio: 0, message: "Aucun chiffre d'affaires" };
+  
+  const ratio = Math.round((resultat / ca) * 100);
+  
+  let message = "";
+  if (ratio > 25) message = "Excellente rentabilité ! 🎉";
+  else if (ratio > 15) message = "Très bonne rentabilité 👍";
+  else if (ratio > 10) message = "Bonne rentabilité ✅";
+  else if (ratio > 5) message = "Rentabilité correcte 📊";
+  else if (ratio > 0) message = "Rentabilité faible ⚠️";
+  else message = "Activité déficitaire 🔴";
+  
+  return { ratio, message };
 }
 
 // Services API
@@ -623,6 +640,10 @@ export const pennylaneApi = {
     solde_tresorerie: number | null
     growth: number | null
     hasData: boolean
+    rentabilite: {
+      ratio: number
+      message: string
+    } | null
   }> {
     try {
       console.log(`📊 Récupération des KPIs pour ${selectedMonth}...`)
@@ -640,7 +661,8 @@ export const pennylaneApi = {
           resultat_net: null,
           solde_tresorerie: null,
           growth: null,
-          hasData: false
+          hasData: false,
+          rentabilite: null
         }
       }
       
@@ -652,6 +674,12 @@ export const pennylaneApi = {
       // Dans une vraie implémentation, nous récupérerions les données de plusieurs mois
       let growth = null
       
+      // Calculer le ratio de rentabilité
+      const rentabilite = calculateProfitabilityRatio(
+        currentResultat.chiffre_affaires || 0,
+        currentResultat.resultat_net || 0
+      );
+
       return {
         chiffre_affaires: currentResultat.chiffre_affaires,
         total_produits_exploitation: currentResultat.total_produits_exploitation,
@@ -659,7 +687,8 @@ export const pennylaneApi = {
         resultat_net: currentResultat.resultat_net,
         solde_tresorerie: currentTresorerie.solde_final,
         growth,
-        hasData: true
+        hasData: true,
+        rentabilite
       }
       
     } catch (error) {
@@ -671,7 +700,8 @@ export const pennylaneApi = {
         resultat_net: null,
         solde_tresorerie: null,
         growth: null,
-        hasData: false
+        hasData: false,
+        rentabilite: null
       }
     }
   },

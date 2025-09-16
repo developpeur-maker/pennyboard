@@ -12,7 +12,15 @@ interface IncomeStatementProps {
 }
 
 const IncomeStatement: React.FC<IncomeStatementProps> = ({ onNavigate }) => {
-  const [selectedMonth, setSelectedMonth] = useState('2025-09')
+  // Obtenir le mois en cours par défaut (format YYYY-MM)
+  const getCurrentMonth = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = (now.getMonth() + 1).toString().padStart(2, '0')
+    return `${year}-${month}`
+  }
+  
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>('')
   const [viewMode, setViewMode] = useState<'month' | 'fiscal-year'>('month')
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())

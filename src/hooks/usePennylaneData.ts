@@ -9,6 +9,10 @@ interface KPIData {
   solde_tresorerie: number | null
   growth: number | null
   hasData: boolean
+  rentabilite: {
+    ratio: number
+    message: string
+  } | null
 }
 
 interface UsePennylaneDataReturn {

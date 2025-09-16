@@ -1,6 +1,12 @@
 const PENNYLANE_API_KEY = process.env.VITE_PENNYLANE_API_KEY;
 
 export default async function handler(req, res) {
+  // Headers de sécurité
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -8,12 +14,43 @@ export default async function handler(req, res) {
   try {
     console.log('🔍 Test de l\'endpoint trial_balance v2...');
     
-    // Récupérer les paramètres depuis la requête (avec valeurs par défaut)
+    // Validation et sanitisation des paramètres
+    const validateDate = (dateStr) => {
+      if (!dateStr) return false;
+      const regex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!regex.test(dateStr)) return false;
+      const date = new Date(dateStr);
+      return date instanceof Date && !isNaN(date);
+    };
+    
+    const validateInteger = (value, min = 1, max = 1000) => {
+      const num = parseInt(value);
+      return !isNaN(num) && num >= min && num <= max ? num : null;
+    };
+    
+    // Récupérer et valider les paramètres
     const periodStart = req.query.period_start || '2025-09-01';
     const periodEnd = req.query.period_end || '2025-09-30';
-    const page = parseInt(req.query.page) || 1;
-    const perPage = parseInt(req.query.per_page) || 20; // Max 1000 selon la doc, mais commençons par 20
-    const isAuxiliary = req.query.is_auxiliary === 'false' ? false : true; // Paramètre requis selon la doc
+    
+    // Validation des dates
+    if (!validateDate(periodStart) || !validateDate(periodEnd)) {
+      return res.status(400).json({
+        error: 'Paramètres invalides',
+        message: 'Les dates doivent être au format YYYY-MM-DD'
+      });
+    }
+    
+    // Validation de la logique des dates
+    if (new Date(periodStart) > new Date(periodEnd)) {
+      return res.status(400).json({
+        error: 'Paramètres invalides',
+        message: 'La date de début doit être antérieure à la date de fin'
+      });
+    }
+    
+    const page = validateInteger(req.query.page, 1, 1000) || 1;
+    const perPage = validateInteger(req.query.per_page, 1, 1000) || 1000;
+    const isAuxiliary = req.query.is_auxiliary === 'false' ? false : true;
     
     const baseUrl = 'https://app.pennylane.com/api/external/v2';
     
@@ -28,8 +65,9 @@ export default async function handler(req, res) {
     
     const url = `${baseUrl}/trial_balance?${params.toString()}`;
     
-    console.log(`📡 URL: ${url}`);
-    console.log(`🔑 API Key: ${PENNYLANE_API_KEY ? 'Présente' : 'Manquante'}`);
+    // Masquer l'URL complète pour la sécurité (ne pas exposer les paramètres complets)
+    console.log(`📡 Endpoint: /trial_balance`);
+    console.log(`🔑 API Key: ${PENNYLANE_API_KEY ? '✓ Configurée' : '✗ Manquante'}`);
     console.log(`📅 Période: ${periodStart} à ${periodEnd}`);
     console.log(`🔧 Paramètres: page=${page}, per_page=${perPage}, is_auxiliary=${isAuxiliary}`);
     
@@ -102,11 +140,18 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Erreur lors du test:', error);
-    return res.status(500).json({
-      error: 'Erreur interne',
+    // Ne pas exposer les détails techniques en production
+    console.error('❌ Erreur lors du test:', {
       message: error.message,
-      stack: error.stack
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      url: req.url
+    });
+    
+    return res.status(500).json({
+      error: 'Erreur interne du serveur',
+      message: 'Une erreur inattendue s\'est produite. Veuillez réessayer plus tard.',
+      timestamp: new Date().toISOString()
     });
   }
 }

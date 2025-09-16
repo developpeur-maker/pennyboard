@@ -16,8 +16,33 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  const [selectedMonth, setSelectedMonth] = useState('2025-09')
+  // Obtenir le mois en cours par défaut (format YYYY-MM)
+  const getCurrentMonth = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = (now.getMonth() + 1).toString().padStart(2, '0')
+    return `${year}-${month}`
+  }
+  
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const { kpis, loading, error, refetch } = usePennylaneData(selectedMonth)
+
+  // Fonction pour obtenir le message de santé financière
+  const getHealthMessage = () => {
+    if (!kpis || !kpis.hasData) return "Données en cours de chargement...";
+    
+    const resultat = kpis.resultat_net || 0;
+    const tresorerie = kpis.solde_tresorerie || 0;
+    
+    if (resultat > 0 && tresorerie > 50000) {
+      return `Excellente santé ! Vous avez généré ${formatCurrency(resultat)} de bénéfice ce mois-ci. 🎉`;
+    } else if (resultat > 0) {
+      return `Bonne performance ! ${formatCurrency(resultat)} de bénéfice ce mois-ci. 👍`;
+    } else if (resultat < 0) {
+      return `Attention : perte de ${formatCurrency(Math.abs(resultat))} ce mois-ci. 🔴`;
+    }
+    return "Situation équilibrée ce mois-ci. 📊";
+  };
 
   // Fonction pour formater les montants
   const formatCurrency = (amount: number) => {
@@ -107,9 +132,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
       </div>
 
+      {/* Message de santé financière */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-4 rounded-lg mb-6">
+        <div className="flex items-center">
+          <div className="flex-shrink-0">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-sm">ℹ️</span>
+            </div>
+          </div>
+          <div className="ml-3">
+            <p className="text-sm font-medium text-blue-900">
+              {getHealthMessage()}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* KPI Cards - Layout centré et propre */}
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
           <KPICard
             title="Ventes"
             subtitle="Chiffre d'affaires net"
@@ -154,6 +195,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             changeType="neutral"
             icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
             color="cyan"
+          />
+          <KPICard
+            title="Rentabilité"
+            subtitle={kpis && kpis.hasData && kpis.rentabilite ? kpis.rentabilite.message : "En attente..."}
+            value={kpis && kpis.hasData && kpis.rentabilite ? `${kpis.rentabilite.ratio}%` : 'Aucune donnée'}
+            change={0}
+            changeType={
+              kpis && kpis.hasData && kpis.rentabilite 
+                ? (kpis.rentabilite.ratio > 15 ? 'increase' : kpis.rentabilite.ratio > 0 ? 'neutral' : 'decrease')
+                : 'neutral'
+            }
+            icon={<Calculator className="w-5 h-5 text-purple-600" />}
+            color="turquoise"
           />
         </div>
       </div>
