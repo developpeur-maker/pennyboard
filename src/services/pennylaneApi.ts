@@ -163,6 +163,17 @@ export async function getTrialBalance(periodStart: string = '2025-01-01', period
 }
 
 // Fonctions utilitaires pour les calculs
+function getMonthDateRange(selectedMonth: string): { startDate: string, endDate: string } {
+  const [year, month] = selectedMonth.split('-')
+  const startDate = `${year}-${month}-01`
+  
+  // Calculer le dernier jour du mois correctement
+  const lastDayOfMonth = new Date(parseInt(year), parseInt(month), 0).getDate()
+  const endDate = `${year}-${month}-${lastDayOfMonth.toString().padStart(2, '0')}`
+  
+  return { startDate, endDate }
+}
+
 function calculateProfitabilityRatio(ca: number, resultat: number): { ratio: number, message: string } {
   if (ca === 0) return { ratio: 0, message: "Aucun chiffre d'affaires" };
   
@@ -224,9 +235,7 @@ export const pennylaneApi = {
       console.log(`📊 Récupération du résultat comptable pour ${selectedMonth}...`)
       
       // Convertir le mois sélectionné en dates
-      const [year, month] = selectedMonth.split('-')
-      const startDate = `${year}-${month}-01`
-      const endDate = `${year}-${month}-31`
+      const { startDate, endDate } = getMonthDateRange(selectedMonth)
       
       // Récupérer le trial balance pour le mois sélectionné
       const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
@@ -253,9 +262,7 @@ export const pennylaneApi = {
       console.log(`💰 Récupération de la trésorerie pour ${selectedMonth}...`)
       
       // Convertir le mois sélectionné en dates
-      const [year, month] = selectedMonth.split('-')
-      const startDate = `${year}-${month}-01`
-      const endDate = `${year}-${month}-31`
+      const { startDate, endDate } = getMonthDateRange(selectedMonth)
       
       // Récupérer le trial balance pour le mois sélectionné
       const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
@@ -496,9 +503,7 @@ export const pennylaneApi = {
       console.log(`📊 Récupération des données trial balance pour ${selectedMonth}...`)
       
       // Convertir le mois sélectionné en dates
-      const [year, month] = selectedMonth.split('-')
-      const startDate = `${year}-${month}-01`
-      const endDate = `${year}-${month}-31`
+      const { startDate, endDate } = getMonthDateRange(selectedMonth)
       
       // Récupérer le trial balance pour le mois sélectionné
       const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
@@ -531,8 +536,7 @@ export const pennylaneApi = {
       
       console.log(`📊 Récupération des données du mois précédent: ${prevMonthStr}...`)
       
-      const startDate = `${prevYear}-${prevMonth}-01`
-      const endDate = `${prevYear}-${prevMonth}-31`
+      const { startDate, endDate } = getMonthDateRange(prevMonthStr)
       
       // Récupérer le trial balance pour le mois précédent
       const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
