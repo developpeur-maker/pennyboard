@@ -12,15 +12,26 @@ export default async function handler(req, res) {
     const periodStart = req.query.period_start || '2025-09-01';
     const periodEnd = req.query.period_end || '2025-09-30';
     const page = parseInt(req.query.page) || 1;
-    const perPage = parseInt(req.query.per_page) || 1000;
+    const perPage = parseInt(req.query.per_page) || 20; // Max 1000 selon la doc, mais commençons par 20
+    const isAuxiliary = req.query.is_auxiliary === 'false' ? false : true; // Paramètre requis selon la doc
     
     const baseUrl = 'https://app.pennylane.com/api/external/v2';
-    const endpoint = `/trial_balance?period_start=${periodStart}&period_end=${periodEnd}&page=${page}&per_page=${perPage}`;
-    const url = `${baseUrl}${endpoint}`;
+    
+    // Construire les paramètres de requête de manière sécurisée selon la documentation
+    const params = new URLSearchParams({
+      period_start: periodStart,
+      period_end: periodEnd,
+      is_auxiliary: isAuxiliary.toString(),
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    
+    const url = `${baseUrl}/trial_balance?${params.toString()}`;
     
     console.log(`📡 URL: ${url}`);
     console.log(`🔑 API Key: ${PENNYLANE_API_KEY ? 'Présente' : 'Manquante'}`);
     console.log(`📅 Période: ${periodStart} à ${periodEnd}`);
+    console.log(`🔧 Paramètres: page=${page}, per_page=${perPage}, is_auxiliary=${isAuxiliary}`);
     
     const response = await fetch(url, {
       method: 'GET',
