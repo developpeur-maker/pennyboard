@@ -122,35 +122,58 @@ export async function getLedgerEntries(page: number = 1, perPage: number = 1000)
   }
 }
 
-// Fonction pour récupérer le trial balance (balance des comptes)
-export async function getTrialBalance(periodStart: string = '2025-01-01', periodEnd: string = '2025-01-31', page: number = 1, perPage: number = 1000): Promise<TrialBalanceResponse> {
+// Fonction pour récupérer le trial balance (balance des comptes) - TOUTES LES PAGES
+export async function getTrialBalance(periodStart: string = '2025-01-01', periodEnd: string = '2025-01-31', perPage: number = 1000): Promise<TrialBalanceResponse> {
   try {
     console.log(`📊 Récupération du trial balance (${periodStart} à ${periodEnd})...`)
     
-    // Construire les paramètres de requête de manière sécurisée
-    const params = new URLSearchParams({
-      period_start: periodStart,
-      period_end: periodEnd,
-      page: page.toString(),
-      per_page: perPage.toString()
-    })
+    let allItems: any[] = []
+    let currentPage = 1
+    let totalPages = 1
     
-    const response = await apiCall<{success: boolean, raw_data: TrialBalanceResponse}>(`trial-balance?${params.toString()}`)
+    // Récupérer toutes les pages
+    do {
+      console.log(`📄 Récupération de la page ${currentPage}/${totalPages}...`)
+      
+      // Construire les paramètres de requête de manière sécurisée
+      const params = new URLSearchParams({
+        period_start: periodStart,
+        period_end: periodEnd,
+        page: currentPage.toString(),
+        per_page: perPage.toString()
+      })
+      
+      const response = await apiCall<{success: boolean, raw_data: TrialBalanceResponse}>(`trial-balance?${params.toString()}`)
+      
+      if (!response.success || !response.raw_data) {
+        throw new Error('Format de réponse inattendu')
+      }
+      
+      // Ajouter les items de cette page
+      if (response.raw_data.items) {
+        allItems = allItems.concat(response.raw_data.items)
+        console.log(`📋 Page ${currentPage}: ${response.raw_data.items.length} comptes récupérés (total: ${allItems.length})`)
+      }
+      
+      // Mettre à jour les informations de pagination
+      totalPages = response.raw_data.total_pages
+      currentPage++
+      
+    } while (currentPage <= totalPages)
     
-    // Debug: Logs détaillés de la réponse
-    console.log('🔍 Réponse complète trial-balance:', JSON.stringify(response, null, 2))
-    console.log('📊 response.success:', response.success)
-    console.log('📊 response.raw_data existe:', !!response.raw_data)
-    console.log('📊 response.raw_data?.items existe:', !!response.raw_data?.items)
-    console.log('📊 response.raw_data?.items?.length:', response.raw_data?.items?.length)
+    console.log(`✅ Trial balance complet récupéré: ${allItems.length} comptes sur ${totalPages} pages`)
     
-    if (response.success && response.raw_data) {
-      console.log('✅ Trial balance data récupérée avec succès')
-      return response.raw_data
+    // Retourner la structure complète avec tous les items
+    const completeTrialBalance: TrialBalanceResponse = {
+      total_pages: totalPages,
+      current_page: 1, // On retourne tout sur une "page virtuelle"
+      per_page: allItems.length,
+      total_items: allItems.length,
+      items: allItems
     }
     
-    console.error('❌ Format de réponse inattendu:', response)
-    throw new Error('Format de réponse inattendu')
+    return completeTrialBalance
+    
   } catch (error) {
     console.error('❌ Erreur lors de la récupération du trial balance:', error)
     throw error
@@ -232,7 +255,7 @@ export const pennylaneApi = {
       const { startDate, endDate } = getMonthDateRange(selectedMonth)
       
       // Récupérer le trial balance pour le mois sélectionné
-      const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
+      const trialBalance = await getTrialBalance(startDate, endDate, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         console.log('⚠️ Aucune donnée de trial balance trouvée pour getResultatComptable')
@@ -264,7 +287,7 @@ export const pennylaneApi = {
       const { startDate, endDate } = getMonthDateRange(selectedMonth)
       
       // Récupérer le trial balance pour le mois sélectionné
-      const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
+      const trialBalance = await getTrialBalance(startDate, endDate, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         console.log('⚠️ Aucune donnée de trial balance trouvée pour la trésorerie')
@@ -350,12 +373,40 @@ export const pennylaneApi = {
       })
     }
     
+    // Debug: Analyser tous les types de comptes reçus
+    const comptesByClass: { [key: string]: number } = {}
+    trialBalance.items.forEach(account => {
+      const firstDigit = account.number.charAt(0)
+      comptesByClass[firstDigit] = (comptesByClass[firstDigit] || 0) + 1
+    })
+    console.log('🔍 Répartition des comptes par classe:', comptesByClass)
+    
     // Analyser les comptes par classe
     const comptes7 = trialBalance.items.filter(account => account.number.startsWith('7')) // Revenus
     const comptes6 = trialBalance.items.filter(account => account.number.startsWith('6')) // Charges
     const comptes5 = trialBalance.items.filter(account => account.number.startsWith('5')) // Trésorerie
     
     console.log(`📋 Comptes trouvés: 7 (${comptes7.length}), 6 (${comptes6.length}), 5 (${comptes5.length})`)
+    
+    // Debug: Afficher quelques comptes de chaque classe s'ils existent
+    if (comptes7.length > 0) {
+      console.log('🔍 Exemples de comptes classe 7 (Revenus):')
+      comptes7.slice(0, 2).forEach(account => {
+        console.log(`   - ${account.number} (${account.label}): credits=${account.credits}, debits=${account.debits}`)
+      })
+    }
+    if (comptes6.length > 0) {
+      console.log('🔍 Exemples de comptes classe 6 (Charges):')
+      comptes6.slice(0, 2).forEach(account => {
+        console.log(`   - ${account.number} (${account.label}): credits=${account.credits}, debits=${account.debits}`)
+      })
+    }
+    if (comptes5.length > 0) {
+      console.log('🔍 Exemples de comptes classe 5 (Trésorerie):')
+      comptes5.slice(0, 2).forEach(account => {
+        console.log(`   - ${account.number} (${account.label}): credits=${account.credits}, debits=${account.debits}`)
+      })
+    }
     
     // Calculer le Chiffre d'Affaires Net (comptes 701-708 moins 709)
     const comptesCA = comptes7.filter(account => {
@@ -514,7 +565,7 @@ export const pennylaneApi = {
       const { startDate, endDate } = getMonthDateRange(selectedMonth)
       
       // Récupérer le trial balance pour le mois sélectionné
-      const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
+      const trialBalance = await getTrialBalance(startDate, endDate, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         throw new Error('Aucune donnée de trial balance trouvée')
@@ -547,7 +598,7 @@ export const pennylaneApi = {
       const { startDate, endDate } = getMonthDateRange(prevMonthStr)
       
       // Récupérer le trial balance pour le mois précédent
-      const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
+      const trialBalance = await getTrialBalance(startDate, endDate, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         console.log(`⚠️ Aucune donnée trouvée pour le mois précédent ${prevMonthStr}`)
@@ -628,7 +679,7 @@ export const pennylaneApi = {
       console.log(`📅 Période: ${fiscalYear.start_date} à ${fiscalYear.end_date}`)
       
       // Récupérer le trial balance pour l'exercice complet
-      const trialBalance = await getTrialBalance(fiscalYear.start_date, fiscalYear.end_date, 1, 1000)
+      const trialBalance = await getTrialBalance(fiscalYear.start_date, fiscalYear.end_date, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         throw new Error('Aucune donnée de trial balance trouvée pour cet exercice')
