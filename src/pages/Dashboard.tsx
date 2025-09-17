@@ -16,12 +16,17 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  // Obtenir le mois en cours par défaut (format YYYY-MM)
+  // Fonction pour obtenir le mois en cours basé sur la date du jour
   const getCurrentMonth = () => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = (now.getMonth() + 1).toString().padStart(2, '0')
-    return `${year}-${month}`
+    const today = new Date() // Date du jour 
+    const year = today.getFullYear() // 2025
+    const month = today.getMonth() + 1 // getMonth() retourne 0-11, donc +1 pour avoir 1-12
+    const monthFormatted = month.toString().padStart(2, '0') // Format "09" pour septembre
+    
+    console.log('Date du jour:', today.toLocaleDateString('fr-FR'))
+    console.log('Mois en cours détecté:', `${year}-${monthFormatted}`)
+    
+    return `${year}-${monthFormatted}`
   }
   
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
