@@ -531,6 +531,16 @@ export const pennylaneApi = {
   processTreasuryFromTrialBalance(trialBalance: TrialBalanceResponse, selectedMonth: string = '2025-09'): PennylaneTresorerie[] {
     console.log(`💰 Traitement de ${trialBalance.items.length} comptes pour la trésorerie...`)
     
+    // Debug: Analyser TOUS les comptes de classe 5 pour comprendre
+    const comptes5 = trialBalance.items.filter(account => account.number.startsWith('5'))
+    console.log(`🔍 DEBUG - Tous les comptes classe 5: ${comptes5.length}`)
+    comptes5.forEach(account => {
+      const credits = this.parseAmount(account.credits)
+      const debits = this.parseAmount(account.debits)
+      const solde = credits - debits
+      console.log(`   - ${account.number} (${account.label}): credits=${credits}, debits=${debits}, solde=${solde}`)
+    })
+    
     // Analyser spécifiquement les comptes 512 (Banques) pour la vraie trésorerie disponible
     const comptes512 = trialBalance.items.filter(account => account.number.startsWith('512'))
     
@@ -542,6 +552,8 @@ export const pennylaneApi = {
       comptes512.forEach(account => {
         console.log(`   - ${account.number} (${account.label}): credits=${account.credits}, debits=${account.debits}`)
       })
+    } else {
+      console.log('⚠️ AUCUN compte 512 trouvé ! Vérifiez le plan comptable.')
     }
     
     // Calculer le solde total de trésorerie (comptes 512 uniquement)

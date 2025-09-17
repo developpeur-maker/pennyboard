@@ -3,6 +3,7 @@ import { ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 interface KPICardProps {
   title: string
+  period?: string // Nouvelle prop pour la période
   subtitle?: string
   value: string
   change: number
@@ -13,6 +14,7 @@ interface KPICardProps {
 
 const KPICard: React.FC<KPICardProps> = ({ 
   title, 
+  period,
   subtitle,
   value, 
   change, 
@@ -40,7 +42,10 @@ const KPICard: React.FC<KPICardProps> = ({
     <div className={`kpi-card ${bgColorClasses[color]} p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 min-h-[220px] flex flex-col justify-between`}>
       <div className="flex items-start justify-between mb-6">
         <div className="flex-1">
-          <p className="kpi-label text-lg font-semibold text-gray-700 mb-2">{title}</p>
+          <p className="kpi-label text-lg font-semibold text-gray-700 mb-2">
+            {title}
+            {period && <span className="text-sm font-normal text-gray-500 ml-2">{period}</span>}
+          </p>
           {subtitle && (
             <p className="kpi-subtitle text-sm text-gray-500 mb-4">{subtitle}</p>
           )}

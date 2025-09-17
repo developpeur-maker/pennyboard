@@ -34,6 +34,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [selectedYear, setSelectedYear] = useState('2025')
   const { kpis, loading, error, refetch } = usePennylaneData(selectedMonth)
 
+  // Fonction pour formater la période affichée
+  const formatPeriod = () => {
+    if (viewMode === 'year') {
+      return `exercice ${selectedYear}`
+    } else {
+      const [year, month] = selectedMonth.split('-')
+      const monthNames = [
+        'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+      ]
+      const monthName = monthNames[parseInt(month) - 1]
+      return `${monthName} ${year}`
+    }
+  }
+
   // Fonction pour obtenir le message de santé financière
   const getHealthMessage = () => {
     if (!kpis || !kpis.hasData) return "Données en cours de chargement...";
@@ -196,6 +211,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <KPICard
             title="Ventes"
+            period={formatPeriod()}
             subtitle="Chiffre d'affaires net"
             value={kpis && kpis.hasData && kpis.chiffre_affaires !== null ? formatCurrency(kpis.chiffre_affaires) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.ca_growth !== null ? Math.abs(kpis.ca_growth) : 0}
@@ -205,6 +221,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           />
           <KPICard
             title="Revenus Totaux"
+            period={formatPeriod()}
             subtitle="Tous les produits"
             value={kpis && kpis.hasData && kpis.total_produits_exploitation !== null ? formatCurrency(kpis.total_produits_exploitation) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.total_produits_growth !== null ? Math.abs(kpis.total_produits_growth) : 0}
@@ -214,6 +231,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           />
           <KPICard
             title="Achats & Charges"
+            period={formatPeriod()}
             subtitle="Coûts d'exploitation"
             value={kpis && kpis.hasData && kpis.charges !== null ? formatCurrency(kpis.charges) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.charges_growth !== null ? Math.abs(kpis.charges_growth) : 0}
@@ -223,6 +241,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           />
           <KPICard
             title="Bénéfice"
+            period={formatPeriod()}
             subtitle="Résultat net"
             value={kpis && kpis.hasData && kpis.resultat_net !== null ? formatCurrency(kpis.resultat_net) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.resultat_growth !== null ? Math.abs(kpis.resultat_growth) : 0}
@@ -232,6 +251,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           />
           <KPICard
             title="Trésorerie"
+            period={formatPeriod()}
             subtitle="Liquidités disponibles"
             value={kpis && kpis.hasData && kpis.solde_tresorerie !== null ? formatCurrency(kpis.solde_tresorerie) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? Math.abs(kpis.tresorerie_growth) : 0}
@@ -241,6 +261,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           />
           <KPICard
             title="Rentabilité"
+            period={formatPeriod()}
             subtitle={kpis && kpis.hasData && kpis.rentabilite ? kpis.rentabilite.message : "En attente..."}
             value={kpis && kpis.hasData && kpis.rentabilite ? `${kpis.rentabilite.ratio}% (${formatCurrency(kpis.rentabilite.montant)})` : 'Aucune donnée'}
             change={0}
