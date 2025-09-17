@@ -33,7 +33,12 @@ interface UsePennylaneDataReturn {
   refetch: () => void
 }
 
-export const usePennylaneData = (selectedMonth: string = '2025-09', selectedFiscalYear?: string): UsePennylaneDataReturn => {
+export const usePennylaneData = (
+  selectedMonth: string = '2025-09', 
+  selectedFiscalYear?: string,
+  viewMode: 'month' | 'year' = 'month',
+  selectedYear: string = '2025'
+): UsePennylaneDataReturn => {
   const [kpis, setKpis] = useState<KPIData | null>(null)
   const [resultatComptable, setResultatComptable] = useState<PennylaneResultatComptable[]>([])
   const [tresorerie, setTresorerie] = useState<PennylaneTresorerie[]>([])
@@ -65,7 +70,7 @@ export const usePennylaneData = (selectedMonth: string = '2025-09', selectedFisc
       const [kpisData, resultatData, tresorerieData, trialBalanceData, previousTrialBalanceData] = await Promise.all([
         pennylaneApi.getKPIs(selectedMonth),
         pennylaneApi.getResultatComptable(selectedMonth),
-        pennylaneApi.getTresorerie(selectedMonth),
+        pennylaneApi.getTresorerie(selectedMonth, viewMode, selectedYear),
         selectedFiscalYear ? pennylaneApi.getTrialBalanceForFiscalYear(selectedFiscalYear) : pennylaneApi.getTrialBalanceData(selectedMonth),
         selectedFiscalYear ? null : pennylaneApi.getPreviousMonthData(selectedMonth)
       ])
@@ -87,7 +92,7 @@ export const usePennylaneData = (selectedMonth: string = '2025-09', selectedFisc
 
   useEffect(() => {
     fetchData()
-  }, [selectedMonth, selectedFiscalYear])
+  }, [selectedMonth, selectedFiscalYear, viewMode, selectedYear])
 
   return {
     kpis,

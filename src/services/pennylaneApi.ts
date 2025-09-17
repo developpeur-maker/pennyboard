@@ -279,14 +279,33 @@ export const pennylaneApi = {
   },
 
   // Récupérer la trésorerie basée sur le trial balance
-  async getTresorerie(selectedMonth: string = '2025-09'): Promise<PennylaneTresorerie[]> {
+  // IMPORTANT: La trésorerie doit être calculée sur les soldes cumulés depuis le début d'exercice
+  async getTresorerie(selectedMonth: string = '2025-09', viewMode: 'month' | 'year' = 'month', selectedYear: string = '2025'): Promise<PennylaneTresorerie[]> {
     try {
-      console.log(`💰 Récupération de la trésorerie pour ${selectedMonth}...`)
+      console.log(`💰 TRÉSORERIE: Mode ${viewMode}, période ${viewMode === 'month' ? selectedMonth : selectedYear}`)
       
-      // Convertir le mois sélectionné en dates
-      const { startDate, endDate } = getMonthDateRange(selectedMonth)
+      let startDate: string
+      let endDate: string
       
-      // Récupérer le trial balance pour le mois sélectionné
+      if (viewMode === 'year') {
+        // Mode année : du 1er janvier au 31 décembre de l'année sélectionnée
+        startDate = `${selectedYear}-01-01`
+        endDate = `${selectedYear}-12-31`
+        console.log(`💰 TRÉSORERIE ANNUELLE: ${startDate} au ${endDate}`)
+      } else {
+        // Mode mensuel : du 1er janvier jusqu'à la fin du mois sélectionné
+        const [year, month] = selectedMonth.split('-')
+        startDate = `${year}-01-01`
+        
+        // Calculer le dernier jour du mois sélectionné
+        const monthNum = parseInt(month)
+        const lastDay = new Date(parseInt(year), monthNum, 0).getDate() // 0 = dernier jour du mois précédent
+        endDate = `${year}-${month.padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
+        
+        console.log(`💰 TRÉSORERIE MENSUELLE: Soldes cumulés du ${startDate} au ${endDate}`)
+      }
+      
+      // Récupérer le trial balance pour la période calculée (soldes cumulés)
       const trialBalance = await getTrialBalance(startDate, endDate, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
@@ -294,9 +313,9 @@ export const pennylaneApi = {
         return []
       }
       
-      console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance pour la trésorerie`)
+      console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance pour la trésorerie (soldes cumulés)`)
       
-      // Traiter les données pour le mois sélectionné
+      // Traiter les données pour obtenir les vrais soldes bancaires
       return this.processTreasuryFromTrialBalance(trialBalance, selectedMonth)
       
     } catch (error) {
@@ -449,8 +468,9 @@ export const pennylaneApi = {
     const tresorerie = comptes512.reduce((total, account) => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
-      console.log(`   Trésorerie 512 - ${account.number}: credits=${credits}, debits=${debits}`)
-      return total + credits - debits
+      const solde = debits - credits // CORRECT: Pour les comptes bancaires (actif), solde = debits - credits
+      console.log(`   Trésorerie 512 - ${account.number}: credits=${credits}, debits=${debits}, solde=${solde}`)
+      return total + solde
     }, 0)
     
     console.log(`💰 Calculs détaillés:`)
@@ -528,6 +548,8 @@ export const pennylaneApi = {
 
 
   // Traiter les données de trésorerie à partir du trial balance
+  // IMPORTANT: La trésorerie doit TOUJOURS être calculée sur les soldes cumulés (début d'exercice à aujourd'hui)
+  // et NON sur les mouvements d'un seul mois
   processTreasuryFromTrialBalance(trialBalance: TrialBalanceResponse, selectedMonth: string = '2025-09'): PennylaneTresorerie[] {
     console.log(`💰 Traitement de ${trialBalance.items.length} comptes pour la trésorerie...`)
     
@@ -557,11 +579,13 @@ export const pennylaneApi = {
     }
     
     // Calculer le solde total de trésorerie (comptes 512 uniquement)
+    // Pour les comptes bancaires (classe 5), le solde = debits - credits
     const soldeTotal = comptes512.reduce((total, account) => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
-      console.log(`   Banque ${account.number}: credits=${credits}, debits=${debits}, solde=${credits - debits}`)
-      return total + credits - debits
+      const solde = debits - credits // CORRECT: Pour les comptes bancaires (actif), solde = debits - credits
+      console.log(`   Banque ${account.number}: credits=${credits}, debits=${debits}, solde=${solde}`)
+      return total + solde
     }, 0)
     
     console.log(`💰 Solde total de trésorerie: ${soldeTotal.toFixed(2)}€`)

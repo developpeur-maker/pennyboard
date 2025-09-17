@@ -27,7 +27,7 @@ const Dashboard: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
   const [selectedYear, setSelectedYear] = useState('2025')
-  const { kpis, loading, error, refetch } = usePennylaneData(selectedMonth)
+  const { kpis, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
 
   // Fonction pour formater la période affichée
   const formatPeriod = () => {
