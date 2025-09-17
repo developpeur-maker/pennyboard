@@ -137,10 +137,19 @@ export async function getTrialBalance(periodStart: string = '2025-01-01', period
     
     const response = await apiCall<{success: boolean, raw_data: TrialBalanceResponse}>(`trial-balance?${params.toString()}`)
     
+    // Debug: Logs détaillés de la réponse
+    console.log('🔍 Réponse complète trial-balance:', JSON.stringify(response, null, 2))
+    console.log('📊 response.success:', response.success)
+    console.log('📊 response.raw_data existe:', !!response.raw_data)
+    console.log('📊 response.raw_data?.items existe:', !!response.raw_data?.items)
+    console.log('📊 response.raw_data?.items?.length:', response.raw_data?.items?.length)
+    
     if (response.success && response.raw_data) {
+      console.log('✅ Trial balance data récupérée avec succès')
       return response.raw_data
     }
     
+    console.error('❌ Format de réponse inattendu:', response)
     throw new Error('Format de réponse inattendu')
   } catch (error) {
     console.error('❌ Erreur lors de la récupération du trial balance:', error)
@@ -226,14 +235,19 @@ export const pennylaneApi = {
       const trialBalance = await getTrialBalance(startDate, endDate, 1, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
-        console.log('⚠️ Aucune donnée de trial balance trouvée')
+        console.log('⚠️ Aucune donnée de trial balance trouvée pour getResultatComptable')
+        console.log('🔍 trialBalance.items:', trialBalance.items)
         return []
       }
       
-      console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance`)
+      console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance pour getResultatComptable`)
       
       // Traiter les données pour le mois sélectionné
-      return this.processTrialBalanceData(trialBalance, selectedMonth)
+      const processedData = this.processTrialBalanceData(trialBalance, selectedMonth)
+      console.log('📊 Données traitées par processTrialBalanceData:', processedData.length, 'éléments')
+      console.log('🔍 Premier élément:', processedData[0])
+      
+      return processedData
       
     } catch (error) {
       console.error('Erreur lors de la récupération du résultat comptable:', error)
@@ -651,7 +665,16 @@ export const pennylaneApi = {
         this.getTresorerie(selectedMonth)
       ])
       
+      console.log('📊 Résultats des appels parallèles dans getKPIs:')
+      console.log('   - resultatData.length:', resultatData.length)
+      console.log('   - tresorerieData.length:', tresorerieData.length)
+      console.log('   - resultatData[0]:', resultatData[0])
+      console.log('   - tresorerieData[0]:', tresorerieData[0])
+      
       if (resultatData.length === 0 || tresorerieData.length === 0) {
+        console.log('❌ getKPIs: Données manquantes détectées')
+        console.log('   - resultatData vide:', resultatData.length === 0)
+        console.log('   - tresorerieData vide:', tresorerieData.length === 0)
         return {
           chiffre_affaires: null,
           total_produits_exploitation: null,
