@@ -1,15 +1,24 @@
-const fetch = require('node-fetch')
+const PENNYLANE_API_KEY = process.env.VITE_PENNYLANE_API_KEY;
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
+  // Headers de sécurité
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    const API_KEY = process.env.VITE_PENNYLANE_API_KEY
     const BASE_URL = 'https://app.pennylane.com/api/external/v1'
 
     console.log('📅 Récupération des exercices fiscaux...')
 
     const response = await fetch(`${BASE_URL}/fiscal_years`, {
       headers: {
-        'Authorization': `Bearer ${API_KEY}`,
+        'Authorization': `Bearer ${PENNYLANE_API_KEY}`,
         'Content-Type': 'application/json'
       }
     })

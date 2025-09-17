@@ -203,8 +203,8 @@ export const pennylaneApi = {
   async testConnection(): Promise<boolean> {
     try {
       console.log('🧪 Test de connexion à l\'API Pennylane via proxy...')
-      // Utiliser l'endpoint fiscal_years pour tester la connexion (plus léger que trial_balance)
-      const data = await apiCall<{success: boolean, raw_data: any}>('fiscal_years')
+      // Utiliser l'endpoint /me pour tester la connexion (endpoint standard et léger)
+      const data = await apiCall<{success: boolean, raw_data: any}>('me')
       console.log('✅ Connexion réussie:', data)
       return data.success || true
     } catch (error) {
