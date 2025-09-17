@@ -5,17 +5,12 @@ import {
   RefreshCw,
   Calculator,
   PiggyBank,
-  Calendar,
-  FileText
+  Calendar
 } from 'lucide-react'
 import KPICard from '../components/KPICard'
 import { usePennylaneData } from '../hooks/usePennylaneData'
 
-interface DashboardProps {
-  onNavigate?: (page: string) => void
-}
-
-const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+const Dashboard: React.FC = () => {
   // Fonction pour obtenir le mois en cours basé sur la date du jour
   const getCurrentMonth = () => {
     const today = new Date() // Date du jour 
@@ -114,7 +109,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             PennyBoard
           </h1>
           <p className="text-gray-600 font-inter mt-2 text-lg">
-            Tableau de bord DIMO DIAGNOSTIC
+            Tableau de bord Entreprise 
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -173,13 +168,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </select>
             )}
           </div>
-          <button
-            onClick={() => onNavigate?.('income-statement')}
-            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-          >
-            <FileText className="w-5 h-5" />
-            Compte de Résultat
-          </button>
           <button
             onClick={refetch}
             className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
