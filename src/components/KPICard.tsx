@@ -60,18 +60,20 @@ const KPICard: React.FC<KPICardProps> = ({
         ) : changeType === 'decrease' ? (
           <ArrowDownRight className="w-4 h-4 text-red-500" />
         ) : null}
-        {changeType !== 'neutral' && (
+        {changeType !== 'neutral' && change !== 0 && (
           <>
             <span className={`text-sm font-semibold ${
               changeType === 'increase' ? 'text-green-600' : 'text-red-500'
             }`}>
-              {Math.abs(change)}%
+              {changeType === 'increase' ? '+' : ''}{change.toFixed(2)}%
             </span>
-            <span className="text-sm text-gray-500">vs mois dernier</span>
+            <span className="text-sm text-gray-500">
+              {changeType === 'increase' ? 'en hausse' : 'en baisse'} vs le mois dernier
+            </span>
           </>
         )}
-        {changeType === 'neutral' && (
-          <span className="text-sm text-gray-400">Comparaison non disponible</span>
+        {(changeType === 'neutral' || change === 0) && (
+          <span className="text-sm text-gray-400">Pas de données du mois précédent</span>
         )}
       </div>
     </div>

@@ -444,9 +444,12 @@ export const pennylaneApi = {
       return total + debits - credits
     }, 0)
     
-    const tresorerie = comptes5.reduce((total, account) => {
+    // Calculer la trésorerie avec les comptes 512 (Banques) uniquement
+    const comptes512 = trialBalance.items.filter(account => account.number.startsWith('512'))
+    const tresorerie = comptes512.reduce((total, account) => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
+      console.log(`   Trésorerie 512 - ${account.number}: credits=${credits}, debits=${debits}`)
       return total + credits - debits
     }, 0)
     
@@ -454,7 +457,8 @@ export const pennylaneApi = {
     console.log(`   - CA Net: ${chiffreAffairesNet.toFixed(2)}€`)
     console.log(`   - Total Produits Exploitation: ${totalProduitsExploitation.toFixed(2)}€`)
     console.log(`   - Charges: ${charges.toFixed(2)}€`)
-    console.log(`   - Trésorerie: ${tresorerie.toFixed(2)}€`)
+    console.log(`   - Trésorerie (comptes 512): ${tresorerie.toFixed(2)}€`)
+    console.log(`   - Nombre de comptes banque (512): ${comptes512.length}`)
     
     // Créer un seul résultat pour le mois sélectionné
     const result: PennylaneResultatComptable[] = []
@@ -527,15 +531,24 @@ export const pennylaneApi = {
   processTreasuryFromTrialBalance(trialBalance: TrialBalanceResponse, selectedMonth: string = '2025-09'): PennylaneTresorerie[] {
     console.log(`💰 Traitement de ${trialBalance.items.length} comptes pour la trésorerie...`)
     
-    // Analyser les comptes de trésorerie (classe 5)
-    const comptes5 = trialBalance.items.filter(account => account.number.startsWith('5'))
+    // Analyser spécifiquement les comptes 512 (Banques) pour la vraie trésorerie disponible
+    const comptes512 = trialBalance.items.filter(account => account.number.startsWith('512'))
     
-    console.log(`📋 Comptes de trésorerie trouvés: ${comptes5.length}`)
+    console.log(`📋 Comptes banque (512) trouvés: ${comptes512.length}`)
     
-    // Calculer le solde total de trésorerie
-    const soldeTotal = comptes5.reduce((total, account) => {
-      const credits = parseFloat(account.credits) || 0
-      const debits = parseFloat(account.debits) || 0
+    // Debug: Afficher les comptes 512 trouvés
+    if (comptes512.length > 0) {
+      console.log('🔍 Détail des comptes banque (512):')
+      comptes512.forEach(account => {
+        console.log(`   - ${account.number} (${account.label}): credits=${account.credits}, debits=${account.debits}`)
+      })
+    }
+    
+    // Calculer le solde total de trésorerie (comptes 512 uniquement)
+    const soldeTotal = comptes512.reduce((total, account) => {
+      const credits = this.parseAmount(account.credits)
+      const debits = this.parseAmount(account.debits)
+      console.log(`   Banque ${account.number}: credits=${credits}, debits=${debits}, solde=${credits - debits}`)
       return total + credits - debits
     }, 0)
     
@@ -771,7 +784,8 @@ export const pennylaneApi = {
       // Calculer les variations par rapport au mois précédent
       const calculateGrowth = (current: number, previous: number | null) => {
         if (!previous || previous === 0) return null
-        return ((current - previous) / Math.abs(previous)) * 100
+        const growth = ((current - previous) / Math.abs(previous)) * 100
+        return Math.round(growth * 100) / 100 // Arrondir à 2 décimales
       }
       
       const caGrowth = calculateGrowth(currentResultat.chiffre_affaires || 0, previousResultat?.chiffre_affaires || null)

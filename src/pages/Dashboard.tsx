@@ -199,7 +199,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             subtitle="Chiffre d'affaires net"
             value={kpis && kpis.hasData && kpis.chiffre_affaires !== null ? formatCurrency(kpis.chiffre_affaires) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.ca_growth !== null ? Math.abs(kpis.ca_growth) : 0}
-            changeType={kpis && kpis.hasData && kpis.ca_growth !== null && kpis.ca_growth >= 0 ? 'increase' : 'decrease'}
+            changeType={kpis && kpis.hasData && kpis.ca_growth !== null ? (kpis.ca_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<DollarSign className="w-5 h-5 text-green-600" />}
             color="green"
           />
@@ -208,7 +208,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             subtitle="Tous les produits"
             value={kpis && kpis.hasData && kpis.total_produits_exploitation !== null ? formatCurrency(kpis.total_produits_exploitation) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.total_produits_growth !== null ? Math.abs(kpis.total_produits_growth) : 0}
-            changeType={kpis && kpis.hasData && kpis.total_produits_growth !== null && kpis.total_produits_growth >= 0 ? 'increase' : 'decrease'}
+            changeType={kpis && kpis.hasData && kpis.total_produits_growth !== null ? (kpis.total_produits_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
             color="green"
           />
@@ -217,7 +217,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             subtitle="Coûts d'exploitation"
             value={kpis && kpis.hasData && kpis.charges !== null ? formatCurrency(kpis.charges) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.charges_growth !== null ? Math.abs(kpis.charges_growth) : 0}
-            changeType={kpis && kpis.hasData && kpis.charges_growth !== null && kpis.charges_growth >= 0 ? 'increase' : 'decrease'}
+            changeType={kpis && kpis.hasData && kpis.charges_growth !== null ? (kpis.charges_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<CreditCard className="w-5 h-5 text-red-600" />}
             color="red"
           />
@@ -226,7 +226,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             subtitle="Résultat net"
             value={kpis && kpis.hasData && kpis.resultat_net !== null ? formatCurrency(kpis.resultat_net) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.resultat_growth !== null ? Math.abs(kpis.resultat_growth) : 0}
-            changeType={kpis && kpis.hasData && kpis.resultat_growth !== null && kpis.resultat_growth >= 0 ? 'increase' : 'decrease'}
+            changeType={kpis && kpis.hasData && kpis.resultat_growth !== null ? (kpis.resultat_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<Calculator className="w-5 h-5 text-blue-600" />}
             color="blue"
           />
@@ -235,7 +235,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             subtitle="Liquidités disponibles"
             value={kpis && kpis.hasData && kpis.solde_tresorerie !== null ? formatCurrency(kpis.solde_tresorerie) : 'Aucune donnée'}
             change={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? Math.abs(kpis.tresorerie_growth) : 0}
-            changeType={kpis && kpis.hasData && kpis.tresorerie_growth !== null && kpis.tresorerie_growth >= 0 ? 'increase' : 'decrease'}
+            changeType={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? (kpis.tresorerie_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
             color="cyan"
           />
