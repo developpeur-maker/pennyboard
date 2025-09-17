@@ -192,8 +192,8 @@ function getMonthDateRange(selectedMonth: string): { startDate: string, endDate:
   return { startDate, endDate }
 }
 
-function calculateProfitabilityRatio(ca: number, resultat: number): { ratio: number, message: string } {
-  if (ca === 0) return { ratio: 0, message: "Aucun chiffre d'affaires" };
+function calculateProfitabilityRatio(ca: number, resultat: number): { ratio: number, message: string, montant: number } {
+  if (ca === 0) return { ratio: 0, message: "Aucun chiffre d'affaires", montant: resultat };
   
   const ratio = Math.round((resultat / ca) * 100);
   
@@ -205,7 +205,7 @@ function calculateProfitabilityRatio(ca: number, resultat: number): { ratio: num
   else if (ratio > 0) message = "Rentabilité faible ⚠️";
   else message = "Activité déficitaire 🔴";
   
-  return { ratio, message };
+  return { ratio, message, montant: resultat };
 }
 
 // Services API
@@ -464,7 +464,7 @@ export const pennylaneApi = {
       chiffre_affaires: chiffreAffairesNet, // CA Net (comptes 701-708 moins 709)
       total_produits_exploitation: totalProduitsExploitation, // Total des produits d'exploitation (tous les comptes 7)
       charges: charges,
-      resultat_net: chiffreAffairesNet - charges,
+      resultat_net: totalProduitsExploitation - charges, // Bénéfice = Revenus totaux - Charges
       currency: 'EUR',
       prestations_services: chiffreAffairesNet, // CA Net pour les prestations
       ventes_biens: 0, // Pas de vente de biens pour DIMO DIAGNOSTIC
@@ -706,14 +706,31 @@ export const pennylaneApi = {
     rentabilite: {
       ratio: number
       message: string
+      montant: number
     } | null
+    // Nouvelles comparaisons
+    ca_growth: number | null
+    total_produits_growth: number | null
+    charges_growth: number | null
+    resultat_growth: number | null
+    tresorerie_growth: number | null
   }> {
     try {
       console.log(`📊 Récupération des KPIs pour ${selectedMonth}...`)
       
-      const [resultatData, tresorerieData] = await Promise.all([
+      // Calculer le mois précédent
+      const [year, month] = selectedMonth.split('-')
+      const previousMonth = month === '01' 
+        ? `${parseInt(year) - 1}-12` 
+        : `${year}-${(parseInt(month) - 1).toString().padStart(2, '0')}`
+      
+      console.log(`📊 Récupération des données pour ${selectedMonth} et comparaison avec ${previousMonth}`)
+      
+      const [resultatData, tresorerieData, previousResultatData, previousTresorerieData] = await Promise.all([
         this.getResultatComptable(selectedMonth),
-        this.getTresorerie(selectedMonth)
+        this.getTresorerie(selectedMonth),
+        this.getResultatComptable(previousMonth).catch(() => []), // Fallback si pas de données
+        this.getTresorerie(previousMonth).catch(() => []) // Fallback si pas de données
       ])
       
       console.log('📊 Résultats des appels parallèles dans getKPIs:')
@@ -734,7 +751,12 @@ export const pennylaneApi = {
           solde_tresorerie: null,
           growth: null,
           hasData: false,
-          rentabilite: null
+          rentabilite: null,
+          ca_growth: null,
+          total_produits_growth: null,
+          charges_growth: null,
+          resultat_growth: null,
+          tresorerie_growth: null
         }
       }
       
@@ -742,9 +764,21 @@ export const pennylaneApi = {
       const currentResultat = resultatData[0] // Premier (et seul) élément pour le mois sélectionné
       const currentTresorerie = tresorerieData[0] // Premier (et seul) élément pour le mois sélectionné
       
-      // Pour l'instant, on ne calcule pas de croissance car nous n'avons qu'un mois de données
-      // Dans une vraie implémentation, nous récupérerions les données de plusieurs mois
-      let growth = null
+      // Prendre les données du mois précédent (si disponibles)
+      const previousResultat = previousResultatData.length > 0 ? previousResultatData[0] : null
+      const previousTresorerie = previousTresorerieData.length > 0 ? previousTresorerieData[0] : null
+      
+      // Calculer les variations par rapport au mois précédent
+      const calculateGrowth = (current: number, previous: number | null) => {
+        if (!previous || previous === 0) return null
+        return ((current - previous) / Math.abs(previous)) * 100
+      }
+      
+      const caGrowth = calculateGrowth(currentResultat.chiffre_affaires || 0, previousResultat?.chiffre_affaires || null)
+      const totalProduitsGrowth = calculateGrowth(currentResultat.total_produits_exploitation || 0, previousResultat?.total_produits_exploitation || null)
+      const chargesGrowth = calculateGrowth(currentResultat.charges || 0, previousResultat?.charges || null)
+      const resultatGrowth = calculateGrowth(currentResultat.resultat_net || 0, previousResultat?.resultat_net || null)
+      const tresorerieGrowth = calculateGrowth(currentTresorerie.solde_final || 0, previousTresorerie?.solde_final || null)
       
       // Calculer le ratio de rentabilité
       const rentabilite = calculateProfitabilityRatio(
@@ -758,9 +792,15 @@ export const pennylaneApi = {
         charges: currentResultat.charges,
         resultat_net: currentResultat.resultat_net,
         solde_tresorerie: currentTresorerie.solde_final,
-        growth,
+        growth: caGrowth, // Garder pour compatibilité
         hasData: true,
-        rentabilite
+        rentabilite,
+        // Nouvelles comparaisons
+        ca_growth: caGrowth,
+        total_produits_growth: totalProduitsGrowth,
+        charges_growth: chargesGrowth,
+        resultat_growth: resultatGrowth,
+        tresorerie_growth: tresorerieGrowth
       }
       
     } catch (error) {
@@ -773,7 +813,12 @@ export const pennylaneApi = {
         solde_tresorerie: null,
         growth: null,
         hasData: false,
-        rentabilite: null
+        rentabilite: null,
+        ca_growth: null,
+        total_produits_growth: null,
+        charges_growth: null,
+        resultat_growth: null,
+        tresorerie_growth: null
       }
     }
   },

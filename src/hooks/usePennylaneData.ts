@@ -12,7 +12,14 @@ interface KPIData {
   rentabilite: {
     ratio: number
     message: string
+    montant: number
   } | null
+  // Nouvelles comparaisons
+  ca_growth: number | null
+  total_produits_growth: number | null
+  charges_growth: number | null
+  resultat_growth: number | null
+  tresorerie_growth: number | null
 }
 
 interface UsePennylaneDataReturn {
