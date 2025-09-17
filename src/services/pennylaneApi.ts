@@ -63,20 +63,6 @@ export interface PennylaneTresorerie {
   currency: string
 }
 
-export interface PennylaneCompany {
-  user: {
-    id: number
-    first_name: string
-    last_name: string
-    email: string
-    locale: string
-  }
-  company: {
-    id: number
-    name: string
-    reg_no: string
-  }
-}
 
 if (!API_KEY) {
   console.warn('⚠️ VITE_PENNYLANE_API_KEY non configurée.')
@@ -123,7 +109,7 @@ export async function getLedgerEntries(page: number = 1, perPage: number = 1000)
       per_page: perPage.toString()
     })
     
-    const response = await apiCall<{success: boolean, raw_data: any}>(`test-accounts?${params.toString()}`)
+    const response = await apiCall<{success: boolean, raw_data: any}>(`accounts?${params.toString()}`)
     
     if (response.success && response.raw_data) {
       return response.raw_data
@@ -149,7 +135,7 @@ export async function getTrialBalance(periodStart: string = '2025-01-01', period
       per_page: perPage.toString()
     })
     
-    const response = await apiCall<{success: boolean, raw_data: TrialBalanceResponse}>(`test-trial-balance?${params.toString()}`)
+    const response = await apiCall<{success: boolean, raw_data: TrialBalanceResponse}>(`trial-balance?${params.toString()}`)
     
     if (response.success && response.raw_data) {
       return response.raw_data
@@ -192,42 +178,41 @@ function calculateProfitabilityRatio(ca: number, resultat: number): { ratio: num
 
 // Services API
 export const pennylaneApi = {
+  // Fonction utilitaire pour parser les montants de manière robuste
+  parseAmount(value: string | number | null | undefined): number {
+    if (value === null || value === undefined || value === '') {
+      return 0
+    }
+    
+    if (typeof value === 'number') {
+      return value
+    }
+    
+    // Nettoyer la chaîne : supprimer les espaces, remplacer les virgules par des points
+    const cleanValue = value.toString().trim().replace(',', '.')
+    const parsed = parseFloat(cleanValue)
+    
+    if (isNaN(parsed)) {
+      console.warn(`⚠️ Impossible de parser la valeur: "${value}" -> 0`)
+      return 0
+    }
+    
+    return parsed
+  },
   // Test de connexion de base
   async testConnection(): Promise<boolean> {
     try {
       console.log('🧪 Test de connexion à l\'API Pennylane via proxy...')
-      const data = await apiCall<PennylaneCompany>('me')
+      // Utiliser l'endpoint fiscal_years pour tester la connexion (plus léger que trial_balance)
+      const data = await apiCall<{success: boolean, raw_data: any}>('fiscal_years')
       console.log('✅ Connexion réussie:', data)
-      return true
+      return data.success || true
     } catch (error) {
       console.error('❌ Erreur de connexion:', error)
       return false
     }
   },
 
-  // Récupérer les informations de l'entreprise
-  async getCompany(): Promise<PennylaneCompany> {
-    try {
-      return await apiCall<PennylaneCompany>('me')
-    } catch (error) {
-      console.error('Erreur lors de la récupération des données de l\'entreprise:', error)
-      // Retourner des données par défaut
-      return {
-        user: {
-          id: 0,
-          first_name: 'Utilisateur',
-          last_name: 'DIMO DIAGNOSTIC',
-          email: 'contact@dimo-diagnostic.net',
-          locale: 'fr'
-        },
-        company: {
-          id: 0,
-          name: 'DIMO DIAGNOSTIC',
-          reg_no: '829642370'
-        }
-      }
-    }
-  },
 
   // Récupérer le résultat comptable basé sur le trial balance
   async getResultatComptable(selectedMonth: string = '2025-09'): Promise<PennylaneResultatComptable[]> {
@@ -343,6 +328,14 @@ export const pennylaneApi = {
   processTrialBalanceData(trialBalance: TrialBalanceResponse, selectedMonth: string = '2025-09'): PennylaneResultatComptable[] {
     console.log(`📊 Traitement de ${trialBalance.items.length} comptes du trial balance...`)
     
+    // Debug: Afficher quelques exemples de comptes
+    if (trialBalance.items.length > 0) {
+      console.log(`🔍 Exemples de comptes reçus:`)
+      trialBalance.items.slice(0, 3).forEach(account => {
+        console.log(`   - ${account.number} (${account.label}): credits="${account.credits}", debits="${account.debits}"`)
+      })
+    }
+    
     // Analyser les comptes par classe
     const comptes7 = trialBalance.items.filter(account => account.number.startsWith('7')) // Revenus
     const comptes6 = trialBalance.items.filter(account => account.number.startsWith('6')) // Charges
@@ -359,14 +352,15 @@ export const pennylaneApi = {
     const comptesRistournes = comptes7.filter(account => account.number.startsWith('709')) // Ristournes
     
     const chiffreAffairesBrut = comptesCA.reduce((total, account) => {
-      const credits = parseFloat(account.credits) || 0
-      const debits = parseFloat(account.debits) || 0
+      const credits = this.parseAmount(account.credits)
+      const debits = this.parseAmount(account.debits)
+      console.log(`   CA - ${account.number}: credits=${credits}, debits=${debits}`)
       return total + credits - debits
     }, 0)
     
     const ristournes = comptesRistournes.reduce((total, account) => {
-      const credits = parseFloat(account.credits) || 0
-      const debits = parseFloat(account.debits) || 0
+      const credits = this.parseAmount(account.credits)
+      const debits = this.parseAmount(account.debits)
       return total + debits - credits // Les ristournes sont en débit
     }, 0)
     
@@ -374,20 +368,20 @@ export const pennylaneApi = {
     
     // Calculer le Total des Produits d'Exploitation (tous les comptes 7)
     const totalProduitsExploitation = comptes7.reduce((total, account) => {
-      const credits = parseFloat(account.credits) || 0
-      const debits = parseFloat(account.debits) || 0
+      const credits = this.parseAmount(account.credits)
+      const debits = this.parseAmount(account.debits)
       return total + credits - debits
     }, 0)
     
     const charges = comptes6.reduce((total, account) => {
-      const credits = parseFloat(account.credits) || 0
-      const debits = parseFloat(account.debits) || 0
+      const credits = this.parseAmount(account.credits)
+      const debits = this.parseAmount(account.debits)
       return total + debits - credits
     }, 0)
     
     const tresorerie = comptes5.reduce((total, account) => {
-      const credits = parseFloat(account.credits) || 0
-      const debits = parseFloat(account.debits) || 0
+      const credits = this.parseAmount(account.credits)
+      const debits = this.parseAmount(account.debits)
       return total + credits - debits
     }, 0)
     
