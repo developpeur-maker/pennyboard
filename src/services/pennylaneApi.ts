@@ -633,13 +633,24 @@ export const pennylaneApi = {
     
     // Calculer le solde total de trésorerie (comptes 512 uniquement)
     // Pour les comptes bancaires (classe 5), le solde = debits - credits
-    const soldeTotal = comptes512.reduce((total, account) => {
+    let soldeTotal = 0
+    console.log(`🔍 CALCUL DÉTAILLÉ DE LA TRÉSORERIE:`)
+    
+    comptes512.forEach((account, index) => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
       const solde = debits - credits // CORRECT: Pour les comptes bancaires (actif), solde = debits - credits
-      console.log(`   Banque ${account.number}: credits=${credits}, debits=${debits}, solde=${solde}`)
-      return total + solde
-    }, 0)
+      
+      console.log(`   ${index + 1}. ${account.number} (${account.label}):`)
+      console.log(`      credits=${credits} (type: ${typeof credits})`)
+      console.log(`      debits=${debits} (type: ${typeof debits})`)
+      console.log(`      solde=${solde} (type: ${typeof solde})`)
+      console.log(`      soldeTotal avant: ${soldeTotal}`)
+      
+      soldeTotal += solde
+      console.log(`      soldeTotal après: ${soldeTotal}`)
+      console.log(`      ----`)
+    })
     
     console.log(`💰 Solde total de trésorerie: ${soldeTotal.toFixed(2)}€`)
     
