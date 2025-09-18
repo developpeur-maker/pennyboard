@@ -155,11 +155,24 @@ export async function getTrialBalance(periodStart: string = '2025-01-01', period
       if (response.raw_data.items) {
         allItems = allItems.concat(response.raw_data.items)
         console.log(`📋 Page ${currentPage}: ${response.raw_data.items.length} comptes récupérés (total: ${allItems.length})`)
+        
+        // Si on a exactement perPage items, il y a probablement une page suivante
+        // même si l'API dit le contraire (bug de l'API pour des périodes longues)
+        if (response.raw_data.items.length === perPage && totalPages === 1) {
+          console.log(`⚠️ DÉTECTION: Page complète (${perPage} items) mais total_pages=1, forçage page suivante`)
+          totalPages = 2 // Forcer au moins une page de plus
+        }
       }
       
       // Mettre à jour les informations de pagination
-      totalPages = response.raw_data.total_pages
+      totalPages = Math.max(totalPages, response.raw_data.total_pages)
       currentPage++
+      
+      // Arrêter si la page est vide (vraie fin)
+      if (response.raw_data.items && response.raw_data.items.length === 0) {
+        console.log(`📄 Page ${currentPage - 1} vide, arrêt de la pagination`)
+        break
+      }
       
     } while (currentPage <= totalPages)
     
@@ -308,7 +321,7 @@ export const pennylaneApi = {
       const { startDate: cumulStartDate, endDate: cumulEndDate } = getCumulativeDateRange(selectedMonth)
       console.log(`📅 Période cumulée pour trésorerie: ${cumulStartDate} au ${cumulEndDate}`)
       console.log(`🔍 DEBUG: Appel getTrialBalance CUMULÉ...`)
-      const trialBalanceCumul = await getTrialBalance(cumulStartDate, cumulEndDate, 1000)
+      const trialBalanceCumul = await getTrialBalance(cumulStartDate, cumulEndDate, 2000)
       console.log(`🔍 DEBUG: Trial balance cumulé récupéré avec ${trialBalanceCumul.items.length} comptes`)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
@@ -501,7 +514,7 @@ export const pennylaneApi = {
     }, 0)
     
     // Calculer la trésorerie avec les comptes 512 (Banques) uniquement
-    // Calculer la TRÉSORERIE avec les soldes CUMULÉS si disponible
+    // Utiliser le trial balance cumulé (avec per_page=2000) pour avoir les vrais soldes cumulés
     const trialBalanceForTreasury = trialBalanceCumul || trialBalance
     const comptes512 = trialBalanceForTreasury.items.filter(account => account.number.startsWith('512'))
     
