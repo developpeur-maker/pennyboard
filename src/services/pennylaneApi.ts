@@ -1624,48 +1624,32 @@ export const pennylaneApi = {
       const today = new Date()
       const todayStr = today.toISOString().split('T')[0]
       const currentYear = today.getFullYear()
-      const previousYear = currentYear - 1
       
-      // 1. SOLDE INITIAL au 31/12 de l'année précédente
-      const endOfPreviousYear = `${previousYear}-12-31`
-      const soldeInitialResponse = await getTrialBalance(endOfPreviousYear, endOfPreviousYear, 1000)
-      const comptes512Initial = soldeInitialResponse.items.filter(account => account.number.startsWith('512'))
+      // APPROCHE SIMPLE: Récupérer les soldes des comptes 512 pour TOUTE l'année fiscale
+      const startOfYear = `${currentYear}-01-01`
+      const endOfYear = `${currentYear}-12-31`
       
-      let soldeInitial = 0
-      comptes512Initial.forEach(account => {
+      console.log(`💰 TRÉSORERIE SIMPLE: Récupération soldes comptes 512 pour ${startOfYear} → ${endOfYear}`)
+      
+      const trialBalanceAnnuel = await getTrialBalance(startOfYear, endOfYear, 1000)
+      const comptes512 = trialBalanceAnnuel.items.filter(account => account.number.startsWith('512'))
+      
+      console.log(`🏦 ${comptes512.length} comptes bancaires trouvés:`)
+      
+      let tresorerieActuelle = 0
+      comptes512.forEach((account, index) => {
         const credits = this.parseAmount(account.credits)
         const debits = this.parseAmount(account.debits)
-        soldeInitial += (credits - debits)
+        const solde = credits - debits
+        console.log(`   ${index + 1}. ${account.number} (${account.label}): ${solde.toFixed(2)}€`)
+        tresorerieActuelle += solde
       })
       
-      // 2. SOLDE ACTUEL au jour d'aujourd'hui (pas les mouvements !)
-      const soldeActuelResponse = await getTrialBalance(todayStr, todayStr, 1000)
-      const comptes512Actuels = soldeActuelResponse.items.filter(account => account.number.startsWith('512'))
-      
-      let soldeActuel = 0
-      comptes512Actuels.forEach(account => {
-        const credits = this.parseAmount(account.credits)
-        const debits = this.parseAmount(account.debits)
-        soldeActuel += (credits - debits)
-      })
-      
-      // 3. CALCUL FINAL - MÉTHODE COMPTABLE CORRECTE
-      // Option A: Solde initial + mouvements (mais les mouvements sont à 0)
-      // Option B: Utiliser directement le solde actuel de l'API
-      const tresorerieMethodeA = soldeInitial // Solde initial seulement (car mouvements = 0)
-      const tresorerieMethodeB = soldeActuel  // Solde actuel direct
-      
-      console.log(`💰 TRÉSORERIE - Solde ${endOfPreviousYear}: ${soldeInitial.toFixed(2)}€`)
-      console.log(`💰 TRÉSORERIE - Solde actuel ${todayStr}: ${soldeActuel.toFixed(2)}€`)
-      console.log(`💰 TRÉSORERIE - MÉTHODE A (solde initial): ${tresorerieMethodeA.toFixed(2)}€`)
-      console.log(`💰 TRÉSORERIE - MÉTHODE B (solde actuel): ${tresorerieMethodeB.toFixed(2)}€`)
-      
-      // Utiliser le solde actuel (méthode B)
-      const tresorerieActuelle = tresorerieMethodeB
+      console.log(`💰 TRÉSORERIE TOTALE (exercice ${currentYear}): ${tresorerieActuelle.toFixed(2)}€`)
       
       return [{
         period: todayStr,
-        solde_initial: soldeInitial,
+        solde_initial: 0,
         encaissements: 0,
         decaissements: 0,
         solde_final: tresorerieActuelle,
