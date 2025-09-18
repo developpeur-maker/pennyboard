@@ -29,7 +29,8 @@ const Dashboard: React.FC = () => {
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
   const [selectedYear, setSelectedYear] = useState('2025')
   const [isChargesModalOpen, setIsChargesModalOpen] = useState(false)
-  const { kpis, chargesBreakdown, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
+  const [isRevenusModalOpen, setIsRevenusModalOpen] = useState(false)
+  const { kpis, chargesBreakdown, revenusBreakdown, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
 
   // Fonction pour formater la période affichée
   const formatPeriod = () => {
@@ -202,10 +203,10 @@ const Dashboard: React.FC = () => {
           <KPICard
             title="Ventes"
             period={formatPeriod()}
-            subtitle="Chiffre d'affaires net"
-            value={kpis && kpis.hasData && kpis.chiffre_affaires !== null ? formatCurrency(kpis.chiffre_affaires) : 'Aucune donnée'}
-            change={kpis && kpis.hasData && kpis.ca_growth !== null ? Math.abs(kpis.ca_growth) : 0}
-            changeType={kpis && kpis.hasData && kpis.ca_growth !== null ? (kpis.ca_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
+            subtitle="Prestations de services"
+            value={kpis && kpis.hasData && kpis.ventes_706 !== null ? formatCurrency(kpis.ventes_706) : 'Aucune donnée'}
+            change={kpis && kpis.hasData && kpis.ventes_growth !== null ? Math.abs(kpis.ventes_growth) : 0}
+            changeType={kpis && kpis.hasData && kpis.ventes_growth !== null ? (kpis.ventes_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<DollarSign className="w-5 h-5 text-green-600" />}
             color="green"
           />
@@ -218,6 +219,7 @@ const Dashboard: React.FC = () => {
             changeType={kpis && kpis.hasData && kpis.total_produits_growth !== null ? (kpis.total_produits_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
             color="green"
+            onClick={() => setIsRevenusModalOpen(true)}
           />
           <KPICard
             title="Achats & Charges"
@@ -229,16 +231,6 @@ const Dashboard: React.FC = () => {
             icon={<CreditCard className="w-5 h-5 text-red-600" />}
             color="red"
             onClick={() => setIsChargesModalOpen(true)}
-          />
-          <KPICard
-            title="Bénéfice"
-            period={formatPeriod()}
-            subtitle="Résultat net"
-            value={kpis && kpis.hasData && kpis.resultat_net !== null ? formatCurrency(kpis.resultat_net) : 'Aucune donnée'}
-            change={kpis && kpis.hasData && kpis.resultat_growth !== null ? Math.abs(kpis.resultat_growth) : 0}
-            changeType={kpis && kpis.hasData && kpis.resultat_growth !== null ? (kpis.resultat_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
-            icon={<Calculator className="w-5 h-5 text-blue-600" />}
-            color="blue"
           />
           <KPICard
             title="Rentabilité"
@@ -289,6 +281,16 @@ const Dashboard: React.FC = () => {
         subtitle={formatPeriod()}
         items={chargesBreakdown}
         totalAmount={kpis?.charges || 0}
+      />
+
+      {/* Modal de détail des revenus */}
+      <DetailModal
+        isOpen={isRevenusModalOpen}
+        onClose={() => setIsRevenusModalOpen(false)}
+        title="Détail des Revenus Totaux"
+        subtitle={formatPeriod()}
+        items={revenusBreakdown}
+        totalAmount={kpis?.total_produits_exploitation || 0}
       />
     </div>
   )

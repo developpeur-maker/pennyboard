@@ -41,6 +41,7 @@ export interface TrialBalanceResponse {
 // Types pour les données Pennylane
 export interface PennylaneResultatComptable {
   period: string
+  ventes_706: number // VRAIES VENTES (compte 706 uniquement)
   chiffre_affaires: number // CA Net (comptes 701-708 moins 709)
   total_produits_exploitation: number // Total des produits d'exploitation (tous les comptes 7)
   charges: number
@@ -394,6 +395,7 @@ export const pennylaneApi = {
     
     const result: PennylaneResultatComptable[] = [{
       period: selectedMonth,
+      ventes_706: 0, // Pas de données spécifiques dans cette fonction de fallback
       chiffre_affaires: chiffreAffairesNet,
       total_produits_exploitation: totalProduitsExploitation,
       charges: charges,
@@ -485,6 +487,19 @@ export const pennylaneApi = {
     
     const chiffreAffairesNet = chiffreAffairesBrut - ristournes
     
+    // Calculer spécifiquement les ventes (compte 706 - prestations de services)
+    let ventes706 = 0
+    trialBalance.items.forEach(account => {
+      const accountNumber = account.number
+      if (accountNumber.startsWith('706')) {
+        const credits = this.parseAmount(account.credits)
+        const debits = this.parseAmount(account.debits)
+        const solde = credits - debits // Pour les comptes de produits, c'est credits - debits
+        ventes706 += solde
+        console.log(`📈 VENTES 706: ${account.number} - ${account.label} = ${solde.toFixed(0)}€`)
+      }
+    })
+    
     // Calculer le Total des Produits d'Exploitation (tous les comptes 7)
     const totalProduitsExploitation = comptes7.reduce((total, account) => {
       const credits = this.parseAmount(account.credits)
@@ -509,6 +524,7 @@ export const pennylaneApi = {
     }, 0)
     
     console.log(`💰 Calculs détaillés:`)
+    console.log(`   - Ventes 706 (prestations): ${ventes706.toFixed(2)}€`)
     console.log(`   - CA Net: ${chiffreAffairesNet.toFixed(2)}€`)
     console.log(`   - Total Produits Exploitation: ${totalProduitsExploitation.toFixed(2)}€`)
     console.log(`   - Charges: ${charges.toFixed(2)}€`)
@@ -520,6 +536,7 @@ export const pennylaneApi = {
     
     result.push({
       period: selectedMonth,
+      ventes_706: ventes706, // VRAIES VENTES (compte 706 uniquement)
       chiffre_affaires: chiffreAffairesNet, // CA Net (comptes 701-708 moins 709)
       total_produits_exploitation: totalProduitsExploitation, // Total des produits d'exploitation (tous les comptes 7)
       charges: charges,
@@ -565,6 +582,7 @@ export const pennylaneApi = {
       
       result.push({
         period,
+        ventes_706: chiffreAffaires, // Estimation: tous les revenus sont des prestations
         chiffre_affaires: chiffreAffaires,
         total_produits_exploitation: chiffreAffaires, // Même valeur pour le fallback
         charges: charges,
@@ -843,8 +861,85 @@ export const pennylaneApi = {
     return result
   },
 
+  // Traiter les données de revenus par classes comptables pour le drill-down
+  processRevenusBreakdown(trialBalanceData: TrialBalanceResponse): Array<{code: string, label: string, description: string, amount: number}> {
+    if (!trialBalanceData.items || trialBalanceData.items.length === 0) {
+      return []
+    }
+
+    const revenusClasses: { [key: string]: { label: string, description: string } } = {
+      '701': { label: 'Ventes de marchandises', description: 'Revente de produits achetés' },
+      '706': { label: 'Prestations de services', description: 'Services rendus aux clients' },
+      '707': { label: 'Ventes de marchandises', description: 'Autres ventes de biens' },
+      '708': { label: 'Autres produits d\'activité', description: 'Commissions, redevances, etc.' },
+      '74': { label: 'Subventions d\'exploitation', description: 'Aides publiques reçues' },
+      '75': { label: 'Autres produits de gestion', description: 'Produits exceptionnels récurrents' },
+      '76': { label: 'Produits financiers', description: 'Intérêts perçus, gains de change' },
+      '77': { label: 'Produits exceptionnels', description: 'Produits non récurrents' },
+      '78': { label: 'Reprises amortissements', description: 'Reprises sur provisions' }
+    }
+
+    const breakdown: { [key: string]: number } = {}
+
+    // Initialiser toutes les classes
+    Object.keys(revenusClasses).forEach(code => {
+      breakdown[code] = 0
+    })
+
+    console.log(`📊 BREAKDOWN REVENUS: Traitement de ${trialBalanceData.items.length} comptes...`)
+
+    trialBalanceData.items.forEach(account => {
+      const accountNumber = account.number
+      let accountClass = ''
+      
+      // Déterminer la classe comptable (701, 706, 707, 708, 74, 75, 76, 77, 78)
+      if (accountNumber.startsWith('701')) accountClass = '701'
+      else if (accountNumber.startsWith('706')) accountClass = '706'  
+      else if (accountNumber.startsWith('707')) accountClass = '707'
+      else if (accountNumber.startsWith('708')) accountClass = '708'
+      else if (accountNumber.startsWith('74')) accountClass = '74'
+      else if (accountNumber.startsWith('75')) accountClass = '75'
+      else if (accountNumber.startsWith('76')) accountClass = '76'
+      else if (accountNumber.startsWith('77')) accountClass = '77'
+      else if (accountNumber.startsWith('78')) accountClass = '78'
+      
+      if (revenusClasses[accountClass]) {
+        const credits = this.parseAmount(account.credits)
+        const debits = this.parseAmount(account.debits)
+        const solde = credits - debits // Pour les comptes de produits, c'est credits - debits
+        
+        if (solde > 0) { // Seulement les soldes créditeurs pour les produits
+          breakdown[accountClass] += solde
+          
+          if (breakdown[accountClass] > 1000) { // Log seulement si montant significatif
+            console.log(`📋 Classe ${accountClass} (${revenusClasses[accountClass].label}): ${account.number} - ${account.label} = ${solde.toFixed(0)}€`)
+          }
+        }
+      }
+    })
+
+    // Convertir en tableau et filtrer les montants significatifs
+    const result = Object.entries(breakdown)
+      .filter(([_, amount]) => amount > 100) // Filtrer les montants < 100€
+      .map(([code, amount]) => ({
+        code,
+        label: revenusClasses[code].label,
+        description: revenusClasses[code].description,
+        amount
+      }))
+      .sort((a, b) => b.amount - a.amount) // Trier par montant décroissant
+
+    console.log(`📊 BREAKDOWN REVENUS: ${result.length} classes avec des montants significatifs`)
+    result.forEach(item => {
+      console.log(`📋 ${item.code} - ${item.label}: ${item.amount.toFixed(0)}€`)
+    })
+
+    return result
+  },
+
   // Récupérer les KPIs consolidés
   async getKPIs(selectedMonth: string = '2025-09'): Promise<{
+    ventes_706: number | null
     chiffre_affaires: number | null
     total_produits_exploitation: number | null
     charges: number | null
@@ -858,6 +953,7 @@ export const pennylaneApi = {
       montant: number
     } | null
     // Nouvelles comparaisons
+    ventes_growth: number | null
     ca_growth: number | null
     total_produits_growth: number | null
     charges_growth: number | null
@@ -893,6 +989,7 @@ export const pennylaneApi = {
         console.log('   - resultatData vide:', resultatData.length === 0)
         console.log('   - tresorerieData vide:', tresorerieData.length === 0)
         return {
+          ventes_706: null,
           chiffre_affaires: null,
           total_produits_exploitation: null,
           charges: null,
@@ -901,6 +998,7 @@ export const pennylaneApi = {
           growth: null,
           hasData: false,
           rentabilite: null,
+          ventes_growth: null,
           ca_growth: null,
           total_produits_growth: null,
           charges_growth: null,
@@ -924,6 +1022,7 @@ export const pennylaneApi = {
         return Math.round(growth * 100) / 100 // Arrondir à 2 décimales
       }
       
+      const ventesGrowth = calculateGrowth(currentResultat.ventes_706 || 0, previousResultat?.ventes_706 || null)
       const caGrowth = calculateGrowth(currentResultat.chiffre_affaires || 0, previousResultat?.chiffre_affaires || null)
       const totalProduitsGrowth = calculateGrowth(currentResultat.total_produits_exploitation || 0, previousResultat?.total_produits_exploitation || null)
       const chargesGrowth = calculateGrowth(currentResultat.charges || 0, previousResultat?.charges || null)
@@ -944,6 +1043,7 @@ export const pennylaneApi = {
       );
 
       return {
+        ventes_706: currentResultat.ventes_706, // VRAIES VENTES
         chiffre_affaires: currentResultat.chiffre_affaires,
         total_produits_exploitation: currentResultat.total_produits_exploitation,
         charges: currentResultat.charges,
@@ -953,6 +1053,7 @@ export const pennylaneApi = {
         hasData: true,
         rentabilite,
         // Nouvelles comparaisons
+        ventes_growth: ventesGrowth, // Croissance des vraies ventes
         ca_growth: caGrowth,
         total_produits_growth: totalProduitsGrowth,
         charges_growth: chargesGrowth,
@@ -963,6 +1064,7 @@ export const pennylaneApi = {
     } catch (error) {
       console.error('Erreur lors de la récupération des KPIs:', error)
       return {
+        ventes_706: null,
         chiffre_affaires: null,
         total_produits_exploitation: null,
         charges: null,
@@ -971,6 +1073,7 @@ export const pennylaneApi = {
         growth: null,
         hasData: false,
         rentabilite: null,
+        ventes_growth: null,
         ca_growth: null,
         total_produits_growth: null,
         charges_growth: null,
