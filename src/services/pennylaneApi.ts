@@ -377,6 +377,7 @@ export const pennylaneApi = {
         endDate = `${year}-${month.padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
         
         console.log(`💰 TRÉSORERIE MENSUELLE: Soldes cumulés du ${startDate} au ${endDate}`)
+      console.log(`🔍 DEBUG: Période demandée à l'API: ${startDate} → ${endDate}`)
       }
       
       // Récupérer le trial balance pour la période calculée (soldes cumulés)
