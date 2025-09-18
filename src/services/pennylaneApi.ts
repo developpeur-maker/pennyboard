@@ -777,6 +777,70 @@ export const pennylaneApi = {
     }
   },
 
+  // Traiter les données de charges par classes comptables pour le drill-down
+  processChargesBreakdown(trialBalanceData: TrialBalanceResponse): Array<{code: string, label: string, amount: number}> {
+    if (!trialBalanceData.items || trialBalanceData.items.length === 0) {
+      return []
+    }
+
+    const chargesClasses: { [key: string]: string } = {
+      '60': 'Achats',
+      '61': 'Services extérieurs',
+      '62': 'Autres services extérieurs',
+      '63': 'Impôts et taxes',
+      '64': 'Charges de personnel',
+      '65': 'Autres charges de gestion',
+      '66': 'Charges financières',
+      '67': 'Charges exceptionnelles',
+      '68': 'Dotations aux amortissements'
+    }
+
+    const breakdown: { [key: string]: number } = {}
+
+    // Initialiser toutes les classes
+    Object.keys(chargesClasses).forEach(code => {
+      breakdown[code] = 0
+    })
+
+    console.log(`📊 BREAKDOWN CHARGES: Traitement de ${trialBalanceData.items.length} comptes...`)
+
+    trialBalanceData.items.forEach(account => {
+      const accountNumber = account.number
+      const accountClass = accountNumber.substring(0, 2)
+      
+      if (chargesClasses[accountClass]) {
+        const debits = this.parseAmount(account.debits)
+        const credits = this.parseAmount(account.credits)
+        const solde = debits - credits
+        
+        if (solde > 0) { // Seulement les soldes débiteurs pour les charges
+          breakdown[accountClass] += solde
+          
+          if (breakdown[accountClass] > 1000) { // Log seulement si montant significatif
+            console.log(`📋 Classe ${accountClass} (${chargesClasses[accountClass]}): ${account.number} - ${account.label} = ${solde.toFixed(0)}€`)
+          }
+        }
+      }
+    })
+
+    // Convertir en tableau et filtrer les montants significatifs
+    const result = Object.entries(breakdown)
+      .filter(([_, amount]) => amount > 100) // Filtrer les montants < 100€
+      .map(([code, amount]) => ({
+        code,
+        label: chargesClasses[code],
+        amount
+      }))
+      .sort((a, b) => b.amount - a.amount) // Trier par montant décroissant
+
+    console.log(`📊 BREAKDOWN CHARGES: ${result.length} classes avec des montants significatifs`)
+    result.forEach(item => {
+      console.log(`📋 ${item.code} - ${item.label}: ${item.amount.toFixed(0)}€`)
+    })
+
+    return result
+  },
+
   // Récupérer les KPIs consolidés
   async getKPIs(selectedMonth: string = '2025-09'): Promise<{
     chiffre_affaires: number | null

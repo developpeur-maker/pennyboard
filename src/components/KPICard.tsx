@@ -14,6 +14,7 @@ interface KPICardProps {
     value: string
     message: string
   }
+  onClick?: () => void
 }
 
 const KPICard: React.FC<KPICardProps> = ({ 
@@ -25,7 +26,8 @@ const KPICard: React.FC<KPICardProps> = ({
   changeType, 
   icon,
   color = 'green',
-  projection
+  projection,
+  onClick
 }) => {
   const colorClasses = {
     green: 'text-green-600',
@@ -44,7 +46,10 @@ const KPICard: React.FC<KPICardProps> = ({
   }
 
   return (
-    <div className={`kpi-card ${bgColorClasses[color]} p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 min-h-[220px] flex flex-col justify-between`}>
+    <div 
+      className={`kpi-card ${bgColorClasses[color]} p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 min-h-[220px] flex flex-col justify-between ${onClick ? 'cursor-pointer hover:scale-105' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between mb-6">
         <div className="flex-1">
           <p className="kpi-label text-lg font-semibold text-gray-700 mb-2">

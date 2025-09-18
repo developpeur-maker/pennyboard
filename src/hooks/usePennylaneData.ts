@@ -32,6 +32,7 @@ interface UsePennylaneDataReturn {
   tresorerie: PennylaneTresorerie[]
   incomeStatement: any | null
   fiscalYears: Array<{id: string, name: string, start_date: string, end_date: string}>
+  chargesBreakdown: Array<{code: string, label: string, amount: number}>
   loading: boolean
   error: string | null
   refetch: () => void
@@ -48,6 +49,7 @@ export const usePennylaneData = (
   const [tresorerie, setTresorerie] = useState<PennylaneTresorerie[]>([])
   const [incomeStatement, setIncomeStatement] = useState<any | null>(null)
   const [fiscalYears, setFiscalYears] = useState<Array<{id: string, name: string, start_date: string, end_date: string}>>([])
+  const [chargesBreakdown, setChargesBreakdown] = useState<Array<{code: string, label: string, amount: number}>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -82,10 +84,14 @@ export const usePennylaneData = (
       // Calculer le compte de résultat avec comparaisons
       const incomeStatementData = pennylaneApi.calculateIncomeStatement(trialBalanceData, previousTrialBalanceData)
 
+      // Calculer le breakdown des charges
+      const chargesBreakdownData = pennylaneApi.processChargesBreakdown(trialBalanceData)
+
       setKpis(kpisData)
       setResultatComptable(resultatData)
       setTresorerie(tresorerieData)
       setIncomeStatement(incomeStatementData)
+      setChargesBreakdown(chargesBreakdownData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
       console.error('Erreur lors du chargement des données Pennylane:', err)
@@ -104,6 +110,7 @@ export const usePennylaneData = (
     tresorerie,
     incomeStatement,
     fiscalYears,
+    chargesBreakdown,
     loading,
     error,
     refetch: fetchData

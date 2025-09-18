@@ -8,6 +8,7 @@ import {
   Calendar
 } from 'lucide-react'
 import KPICard from '../components/KPICard'
+import DetailModal from '../components/DetailModal'
 import { usePennylaneData } from '../hooks/usePennylaneData'
 
 const Dashboard: React.FC = () => {
@@ -27,7 +28,8 @@ const Dashboard: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
   const [selectedYear, setSelectedYear] = useState('2025')
-  const { kpis, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
+  const [isChargesModalOpen, setIsChargesModalOpen] = useState(false)
+  const { kpis, chargesBreakdown, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
 
   // Fonction pour formater la période affichée
   const formatPeriod = () => {
@@ -226,6 +228,7 @@ const Dashboard: React.FC = () => {
             changeType={kpis && kpis.hasData && kpis.charges_growth !== null ? (kpis.charges_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<CreditCard className="w-5 h-5 text-red-600" />}
             color="red"
+            onClick={() => setIsChargesModalOpen(true)}
           />
           <KPICard
             title="Bénéfice"
@@ -271,6 +274,16 @@ const Dashboard: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Modal de détail des charges */}
+      <DetailModal
+        isOpen={isChargesModalOpen}
+        onClose={() => setIsChargesModalOpen(false)}
+        title="Détail des Achats & Charges"
+        subtitle={formatPeriod()}
+        items={chargesBreakdown}
+        totalAmount={kpis?.charges || 0}
+      />
     </div>
   )
 }
