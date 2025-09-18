@@ -1662,18 +1662,31 @@ export const pennylaneApi = {
       const comptes512Mouvements = mouvementsResponse.items.filter(account => account.number.startsWith('512'))
       
       let mouvements = 0
-      comptes512Mouvements.forEach(account => {
+      comptes512Mouvements.forEach((account, index) => {
         const credits = this.parseAmount(account.credits)
         const debits = this.parseAmount(account.debits)
         const solde = credits - debits
+        console.log(`   ${index + 1}. ${account.number}: C=${credits.toFixed(2)}€, D=${debits.toFixed(2)}€, Solde=${solde.toFixed(2)}€`)
         mouvements += solde
       })
       
-      console.log(`📊 Mouvements ${startOfYear} → ${todayStr}: ${mouvements.toFixed(2)}€`)
+      console.log(`📊 Mouvements CUMULÉS ${startOfYear} → ${todayStr}: ${mouvements.toFixed(2)}€`)
       
-      // 3. CALCUL FINAL
-      const tresorerieActuelle = soldeInitial + mouvements
-      console.log(`💰 TRÉSORERIE ACTUELLE = ${soldeInitial.toFixed(2)}€ + ${mouvements.toFixed(2)}€ = ${tresorerieActuelle.toFixed(2)}€`)
+      // 3. CALCUL FINAL - QUESTION: Est-ce que les mouvements sont déjà cumulatifs ?
+      // Si OUI: tresorerieActuelle = mouvements (les mouvements incluent déjà le solde initial)
+      // Si NON: tresorerieActuelle = soldeInitial + mouvements
+      
+      console.log(`🤔 ANALYSE: Solde initial=${soldeInitial.toFixed(2)}€, Mouvements=${mouvements.toFixed(2)}€`)
+      
+      // TEST: Si les mouvements sont déjà cumulatifs, ils devraient être proches de la vraie trésorerie
+      const tresorerieMethode1 = mouvements // Mouvements = soldes cumulés
+      const tresorerieMethode2 = soldeInitial + mouvements // Addition classique
+      
+      console.log(`💰 MÉTHODE 1 (mouvements seuls): ${tresorerieMethode1.toFixed(2)}€`)
+      console.log(`💰 MÉTHODE 2 (initial + mouvements): ${tresorerieMethode2.toFixed(2)}€`)
+      
+      // Pour le moment, utilisons la méthode 1 (mouvements seuls)
+      const tresorerieActuelle = tresorerieMethode1
       
       return [{
         period: todayStr,
