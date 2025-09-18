@@ -1635,20 +1635,27 @@ export const pennylaneApi = {
       // Date du jour
       const today = new Date()
       const todayStr = today.toISOString().split('T')[0] // Format YYYY-MM-DD
+      const currentYear = today.getFullYear().toString()
+      const startOfYear = `${currentYear}-01-01`
       
-      // Récupérer les soldes des comptes 512 à la date du jour
-      const trialBalance = await getTrialBalance(todayStr, todayStr, 2000)
+      console.log(`📅 Calcul trésorerie cumulée: ${startOfYear} → ${todayStr}`)
+      
+      // Récupérer les soldes CUMULÉS des comptes 512 depuis le début de l'année
+      const trialBalance = await getTrialBalance(startOfYear, todayStr, 2000)
       const comptes512 = trialBalance.items.filter(account => account.number.startsWith('512'))
       
+      console.log(`🏦 ${comptes512.length} comptes bancaires trouvés:`)
+      
       let tresorerieActuelle = 0
-      comptes512.forEach(account => {
+      comptes512.forEach((account, index) => {
         const credits = this.parseAmount(account.credits)
         const debits = this.parseAmount(account.debits)
         const solde = credits - debits
+        console.log(`   ${index + 1}. ${account.number} (${account.label}): ${solde.toFixed(2)}€`)
         tresorerieActuelle += solde
       })
       
-      console.log(`💰 Trésorerie actuelle (${todayStr}): ${tresorerieActuelle.toFixed(2)}€`)
+      console.log(`💰 Trésorerie CUMULÉE (${startOfYear} → ${todayStr}): ${tresorerieActuelle.toFixed(2)}€`)
       
       return [{
         period: todayStr,
