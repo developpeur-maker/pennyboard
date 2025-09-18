@@ -529,6 +529,7 @@ export const pennylaneApi = {
     selectedMonth: string = '2025-09',
     trialBalanceCumul?: TrialBalanceResponse
   ): Promise<PennylaneResultatComptable[]> {
+    console.log(`🔧 processTrialBalanceData: ${trialBalance.items.length} comptes principaux, ${trialBalanceCumul?.items.length || 0} comptes cumulés`)
     // Analyser les comptes par classe
     const comptes7 = trialBalance.items.filter(account => account.number.startsWith('7')) // Revenus
     const comptes6 = trialBalance.items.filter(account => account.number.startsWith('6')) // Charges
@@ -1644,7 +1645,14 @@ export const pennylaneApi = {
       console.log(`📅 Période unifiée: ${startDate} au ${endDate}`)
       const trialBalanceCumul = await getTrialBalance(startDate, endDate, 2000)
       
-      // 2. UN appel pour le mois précédent (pour les comparaisons)
+      // 2. UN appel pour le mois sélectionné seul (pour avoir tous les comptes)
+      const trialBalanceMensuel = await getTrialBalance(
+        `${selectedYearStr}-${selectedMonth.split('-')[1]}-01`,
+        endDate,
+        2000
+      )
+      
+      // 3. UN appel pour le mois précédent (pour les comparaisons)
       const previousDate = new Date(selectedMonth + '-01')
       previousDate.setMonth(previousDate.getMonth() - 1)
       const prevYear = previousDate.getFullYear().toString()
@@ -1658,9 +1666,10 @@ export const pennylaneApi = {
       ).catch(() => null)
       
       console.log(`📊 Trial balance cumulé: ${trialBalanceCumul.items.length} comptes`)
+      console.log(`📊 Trial balance mensuel: ${trialBalanceMensuel.items.length} comptes`)
       
-      // 3. Traiter toutes les données à partir de ces 2 appels
-      const resultatComptable = await this.processTrialBalanceData(trialBalanceCumul, selectedMonth)
+      // 4. Traiter toutes les données : mensuel pour tout, cumulé pour les breakdowns
+      const resultatComptable = await this.processTrialBalanceData(trialBalanceMensuel, selectedMonth, trialBalanceCumul)
       const currentResultat = resultatComptable[0]
       
       let previousResultat = null
