@@ -192,20 +192,48 @@ function getMonthDateRange(selectedMonth: string): { startDate: string, endDate:
   return { startDate, endDate }
 }
 
-function calculateProfitabilityRatio(ca: number, resultat: number): { ratio: number, message: string, montant: number } {
+function calculateProfitabilityRatio(
+  ca: number, 
+  resultat: number, 
+  previousMonthCharges?: number,
+  isCurrentMonth: boolean = false
+): { ratio: number, message: string, montant: number } {
   if (ca === 0) return { ratio: 0, message: "Aucun chiffre d'affaires", montant: resultat };
   
-  const ratio = Math.round((resultat / ca) * 100);
+  let finalResultat = resultat
+  let projectionMessage = ""
   
-  let message = "";
-  if (ratio > 25) message = "Excellente rentabilité ! 🎉";
-  else if (ratio > 15) message = "Très bonne rentabilité 👍";
-  else if (ratio > 10) message = "Bonne rentabilité ✅";
-  else if (ratio > 5) message = "Rentabilité correcte 📊";
-  else if (ratio > 0) message = "Rentabilité faible ⚠️";
-  else message = "Activité déficitaire 🔴";
+  // Si c'est le mois en cours ET qu'on a les charges du mois précédent
+  if (isCurrentMonth && previousMonthCharges && previousMonthCharges > 0) {
+    // Projection : estimer les charges manquantes (salaires, loyers, etc.)
+    const estimatedMissingCharges = previousMonthCharges * 0.7 // 70% des charges du mois précédent
+    finalResultat = resultat - estimatedMissingCharges
+    
+    const monthNames = [
+      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ]
+    const prevMonth = new Date()
+    prevMonth.setMonth(prevMonth.getMonth() - 1)
+    const prevMonthName = monthNames[prevMonth.getMonth()]
+    
+    projectionMessage = ` (projection basée sur ${prevMonthName})`
+    console.log(`💡 PROJECTION RENTABILITÉ: Résultat réel ${resultat.toFixed(0)}€ - charges estimées ${estimatedMissingCharges.toFixed(0)}€ = ${finalResultat.toFixed(0)}€`)
+  }
   
-  return { ratio, message, montant: resultat };
+  const ratio = Math.round((finalResultat / ca) * 100);
+  
+  let baseMessage = "";
+  if (ratio > 25) baseMessage = "Excellente rentabilité ! 🎉";
+  else if (ratio > 15) baseMessage = "Très bonne rentabilité 👍";
+  else if (ratio > 10) baseMessage = "Bonne rentabilité ✅";
+  else if (ratio > 5) baseMessage = "Rentabilité correcte 📊";
+  else if (ratio > 0) baseMessage = "Rentabilité faible ⚠️";
+  else baseMessage = "Activité déficitaire 🔴";
+  
+  const message = baseMessage + projectionMessage
+  
+  return { ratio, message, montant: finalResultat };
 }
 
 // Services API
@@ -830,10 +858,17 @@ export const pennylaneApi = {
       const resultatGrowth = calculateGrowth(currentResultat.resultat_net || 0, previousResultat?.resultat_net || null)
       const tresorerieGrowth = calculateGrowth(currentTresorerie.solde_final || 0, previousTresorerie?.solde_final || null)
       
-      // Calculer le ratio de rentabilité
+      // Détecter si c'est le mois en cours
+      const today = new Date()
+      const currentMonthKey = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`
+      const isCurrentMonth = selectedMonth === currentMonthKey
+      
+      // Calculer le ratio de rentabilité avec projection si nécessaire
       const rentabilite = calculateProfitabilityRatio(
         currentResultat.chiffre_affaires || 0,
-        currentResultat.resultat_net || 0
+        currentResultat.resultat_net || 0,
+        previousResultat?.charges || undefined,
+        isCurrentMonth
       );
 
       return {
