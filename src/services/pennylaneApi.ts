@@ -580,11 +580,7 @@ export const pennylaneApi = {
       return total + debits - credits
     }, 0)
     
-  // NOUVELLE APPROCHE: Calculer la trésorerie en cascade mois par mois
-  const tresorerieCascade = await this.calculateTresorerieCascade(selectedMonth)
-  console.log(`💰 TRÉSORERIE CALCULÉE EN CASCADE: ${tresorerieCascade.toFixed(2)}€`)
-  
-  // Ancienne méthode (gardée pour debug)
+  // APPROCHE DIRECTE: Récupérer le solde de trésorerie à l'instant T (cumulé)
   const trialBalanceForTreasury = trialBalanceCumul || trialBalance
   const comptes512 = trialBalanceForTreasury.items.filter(account => account.number.startsWith('512'))
     
@@ -605,20 +601,13 @@ export const pennylaneApi = {
     comptes512.forEach((account, index) => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
-      const solde = credits - debits // CORRECTION: Pour avoir des valeurs positives comme dans Pennylane
+      const solde = credits - debits // Formule corrigée pour avoir des valeurs positives
       
-      console.log(`   ${index + 1}. ${account.number} (${account.label}):`)
-      console.log(`      credits=${credits} (type: ${typeof credits})`)
-      console.log(`      debits=${debits} (type: ${typeof debits})`)
-      console.log(`      solde=${solde} (type: ${typeof solde})`)
-      console.log(`      tresorerie avant: ${tresorerie}`)
-      
+      console.log(`   ${index + 1}. ${account.number} (${account.label}): ${solde.toFixed(2)}€`)
       tresorerie += solde
-      console.log(`      tresorerie après: ${tresorerie}`)
-      console.log(`      ----`)
     })
     
-    console.log(`💰 RÉSULTAT FINAL: Trésorerie ${trialBalanceCumul ? 'CUMULÉE' : 'MENSUELLE'} = ${tresorerie.toFixed(2)}€`)
+    console.log(`💰 TRÉSORERIE FINALE (${trialBalanceCumul ? 'CUMULÉE' : 'MENSUELLE'}): ${tresorerie.toFixed(2)}€`)
     
     // Si aucun compte 512 dans le cumulé, essayer avec le mensuel
     if (comptes512.length === 0 && trialBalanceCumul) {
@@ -649,7 +638,7 @@ export const pennylaneApi = {
       total_produits_exploitation: totalProduitsExploitation, // Total des produits d'exploitation (tous les comptes 7)
       charges: charges,
       resultat_net: totalProduitsExploitation - charges, // Bénéfice = Revenus totaux - Charges
-      tresorerie_calculee: tresorerieCascade, // NOUVELLE TRÉSORERIE CASCADE !
+      tresorerie_calculee: tresorerie, // TRÉSORERIE DIRECTE (cumulée depuis janvier)
       currency: 'EUR',
       prestations_services: chiffreAffairesNet, // CA Net pour les prestations
       ventes_biens: 0, // Pas de vente de biens pour DIMO DIAGNOSTIC
