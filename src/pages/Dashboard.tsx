@@ -243,20 +243,26 @@ const Dashboard: React.FC = () => {
           <KPICard
             title="Rentabilité"
             period={formatPeriod()}
-            subtitle={kpis && kpis.hasData && kpis.rentabilite ? kpis.rentabilite.message : "En attente..."}
-            value={kpis && kpis.hasData && kpis.rentabilite ? `${kpis.rentabilite.ratio}% (${formatCurrency(kpis.rentabilite.montant)})` : 'Aucune donnée'}
-            projection={
-              kpis && kpis.hasData && kpis.rentabilite?.projection 
-                ? {
-                    value: `${kpis.rentabilite.projection.ratio}% (projection)`,
-                    message: kpis.rentabilite.projection.message
-                  }
-                : undefined
+            subtitle={
+              kpis && kpis.hasData && kpis.rentabilite?.projection
+                ? kpis.rentabilite.projection.message
+                : (kpis && kpis.hasData && kpis.rentabilite ? kpis.rentabilite.message : "En attente...")
+            }
+            value={
+              kpis && kpis.hasData && kpis.rentabilite
+                ? (kpis.rentabilite.projection
+                    ? `${kpis.rentabilite.projection.ratio}% (${formatCurrency(kpis.rentabilite.projection.montant)})`
+                    : `${kpis.rentabilite.ratio}% (${formatCurrency(kpis.rentabilite.montant)})`
+                  )
+                : 'Aucune donnée'
             }
             change={0}
             changeType={
               kpis && kpis.hasData && kpis.rentabilite 
-                ? (kpis.rentabilite.ratio > 15 ? 'increase' : kpis.rentabilite.ratio > 0 ? 'neutral' : 'decrease')
+                ? (kpis.rentabilite.projection
+                    ? (kpis.rentabilite.projection.ratio > 15 ? 'increase' : kpis.rentabilite.projection.ratio > 0 ? 'neutral' : 'decrease')
+                    : (kpis.rentabilite.ratio > 15 ? 'increase' : kpis.rentabilite.ratio > 0 ? 'neutral' : 'decrease')
+                  )
                 : 'neutral'
             }
             icon={<Calculator className="w-5 h-5 text-purple-600" />}

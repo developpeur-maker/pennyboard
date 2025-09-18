@@ -197,7 +197,7 @@ function calculateProfitabilityRatio(
   resultat: number, 
   previousMonthCharges?: number,
   isCurrentMonth: boolean = false
-): { ratio: number, message: string, montant: number, projection?: { ratio: number, message: string } } {
+): { ratio: number, message: string, montant: number, projection?: { ratio: number, message: string, montant: number } } {
   if (ca === 0) return { ratio: 0, message: "Aucun chiffre d'affaires", montant: resultat };
   
   // TOUJOURS garder le ratio réel (sans modification)
@@ -228,7 +228,8 @@ function calculateProfitabilityRatio(
     
     projection = {
       ratio: projectedRatio,
-      message: `Mois en cours - Projection basée sur ${prevMonthName}`
+      message: `Mois en cours - Projection basée sur ${prevMonthName}`,
+      montant: projectedResultat
     }
     
     console.log(`💡 PROJECTION RENTABILITÉ: Réel ${realRatio}% → Projection ${projectedRatio}% (charges estimées: ${estimatedMissingCharges.toFixed(0)}€)`)

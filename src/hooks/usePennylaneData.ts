@@ -16,6 +16,7 @@ interface KPIData {
     projection?: {
       ratio: number
       message: string
+      montant: number
     }
   } | null
   // Nouvelles comparaisons
