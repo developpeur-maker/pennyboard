@@ -1625,13 +1625,12 @@ export const pennylaneApi = {
       const todayStr = today.toISOString().split('T')[0]
       const currentYear = today.getFullYear()
       
-      // APPROCHE SIMPLE: Récupérer les soldes des comptes 512 pour TOUTE l'année fiscale
+      // APPROCHE SIMPLE: Récupérer les soldes des comptes 512 depuis le début de l'année jusqu'à aujourd'hui
       const startOfYear = `${currentYear}-01-01`
-      const endOfYear = `${currentYear}-12-31`
       
-      console.log(`💰 TRÉSORERIE SIMPLE: Récupération soldes comptes 512 pour ${startOfYear} → ${endOfYear}`)
+      console.log(`💰 TRÉSORERIE SIMPLE: Récupération soldes comptes 512 pour ${startOfYear} → ${todayStr}`)
       
-      const trialBalanceAnnuel = await getTrialBalance(startOfYear, endOfYear, 1000)
+      const trialBalanceAnnuel = await getTrialBalance(startOfYear, todayStr, 1000)
       const comptes512 = trialBalanceAnnuel.items.filter(account => account.number.startsWith('512'))
       
       console.log(`🏦 ${comptes512.length} comptes bancaires trouvés:`)
@@ -1645,7 +1644,7 @@ export const pennylaneApi = {
         tresorerieActuelle += solde
       })
       
-      console.log(`💰 TRÉSORERIE TOTALE (exercice ${currentYear}): ${tresorerieActuelle.toFixed(2)}€`)
+      console.log(`💰 TRÉSORERIE TOTALE (${startOfYear} → ${todayStr}): ${tresorerieActuelle.toFixed(2)}€`)
       
       return [{
         period: todayStr,
