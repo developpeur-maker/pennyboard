@@ -1640,11 +1640,15 @@ export const pennylaneApi = {
       
       console.log(`📅 Calcul trésorerie cumulée: ${startOfYear} → ${todayStr}`)
       
-      // Récupérer les soldes CUMULÉS des comptes 512 depuis le début de l'année
-      const trialBalance = await getTrialBalance(startOfYear, todayStr, 2000)
-      const comptes512 = trialBalance.items.filter(account => account.number.startsWith('512'))
+      // RÉCUPÉRATION COMPLÈTE avec pagination automatique (getTrialBalance gère déjà la pagination)
+      console.log('📊 Récupération de TOUS les comptes avec pagination automatique...')
+      const trialBalance = await getTrialBalance(startOfYear, todayStr, 1000)
       
-      console.log(`🏦 ${comptes512.length} comptes bancaires trouvés:`)
+      console.log(`📊 TOTAL: ${trialBalance.items.length} comptes récupérés`)
+      
+      // Filtrer les comptes 512
+      const comptes512 = trialBalance.items.filter(account => account.number.startsWith('512'))
+      console.log(`🏦 ${comptes512.length} comptes bancaires (512) trouvés:`)
       
       let tresorerieActuelle = 0
       comptes512.forEach((account, index) => {
