@@ -521,7 +521,17 @@ export const pennylaneApi = {
     console.log(`🔍 DEBUG TRÉSORERIE KPIs - CALCUL DÉTAILLÉ (${trialBalanceCumul ? 'CUMULÉ' : 'MENSUEL'}):`)
     console.log(`🔍 COMPTES 512 TROUVÉS: ${comptes512.length} comptes`)
     comptes512.forEach((account, index) => {
-      console.log(`   ${index + 1}. ${account.number} (${account.label}) - Débits: ${account.debits}, Crédits: ${account.credits}`)
+      console.log(`   ${index + 1}. ${account.number} (${account.label})`)
+      console.log(`      BRUT API - Débits: "${account.debits}" (type: ${typeof account.debits})`)
+      console.log(`      BRUT API - Crédits: "${account.credits}" (type: ${typeof account.credits})`)
+      
+      const credits = this.parseAmount(account.credits)
+      const debits = this.parseAmount(account.debits)
+      console.log(`      APRÈS PARSING - Débits: ${debits}, Crédits: ${credits}`)
+      console.log(`      CALCULS POSSIBLES:`)
+      console.log(`        débits - crédits = ${debits - credits}`)
+      console.log(`        crédits - débits = ${credits - debits}`)
+      console.log(`        |débits - crédits| = ${Math.abs(debits - credits)}`)
     })
     
     let tresorerie = 0
