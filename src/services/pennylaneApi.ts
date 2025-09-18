@@ -1618,45 +1618,62 @@ export const pennylaneApi = {
     }
   },
 
-  // TRÉSORERIE FIXE: Calculer la trésorerie actuelle (indépendante des filtres)
+  // TRÉSORERIE SIMPLE ET PROPRE - FONCTION NEUVE
   async getTresorerieActuelle(): Promise<PennylaneTresorerie[]> {
     try {
-      const today = new Date()
-      const todayStr = today.toISOString().split('T')[0]
-      const currentYear = today.getFullYear()
+      console.log('🆕 NOUVELLE FONCTION TRÉSORERIE - DÉMARRAGE')
       
-      // APPROCHE SIMPLE: Récupérer les soldes des comptes 512 depuis le début de l'année jusqu'à aujourd'hui
-      const startOfYear = `${currentYear}-01-01`
+      // Dates
+      const aujourd_hui = new Date().toISOString().split('T')[0]
+      const debut_annee = '2025-01-01'
       
-      console.log(`💰 TRÉSORERIE SIMPLE: Récupération soldes comptes 512 pour ${startOfYear} → ${todayStr}`)
+      console.log(`📅 Période: ${debut_annee} → ${aujourd_hui}`)
       
-      const trialBalanceAnnuel = await getTrialBalance(startOfYear, todayStr, 1000)
-      const comptes512 = trialBalanceAnnuel.items.filter(account => account.number.startsWith('512'))
-      
-      console.log(`🏦 ${comptes512.length} comptes bancaires trouvés:`)
-      
-      let tresorerieActuelle = 0
-      comptes512.forEach((account, index) => {
-        const credits = this.parseAmount(account.credits)
-        const debits = this.parseAmount(account.debits)
-        const solde = credits - debits
-        console.log(`   ${index + 1}. ${account.number} (${account.label}): ${solde.toFixed(2)}€`)
-        tresorerieActuelle += solde
+      // Appel API direct
+      const response = await fetch('/api/pennylane/trial-balance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          period_start: debut_annee,
+          period_end: aujourd_hui,
+          per_page: 1000
+        })
       })
       
-      console.log(`💰 TRÉSORERIE TOTALE (${startOfYear} → ${todayStr}): ${tresorerieActuelle.toFixed(2)}€`)
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      console.log(`📊 ${data.items?.length || 0} comptes récupérés`)
+      
+      // Filtrer comptes 512
+      const comptes_bancaires = (data.items || []).filter((compte: any) => compte.number.startsWith('512'))
+      console.log(`🏦 ${comptes_bancaires.length} comptes bancaires (512)`)
+      
+      // Calculer total
+      let total = 0
+      comptes_bancaires.forEach((compte: any) => {
+        const credits = parseFloat(compte.credits || '0')
+        const debits = parseFloat(compte.debits || '0')
+        const solde = credits - debits
+        console.log(`   • ${compte.number}: ${solde.toFixed(2)}€`)
+        total += solde
+      })
+      
+      console.log(`💰 TOTAL FINAL: ${total.toFixed(2)}€`)
       
       return [{
-        period: todayStr,
+        period: aujourd_hui,
         solde_initial: 0,
         encaissements: 0,
         decaissements: 0,
-        solde_final: tresorerieActuelle,
+        solde_final: total,
         currency: 'EUR'
       }]
       
     } catch (error) {
-      console.error('❌ Erreur calcul trésorerie actuelle:', error)
+      console.error('❌ Erreur:', error)
       return [{
         period: new Date().toISOString().split('T')[0],
         solde_initial: 0,
