@@ -30,7 +30,8 @@ const Dashboard: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState('2025')
   const [isChargesModalOpen, setIsChargesModalOpen] = useState(false)
   const [isRevenusModalOpen, setIsRevenusModalOpen] = useState(false)
-  const { kpis, chargesBreakdown, revenusBreakdown, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
+  const [isTresorerieModalOpen, setIsTresorerieModalOpen] = useState(false)
+  const { kpis, chargesBreakdown, revenusBreakdown, tresorerieBreakdown, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
 
   // Fonction pour formater la période affichée
   const formatPeriod = () => {
@@ -269,6 +270,7 @@ const Dashboard: React.FC = () => {
             changeType={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? (kpis.tresorerie_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
             color="cyan"
+            onClick={() => setIsTresorerieModalOpen(true)}
           />
         </div>
       </div>
@@ -291,6 +293,16 @@ const Dashboard: React.FC = () => {
         subtitle={formatPeriod()}
         items={revenusBreakdown}
         totalAmount={kpis?.total_produits_exploitation || 0}
+      />
+
+      {/* Modal de détail de la trésorerie */}
+      <DetailModal
+        isOpen={isTresorerieModalOpen}
+        onClose={() => setIsTresorerieModalOpen(false)}
+        title="Détail de la Trésorerie"
+        subtitle={formatPeriod()}
+        items={tresorerieBreakdown}
+        totalAmount={kpis?.solde_tresorerie || 0}
       />
     </div>
   )

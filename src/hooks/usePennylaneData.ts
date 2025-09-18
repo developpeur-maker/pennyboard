@@ -37,6 +37,7 @@ interface UsePennylaneDataReturn {
   fiscalYears: Array<{id: string, name: string, start_date: string, end_date: string}>
   chargesBreakdown: Array<{code: string, label: string, description: string, amount: number}>
   revenusBreakdown: Array<{code: string, label: string, description: string, amount: number}>
+  tresorerieBreakdown: Array<{code: string, label: string, description: string, amount: number}>
   loading: boolean
   error: string | null
   refetch: () => void
@@ -55,6 +56,7 @@ export const usePennylaneData = (
   const [fiscalYears, setFiscalYears] = useState<Array<{id: string, name: string, start_date: string, end_date: string}>>([])
   const [chargesBreakdown, setChargesBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [revenusBreakdown, setRevenusBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
+  const [tresorerieBreakdown, setTresorerieBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -89,9 +91,10 @@ export const usePennylaneData = (
       // Calculer le compte de résultat avec comparaisons
       const incomeStatementData = pennylaneApi.calculateIncomeStatement(trialBalanceData, previousTrialBalanceData)
 
-      // Calculer le breakdown des charges et revenus
+      // Calculer le breakdown des charges, revenus et trésorerie
       const chargesBreakdownData = pennylaneApi.processChargesBreakdown(trialBalanceData)
       const revenusBreakdownData = pennylaneApi.processRevenusBreakdown(trialBalanceData)
+      const tresorerieBreakdownData = pennylaneApi.processTresorerieBreakdown(trialBalanceData)
 
       setKpis(kpisData)
       setResultatComptable(resultatData)
@@ -99,6 +102,7 @@ export const usePennylaneData = (
       setIncomeStatement(incomeStatementData)
       setChargesBreakdown(chargesBreakdownData)
       setRevenusBreakdown(revenusBreakdownData)
+      setTresorerieBreakdown(tresorerieBreakdownData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
       console.error('Erreur lors du chargement des données Pennylane:', err)
@@ -119,6 +123,7 @@ export const usePennylaneData = (
     fiscalYears,
     chargesBreakdown,
     revenusBreakdown,
+    tresorerieBreakdown,
     loading,
     error,
     refetch: fetchData

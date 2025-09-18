@@ -937,6 +937,65 @@ export const pennylaneApi = {
     return result
   },
 
+  // Traiter les données de trésorerie par comptes bancaires pour le drill-down
+  processTresorerieBreakdown(trialBalanceData: TrialBalanceResponse): Array<{code: string, label: string, description: string, amount: number}> {
+    if (!trialBalanceData.items || trialBalanceData.items.length === 0) {
+      return []
+    }
+
+    console.log(`💰 BREAKDOWN TRÉSORERIE: Traitement de ${trialBalanceData.items.length} comptes...`)
+
+    const result: Array<{code: string, label: string, description: string, amount: number}> = []
+
+    // Analyser TOUS les comptes de classe 5 pour voir ce qu'on a
+    const comptes5 = trialBalanceData.items.filter(account => account.number.startsWith('5'))
+    console.log(`🔍 TRÉSORERIE: ${comptes5.length} comptes de classe 5 trouvés`)
+    
+    comptes5.forEach(account => {
+      const credits = this.parseAmount(account.credits)
+      const debits = this.parseAmount(account.debits)
+      const solde = debits - credits // Pour les comptes d'actif (classe 5), solde = debits - credits
+      
+      console.log(`💳 ${account.number} - ${account.label}: credits=${credits}, debits=${debits}, solde=${solde}`)
+      
+      if (Math.abs(solde) > 10) { // Filtrer les soldes significatifs (> 10€)
+        let description = "Compte de trésorerie"
+        
+        // Déterminer la description selon le type de compte
+        if (account.number.startsWith('512')) {
+          description = "Compte bancaire courant"
+        } else if (account.number.startsWith('514')) {
+          description = "Chèques postaux"
+        } else if (account.number.startsWith('515')) {
+          description = "Caisse"
+        } else if (account.number.startsWith('516')) {
+          description = "Régies d'avances"
+        } else if (account.number.startsWith('518')) {
+          description = "Autres disponibilités"
+        } else if (account.number.startsWith('519')) {
+          description = "Concours bancaires courants"
+        }
+        
+        result.push({
+          code: account.number,
+          label: account.label || `Compte ${account.number}`,
+          description: description,
+          amount: solde
+        })
+      }
+    })
+
+    // Trier par montant décroissant (plus gros soldes en premier)
+    result.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+
+    console.log(`💰 BREAKDOWN TRÉSORERIE: ${result.length} comptes avec soldes significatifs`)
+    result.forEach(item => {
+      console.log(`💳 ${item.code} - ${item.label}: ${item.amount.toFixed(0)}€`)
+    })
+
+    return result
+  },
+
   // Récupérer les KPIs consolidés
   async getKPIs(selectedMonth: string = '2025-09'): Promise<{
     ventes_706: number | null
