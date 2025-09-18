@@ -1645,11 +1645,24 @@ export const pennylaneApi = {
       }
       
       const data = await response.json()
+      console.log(`📊 RÉPONSE API:`, data)
       console.log(`📊 ${data.items?.length || 0} comptes récupérés`)
+      
+      if (!data.items || data.items.length === 0) {
+        console.log('⚠️ AUCUN COMPTE RETOURNÉ PAR L\'API')
+        console.log('📋 Structure de la réponse:', Object.keys(data))
+      }
       
       // Filtrer comptes 512
       const comptes_bancaires = (data.items || []).filter((compte: any) => compte.number.startsWith('512'))
       console.log(`🏦 ${comptes_bancaires.length} comptes bancaires (512)`)
+      
+      if (comptes_bancaires.length === 0 && data.items?.length > 0) {
+        console.log('🔍 PREMIERS 5 COMPTES POUR DEBUG:')
+        data.items.slice(0, 5).forEach((compte: any, i: number) => {
+          console.log(`   ${i + 1}. ${compte.number} (${compte.label})`)
+        })
+      }
       
       // Calculer total
       let total = 0
