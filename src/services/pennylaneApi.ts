@@ -46,6 +46,7 @@ export interface PennylaneResultatComptable {
   total_produits_exploitation: number // Total des produits d'exploitation (tous les comptes 7)
   charges: number
   resultat_net: number
+  tresorerie_calculee: number // TRÉSORERIE CALCULÉE dans processTrialBalanceData
   currency: string
   // Détails par compte
   prestations_services: number // Compte 706
@@ -400,6 +401,7 @@ export const pennylaneApi = {
       total_produits_exploitation: totalProduitsExploitation,
       charges: charges,
       resultat_net: totalProduitsExploitation - charges,
+      tresorerie_calculee: 0, // Pas de calcul de trésorerie dans cette fonction
       currency: 'EUR',
       prestations_services: chiffreAffairesNet * 0.8,
       ventes_biens: chiffreAffairesNet * 0.2,
@@ -504,6 +506,7 @@ export const pennylaneApi = {
       total_produits_exploitation: totalProduitsExploitation, // Total des produits d'exploitation (tous les comptes 7)
       charges: charges,
       resultat_net: totalProduitsExploitation - charges, // Bénéfice = Revenus totaux - Charges
+      tresorerie_calculee: tresorerie, // TRÉSORERIE CALCULÉE ICI !
       currency: 'EUR',
       prestations_services: chiffreAffairesNet, // CA Net pour les prestations
       ventes_biens: 0, // Pas de vente de biens pour DIMO DIAGNOSTIC
@@ -550,6 +553,7 @@ export const pennylaneApi = {
         total_produits_exploitation: chiffreAffaires, // Même valeur pour le fallback
         charges: charges,
         resultat_net: chiffreAffaires - charges,
+        tresorerie_calculee: 0, // Pas de calcul de trésorerie dans cette fonction
         currency: 'EUR',
         prestations_services: chiffreAffaires, // Tous les revenus sont des prestations
         ventes_biens: 0, // Pas de vente de biens pour DIMO DIAGNOSTIC
@@ -1063,7 +1067,7 @@ export const pennylaneApi = {
         total_produits_exploitation: currentResultat.total_produits_exploitation,
         charges: currentResultat.charges,
         resultat_net: currentResultat.resultat_net,
-        solde_tresorerie: currentTresorerie.solde_final,
+        solde_tresorerie: currentResultat.tresorerie_calculee,
         growth: caGrowth, // Garder pour compatibilité
         hasData: true,
         rentabilite,
