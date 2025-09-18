@@ -575,53 +575,9 @@ export const pennylaneApi = {
       return total + debits - credits
     }, 0)
     
-  // APPROCHE DIRECTE: Utiliser le trial balance mensuel car le cumulé ne contient pas les comptes 512
-  // Le trial balance cumulé semble être limité à 1000 comptes et exclut les comptes 512
-  const trialBalanceForTreasury = trialBalance // Utiliser TOUJOURS le mensuel
-  const comptes512 = trialBalanceForTreasury.items.filter(account => account.number.startsWith('512'))
-    
-    console.log(`🔍 COMPTES 512 TROUVÉS: ${comptes512.length} comptes`)
-    comptes512.forEach((account, index) => {
-      const credits = this.parseAmount(account.credits)
-      const debits = this.parseAmount(account.debits)
-      
-      console.log(`   ${index + 1}. ${account.number} (${account.label}):`)
-      console.log(`      API: D="${account.debits}" C="${account.credits}"`)
-      console.log(`      Parsé: D=${debits} C=${credits}`)
-      console.log(`      Formules: D-C=${debits - credits} | C-D=${credits - debits}`)
-    })
-    
-    let tresorerie = 0
-    
-    comptes512.forEach((account, index) => {
-      const credits = this.parseAmount(account.credits)
-      const debits = this.parseAmount(account.debits)
-      const solde = credits - debits // Formule corrigée pour avoir des valeurs positives
-      
-      console.log(`   ${index + 1}. ${account.number} (${account.label}): ${solde.toFixed(2)}€`)
-      tresorerie += solde
-    })
-    
-    console.log(`💰 TRÉSORERIE FINALE (MENSUELLE - Forcé): ${tresorerie.toFixed(2)}€`)
-    
-    // Si aucun compte 512 dans le cumulé, essayer avec le mensuel
-    if (comptes512.length === 0 && trialBalanceCumul) {
-      console.log(`⚠️ FALLBACK: Aucun compte 512 dans le trial balance cumulé, utilisation du mensuel`)
-      const comptes512Mensuel = trialBalance.items.filter(account => account.number.startsWith('512'))
-      console.log(`🔍 COMPTES 512 MENSUELS TROUVÉS: ${comptes512Mensuel.length} comptes`)
-      
-      let tresorerieFallback = 0
-      comptes512Mensuel.forEach((account, index) => {
-        const credits = this.parseAmount(account.credits)
-        const debits = this.parseAmount(account.debits)
-        const solde = credits - debits // CORRECTION: Pour avoir des valeurs positives
-        tresorerieFallback += solde
-        console.log(`   FALLBACK ${index + 1}. ${account.number}: ${solde.toFixed(2)}€`)
-      })
-      
-      tresorerie = tresorerieFallback
-      console.log(`💰 TRÉSORERIE FALLBACK (MENSUEL): ${tresorerie.toFixed(2)}€`)
-    }
+  // ANCIENNE LOGIQUE DE TRÉSORERIE SUPPRIMÉE - Utilise maintenant getTresorerieActuelle()
+  console.log('⚠️ Ancienne logique de trésorerie dans getKPIs supprimée')
+  const tresorerie = 0 // Valeur par défaut
     
     // Créer un seul résultat pour le mois sélectionné
     const result: PennylaneResultatComptable[] = []
