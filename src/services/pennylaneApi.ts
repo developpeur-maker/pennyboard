@@ -419,50 +419,9 @@ export const pennylaneApi = {
 
   // Traiter les données du trial balance pour calculer les métriques
   processTrialBalanceData(trialBalance: TrialBalanceResponse, selectedMonth: string = '2025-09'): PennylaneResultatComptable[] {
-    console.log(`📊 Traitement de ${trialBalance.items.length} comptes du trial balance...`)
-    
-    // Debug: Afficher quelques exemples de comptes
-    if (trialBalance.items.length > 0) {
-      console.log(`🔍 Exemples de comptes reçus:`)
-      trialBalance.items.slice(0, 3).forEach(account => {
-        console.log(`   - ${account.number} (${account.label}): credits="${account.credits}", debits="${account.debits}"`)
-      })
-    }
-    
-    // Debug: Analyser tous les types de comptes reçus
-    const comptesByClass: { [key: string]: number } = {}
-    trialBalance.items.forEach(account => {
-      const firstDigit = account.number.charAt(0)
-      comptesByClass[firstDigit] = (comptesByClass[firstDigit] || 0) + 1
-    })
-    console.log('🔍 Répartition des comptes par classe:', comptesByClass)
-    
     // Analyser les comptes par classe
     const comptes7 = trialBalance.items.filter(account => account.number.startsWith('7')) // Revenus
     const comptes6 = trialBalance.items.filter(account => account.number.startsWith('6')) // Charges
-    const comptes5 = trialBalance.items.filter(account => account.number.startsWith('5')) // Trésorerie
-    
-    console.log(`📋 Comptes trouvés: 7 (${comptes7.length}), 6 (${comptes6.length}), 5 (${comptes5.length})`)
-    
-    // Debug: Afficher quelques comptes de chaque classe s'ils existent
-    if (comptes7.length > 0) {
-      console.log('🔍 Exemples de comptes classe 7 (Revenus):')
-      comptes7.slice(0, 2).forEach(account => {
-        console.log(`   - ${account.number} (${account.label}): credits=${account.credits}, debits=${account.debits}`)
-      })
-    }
-    if (comptes6.length > 0) {
-      console.log('🔍 Exemples de comptes classe 6 (Charges):')
-      comptes6.slice(0, 2).forEach(account => {
-        console.log(`   - ${account.number} (${account.label}): credits=${account.credits}, debits=${account.debits}`)
-      })
-    }
-    if (comptes5.length > 0) {
-      console.log('🔍 Exemples de comptes classe 5 (Trésorerie):')
-      comptes5.slice(0, 2).forEach(account => {
-        console.log(`   - ${account.number} (${account.label}): credits=${account.credits}, debits=${account.debits}`)
-      })
-    }
     
     // Calculer le Chiffre d'Affaires Net (comptes 701-708 moins 709)
     const comptesCA = comptes7.filter(account => {
@@ -475,7 +434,6 @@ export const pennylaneApi = {
     const chiffreAffairesBrut = comptesCA.reduce((total, account) => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
-      console.log(`   CA - ${account.number}: credits=${credits}, debits=${debits}`)
       return total + credits - debits
     }, 0)
     
@@ -496,7 +454,6 @@ export const pennylaneApi = {
         const debits = this.parseAmount(account.debits)
         const solde = credits - debits // Pour les comptes de produits, c'est credits - debits
         ventes706 += solde
-        console.log(`📈 VENTES 706: ${account.number} - ${account.label} = ${solde.toFixed(0)}€`)
       }
     })
     
@@ -535,13 +492,7 @@ export const pennylaneApi = {
       console.log(`      ----`)
     })
     
-    console.log(`💰 Calculs détaillés:`)
-    console.log(`   - Ventes 706 (prestations): ${ventes706.toFixed(2)}€`)
-    console.log(`   - CA Net: ${chiffreAffairesNet.toFixed(2)}€`)
-    console.log(`   - Total Produits Exploitation: ${totalProduitsExploitation.toFixed(2)}€`)
-    console.log(`   - Charges: ${charges.toFixed(2)}€`)
-    console.log(`   - Trésorerie (comptes 512): ${tresorerie.toFixed(2)}€`)
-    console.log(`   - Nombre de comptes banque (512): ${comptes512.length}`)
+    console.log(`💰 RÉSULTAT FINAL: Trésorerie = ${tresorerie.toFixed(2)}€`)
     
     // Créer un seul résultat pour le mois sélectionné
     const result: PennylaneResultatComptable[] = []
@@ -844,7 +795,7 @@ export const pennylaneApi = {
       breakdown[code] = 0
     })
 
-    console.log(`📊 BREAKDOWN CHARGES: Traitement de ${trialBalanceData.items.length} comptes...`)
+    // Traitement des charges par classes comptables
 
     trialBalanceData.items.forEach(account => {
       const accountNumber = account.number
@@ -858,9 +809,7 @@ export const pennylaneApi = {
         if (solde > 0) { // Seulement les soldes débiteurs pour les charges
           breakdown[accountClass] += solde
           
-          if (breakdown[accountClass] > 1000) { // Log seulement si montant significatif
-            console.log(`📋 Classe ${accountClass} (${chargesClasses[accountClass].label}): ${account.number} - ${account.label} = ${solde.toFixed(0)}€`)
-          }
+          // Accumulation silencieuse
         }
       }
     })
@@ -876,10 +825,7 @@ export const pennylaneApi = {
       }))
       .sort((a, b) => b.amount - a.amount) // Trier par montant décroissant
 
-    console.log(`📊 BREAKDOWN CHARGES: ${result.length} classes avec des montants significatifs`)
-    result.forEach(item => {
-      console.log(`📋 ${item.code} - ${item.label}: ${item.amount.toFixed(0)}€`)
-    })
+    // Breakdown charges terminé
 
     return result
   },
@@ -909,7 +855,7 @@ export const pennylaneApi = {
       breakdown[code] = 0
     })
 
-    console.log(`📊 BREAKDOWN REVENUS: Traitement de ${trialBalanceData.items.length} comptes...`)
+    // Traitement des revenus par classes comptables
 
     trialBalanceData.items.forEach(account => {
       const accountNumber = account.number
@@ -934,9 +880,7 @@ export const pennylaneApi = {
         if (solde > 0) { // Seulement les soldes créditeurs pour les produits
           breakdown[accountClass] += solde
           
-          if (breakdown[accountClass] > 1000) { // Log seulement si montant significatif
-            console.log(`📋 Classe ${accountClass} (${revenusClasses[accountClass].label}): ${account.number} - ${account.label} = ${solde.toFixed(0)}€`)
-          }
+          // Accumulation silencieuse
         }
       }
     })
@@ -952,10 +896,7 @@ export const pennylaneApi = {
       }))
       .sort((a, b) => b.amount - a.amount) // Trier par montant décroissant
 
-    console.log(`📊 BREAKDOWN REVENUS: ${result.length} classes avec des montants significatifs`)
-    result.forEach(item => {
-      console.log(`📋 ${item.code} - ${item.label}: ${item.amount.toFixed(0)}€`)
-    })
+    // Breakdown revenus terminé
 
     return result
   },
@@ -966,20 +907,15 @@ export const pennylaneApi = {
       return []
     }
 
-    console.log(`💰 BREAKDOWN TRÉSORERIE: Traitement de ${trialBalanceData.items.length} comptes...`)
-
     const result: Array<{code: string, label: string, description: string, amount: number}> = []
 
     // Analyser TOUS les comptes de classe 5 pour voir ce qu'on a
     const comptes5 = trialBalanceData.items.filter(account => account.number.startsWith('5'))
-    console.log(`🔍 TRÉSORERIE: ${comptes5.length} comptes de classe 5 trouvés`)
     
     comptes5.forEach(account => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
       const solde = debits - credits // Pour les comptes d'actif (classe 5), solde = debits - credits
-      
-      console.log(`💳 ${account.number} - ${account.label}: credits=${credits}, debits=${debits}, solde=${solde}`)
       
       if (Math.abs(solde) > 10) { // Filtrer les soldes significatifs (> 10€)
         let description = "Compte de trésorerie"
@@ -1011,10 +947,7 @@ export const pennylaneApi = {
     // Trier par montant décroissant (plus gros soldes en premier)
     result.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
 
-    console.log(`💰 BREAKDOWN TRÉSORERIE: ${result.length} comptes avec soldes significatifs`)
-    result.forEach(item => {
-      console.log(`💳 ${item.code} - ${item.label}: ${item.amount.toFixed(0)}€`)
-    })
+    // Breakdown trésorerie terminé
 
     return result
   },
