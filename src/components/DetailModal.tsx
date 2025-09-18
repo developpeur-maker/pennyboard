@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 interface DetailItem {
   code: string
   label: string
+  description: string
   amount: number
 }
 
@@ -77,7 +78,10 @@ const DetailModal: React.FC<DetailModalProps> = ({
                       <div className="font-medium text-gray-900">
                         {item.label}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-600 mb-1">
+                        {item.description}
+                      </div>
+                      <div className="text-xs text-gray-500">
                         Compte {item.code}
                       </div>
                     </div>

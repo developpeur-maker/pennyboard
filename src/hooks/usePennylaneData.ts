@@ -33,7 +33,7 @@ interface UsePennylaneDataReturn {
   tresorerie: PennylaneTresorerie[]
   incomeStatement: any | null
   fiscalYears: Array<{id: string, name: string, start_date: string, end_date: string}>
-  chargesBreakdown: Array<{code: string, label: string, amount: number}>
+  chargesBreakdown: Array<{code: string, label: string, description: string, amount: number}>
   loading: boolean
   error: string | null
   refetch: () => void
@@ -50,7 +50,7 @@ export const usePennylaneData = (
   const [tresorerie, setTresorerie] = useState<PennylaneTresorerie[]>([])
   const [incomeStatement, setIncomeStatement] = useState<any | null>(null)
   const [fiscalYears, setFiscalYears] = useState<Array<{id: string, name: string, start_date: string, end_date: string}>>([])
-  const [chargesBreakdown, setChargesBreakdown] = useState<Array<{code: string, label: string, amount: number}>>([])
+  const [chargesBreakdown, setChargesBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

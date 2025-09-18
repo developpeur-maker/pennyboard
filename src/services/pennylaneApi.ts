@@ -779,21 +779,21 @@ export const pennylaneApi = {
   },
 
   // Traiter les données de charges par classes comptables pour le drill-down
-  processChargesBreakdown(trialBalanceData: TrialBalanceResponse): Array<{code: string, label: string, amount: number}> {
+  processChargesBreakdown(trialBalanceData: TrialBalanceResponse): Array<{code: string, label: string, description: string, amount: number}> {
     if (!trialBalanceData.items || trialBalanceData.items.length === 0) {
       return []
     }
 
-    const chargesClasses: { [key: string]: string } = {
-      '60': 'Achats',
-      '61': 'Services extérieurs',
-      '62': 'Autres services extérieurs',
-      '63': 'Impôts et taxes',
-      '64': 'Charges de personnel',
-      '65': 'Autres charges de gestion',
-      '66': 'Charges financières',
-      '67': 'Charges exceptionnelles',
-      '68': 'Dotations aux amortissements'
+    const chargesClasses: { [key: string]: { label: string, description: string } } = {
+      '60': { label: 'Achats', description: 'Matériel non immobilisé, fournitures, Matériel de bureau etc' },
+      '61': { label: 'Services extérieurs', description: 'Sous-traitance, Locations et Loyers, Assurances etc' },
+      '62': { label: 'Autres services extérieurs', description: 'Réceptions, Publicité, Déplacements etc' },
+      '63': { label: 'Impôts et taxes', description: 'Taxes professionnelles, contributions etc' },
+      '64': { label: 'Charges de personnel', description: 'Salaires, Charges sociales etc' },
+      '65': { label: 'Autres charges de gestion', description: 'Pertes sur conversions, ou irrécouvrables etc' },
+      '66': { label: 'Charges financières', description: 'Intérêts d\'emprunts, commissions bancaires' },
+      '67': { label: 'Charges exceptionnelles', description: 'Amendes, dons, charges non récurrentes' },
+      '68': { label: 'Dotations aux amortissements', description: 'Amortissement du matériel, véhicules etc' }
     }
 
     const breakdown: { [key: string]: number } = {}
@@ -818,7 +818,7 @@ export const pennylaneApi = {
           breakdown[accountClass] += solde
           
           if (breakdown[accountClass] > 1000) { // Log seulement si montant significatif
-            console.log(`📋 Classe ${accountClass} (${chargesClasses[accountClass]}): ${account.number} - ${account.label} = ${solde.toFixed(0)}€`)
+            console.log(`📋 Classe ${accountClass} (${chargesClasses[accountClass].label}): ${account.number} - ${account.label} = ${solde.toFixed(0)}€`)
           }
         }
       }
@@ -829,7 +829,8 @@ export const pennylaneApi = {
       .filter(([_, amount]) => amount > 100) // Filtrer les montants < 100€
       .map(([code, amount]) => ({
         code,
-        label: chargesClasses[code],
+        label: chargesClasses[code].label,
+        description: chargesClasses[code].description,
         amount
       }))
       .sort((a, b) => b.amount - a.amount) // Trier par montant décroissant
