@@ -1618,10 +1618,18 @@ export const pennylaneApi = {
     }
   },
 
-  // TRÉSORERIE SIMPLE ET PROPRE - FONCTION NEUVE
+  // TRÉSORERIE UNIFIÉE - Calcul + Breakdown en un seul appel
+  tresorerieData: null as any, // Cache pour éviter les doublons
+  
   async getTresorerieActuelle(): Promise<PennylaneTresorerie[]> {
     try {
-      console.log('🆕 NOUVELLE FONCTION TRÉSORERIE - DÉMARRAGE')
+      console.log('💰 TRÉSORERIE - Récupération des données')
+      
+      // Si on a déjà les données, les réutiliser
+      if (this.tresorerieData) {
+        console.log('♻️ Réutilisation des données en cache')
+        return this.tresorerieData.summary
+      }
       
       // Dates
       const aujourd_hui = new Date().toISOString().split('T')[0]
@@ -1629,7 +1637,7 @@ export const pennylaneApi = {
       
       console.log(`📅 Période: ${debut_annee} → ${aujourd_hui}`)
       
-      // Appel API direct
+      // Appel API UNIQUE
       const response = await fetch('/api/pennylane/trial-balance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1645,38 +1653,32 @@ export const pennylaneApi = {
       }
       
       const data = await response.json()
-      console.log(`📊 RÉPONSE API:`, data)
       console.log(`📊 ${data.items?.length || 0} comptes récupérés`)
-      
-      if (!data.items || data.items.length === 0) {
-        console.log('⚠️ AUCUN COMPTE RETOURNÉ PAR L\'API')
-        console.log('📋 Structure de la réponse:', Object.keys(data))
-      }
       
       // Filtrer comptes 512
       const comptes_bancaires = (data.items || []).filter((compte: any) => compte.number.startsWith('512'))
       console.log(`🏦 ${comptes_bancaires.length} comptes bancaires (512)`)
       
-      if (comptes_bancaires.length === 0 && data.items?.length > 0) {
-        console.log('🔍 PREMIERS 5 COMPTES POUR DEBUG:')
-        data.items.slice(0, 5).forEach((compte: any, i: number) => {
-          console.log(`   ${i + 1}. ${compte.number} (${compte.label})`)
-        })
-      }
-      
-      // Calculer total
+      // Calculer total ET préparer breakdown
       let total = 0
-      comptes_bancaires.forEach((compte: any) => {
+      const breakdown = comptes_bancaires.map((compte: any) => {
         const credits = parseFloat(compte.credits || '0')
         const debits = parseFloat(compte.debits || '0')
-        const solde = credits - debits
+        const solde = debits - credits
         console.log(`   • ${compte.number}: ${solde.toFixed(2)}€`)
         total += solde
+        
+        return {
+          code: compte.number,
+          label: compte.number,
+          description: compte.label || compte.number,
+          amount: solde
+        }
       })
       
       console.log(`💰 TOTAL FINAL: ${total.toFixed(2)}€`)
       
-      return [{
+      const summary = [{
         period: aujourd_hui,
         solde_initial: 0,
         encaissements: 0,
@@ -1684,6 +1686,11 @@ export const pennylaneApi = {
         solde_final: total,
         currency: 'EUR'
       }]
+      
+      // Mettre en cache pour éviter les doublons
+      this.tresorerieData = { summary, breakdown }
+      
+      return summary
       
     } catch (error) {
       console.error('❌ Erreur:', error)
@@ -1711,10 +1718,21 @@ export const pennylaneApi = {
     return this.processRevenusBreakdown(trialBalance)
   },
 
-  async processTresorerieBreakdownFromMonth(selectedMonth: string) {
-    const { startDate, endDate } = getMonthDateRange(selectedMonth)
-    const trialBalance = await getTrialBalance(startDate, endDate, 2000)
-    return this.processTresorerieBreakdown(trialBalance)
+  async processTresorerieBreakdownFromMonth(_selectedMonth: string) {
+    console.log('💰 BREAKDOWN TRÉSORERIE - Utilisation du cache')
+    
+    // Si on a les données en cache, les utiliser
+    if (this.tresorerieData && this.tresorerieData.breakdown) {
+      console.log('♻️ Breakdown récupéré depuis le cache')
+      return this.tresorerieData.breakdown
+    }
+    
+    // Sinon, déclencher le calcul principal qui va remplir le cache
+    console.log('🔄 Calcul principal pour remplir le cache...')
+    await this.getTresorerieActuelle()
+    
+    // Maintenant on a le cache, le retourner
+    return this.tresorerieData?.breakdown || []
   },
 
   // NOUVELLE FONCTION UNIFIÉE: Un seul appel API pour toutes les données
