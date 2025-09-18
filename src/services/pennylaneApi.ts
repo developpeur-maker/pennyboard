@@ -521,17 +521,13 @@ export const pennylaneApi = {
     console.log(`🔍 DEBUG TRÉSORERIE KPIs - CALCUL DÉTAILLÉ (${trialBalanceCumul ? 'CUMULÉ' : 'MENSUEL'}):`)
     console.log(`🔍 COMPTES 512 TROUVÉS: ${comptes512.length} comptes`)
     comptes512.forEach((account, index) => {
-      console.log(`   ${index + 1}. ${account.number} (${account.label})`)
-      console.log(`      BRUT API - Débits: "${account.debits}" (type: ${typeof account.debits})`)
-      console.log(`      BRUT API - Crédits: "${account.credits}" (type: ${typeof account.credits})`)
-      
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
-      console.log(`      APRÈS PARSING - Débits: ${debits}, Crédits: ${credits}`)
-      console.log(`      CALCULS POSSIBLES:`)
-      console.log(`        débits - crédits = ${debits - credits}`)
-      console.log(`        crédits - débits = ${credits - debits}`)
-      console.log(`        |débits - crédits| = ${Math.abs(debits - credits)}`)
+      
+      console.log(`   ${index + 1}. ${account.number} (${account.label}):`)
+      console.log(`      API: D="${account.debits}" C="${account.credits}"`)
+      console.log(`      Parsé: D=${debits} C=${credits}`)
+      console.log(`      Formules: D-C=${debits - credits} | C-D=${credits - debits}`)
     })
     
     let tresorerie = 0
@@ -539,7 +535,7 @@ export const pennylaneApi = {
     comptes512.forEach((account, index) => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
-      const solde = debits - credits // CORRECT: Pour les comptes bancaires (actif), solde = debits - credits
+      const solde = credits - debits // CORRECTION: Pour avoir des valeurs positives comme dans Pennylane
       
       console.log(`   ${index + 1}. ${account.number} (${account.label}):`)
       console.log(`      credits=${credits} (type: ${typeof credits})`)
@@ -564,7 +560,7 @@ export const pennylaneApi = {
       comptes512Mensuel.forEach((account, index) => {
         const credits = this.parseAmount(account.credits)
         const debits = this.parseAmount(account.debits)
-        const solde = debits - credits
+        const solde = credits - debits // CORRECTION: Pour avoir des valeurs positives
         tresorerieFallback += solde
         console.log(`   FALLBACK ${index + 1}. ${account.number}: ${solde.toFixed(2)}€`)
       })
@@ -683,7 +679,7 @@ export const pennylaneApi = {
     comptes512.forEach((account, index) => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
-      const solde = debits - credits // CORRECT: Pour les comptes bancaires (actif), solde = debits - credits
+      const solde = credits - debits // CORRECTION: Pour avoir des valeurs positives comme dans Pennylane
       
       console.log(`   ${index + 1}. ${account.number} (${account.label}):`)
       console.log(`      credits=${credits} (type: ${typeof credits})`)
