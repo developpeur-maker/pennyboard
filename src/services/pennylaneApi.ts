@@ -320,9 +320,7 @@ export const pennylaneApi = {
       // Récupérer le trial balance cumulé pour la trésorerie
       const { startDate: cumulStartDate, endDate: cumulEndDate } = getCumulativeDateRange(selectedMonth)
       console.log(`📅 Période cumulée pour trésorerie: ${cumulStartDate} au ${cumulEndDate}`)
-      console.log(`🔍 DEBUG: Appel getTrialBalance CUMULÉ...`)
       const trialBalanceCumul = await getTrialBalance(cumulStartDate, cumulEndDate, 2000)
-      console.log(`🔍 DEBUG: Trial balance cumulé récupéré avec ${trialBalanceCumul.items.length} comptes`)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         console.log('⚠️ Aucune donnée de trial balance trouvée pour getResultatComptable')
@@ -333,11 +331,6 @@ export const pennylaneApi = {
       console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance pour getResultatComptable`)
       console.log(`📋 ${trialBalanceCumul.items.length} comptes récupérés du trial balance cumulé pour trésorerie`)
       
-      // DEBUG: Vérifier les comptes 512 dans les deux trial balances
-      const comptes512Mensuel = trialBalance.items.filter(account => account.number.startsWith('512'))
-      const comptes512Cumul = trialBalanceCumul.items.filter(account => account.number.startsWith('512'))
-      console.log(`🔍 DEBUG: Comptes 512 mensuel (${comptes512Mensuel.length}):`, comptes512Mensuel.map(c => `${c.number}: ${c.debits}€ - ${c.credits}€`))
-      console.log(`🔍 DEBUG: Comptes 512 cumulé (${comptes512Cumul.length}):`, comptes512Cumul.map(c => `${c.number}: ${c.debits}€ - ${c.credits}€`))
       
       // Traiter les données avec les deux trial balances
       const processedData = await this.processTrialBalanceData(trialBalance, selectedMonth, trialBalanceCumul)
@@ -586,7 +579,6 @@ export const pennylaneApi = {
   const trialBalanceForTreasury = trialBalance // Utiliser TOUJOURS le mensuel
   const comptes512 = trialBalanceForTreasury.items.filter(account => account.number.startsWith('512'))
     
-    console.log(`🔍 DEBUG TRÉSORERIE KPIs - CALCUL DÉTAILLÉ (MENSUEL - Forcé):`)
     console.log(`🔍 COMPTES 512 TROUVÉS: ${comptes512.length} comptes`)
     comptes512.forEach((account, index) => {
       const credits = this.parseAmount(account.credits)
@@ -709,7 +701,6 @@ export const pennylaneApi = {
     
     // Debug: Analyser TOUS les comptes de classe 5 pour comprendre
     const comptes5 = trialBalance.items.filter(account => account.number.startsWith('5'))
-    console.log(`🔍 DEBUG - Tous les comptes classe 5: ${comptes5.length}`)
     comptes5.forEach(account => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
@@ -1630,8 +1621,6 @@ export const pennylaneApi = {
   // TRÉSORERIE FIXE: Calculer la trésorerie actuelle (indépendante des filtres)
   async getTresorerieActuelle(): Promise<PennylaneTresorerie[]> {
     try {
-      console.log('💰 CALCUL TRÉSORERIE ACTUELLE - MÉTHODE SIMPLE')
-      
       const today = new Date()
       const todayStr = today.toISOString().split('T')[0]
       const currentYear = today.getFullYear()
@@ -1639,8 +1628,6 @@ export const pennylaneApi = {
       
       // 1. SOLDE INITIAL au 31/12 de l'année précédente
       const endOfPreviousYear = `${previousYear}-12-31`
-      console.log(`📅 1. Récupération solde initial au ${endOfPreviousYear}`)
-      
       const soldeInitialResponse = await getTrialBalance(endOfPreviousYear, endOfPreviousYear, 1000)
       const comptes512Initial = soldeInitialResponse.items.filter(account => account.number.startsWith('512'))
       
@@ -1648,45 +1635,28 @@ export const pennylaneApi = {
       comptes512Initial.forEach(account => {
         const credits = this.parseAmount(account.credits)
         const debits = this.parseAmount(account.debits)
-        const solde = credits - debits
-        soldeInitial += solde
+        soldeInitial += (credits - debits)
       })
-      
-      console.log(`💰 Solde initial au ${endOfPreviousYear}: ${soldeInitial.toFixed(2)}€`)
       
       // 2. MOUVEMENTS de janvier à aujourd'hui
       const startOfYear = `${currentYear}-01-01`
-      console.log(`📅 2. Récupération mouvements: ${startOfYear} → ${todayStr}`)
-      
       const mouvementsResponse = await getTrialBalance(startOfYear, todayStr, 1000)
       const comptes512Mouvements = mouvementsResponse.items.filter(account => account.number.startsWith('512'))
       
       let mouvements = 0
-      comptes512Mouvements.forEach((account, index) => {
+      comptes512Mouvements.forEach(account => {
         const credits = this.parseAmount(account.credits)
         const debits = this.parseAmount(account.debits)
-        const solde = credits - debits
-        console.log(`   ${index + 1}. ${account.number}: C=${credits.toFixed(2)}€, D=${debits.toFixed(2)}€, Solde=${solde.toFixed(2)}€`)
-        mouvements += solde
+        mouvements += (credits - debits)
       })
       
-      console.log(`📊 Mouvements CUMULÉS ${startOfYear} → ${todayStr}: ${mouvements.toFixed(2)}€`)
+      // 3. CALCUL FINAL - MÉTHODE COMPTABLE CORRECTE
+      // Trésorerie = Solde fin d'exercice précédent + Mouvements jusqu'à la date recherchée
+      const tresorerieActuelle = soldeInitial + mouvements
       
-      // 3. CALCUL FINAL - QUESTION: Est-ce que les mouvements sont déjà cumulatifs ?
-      // Si OUI: tresorerieActuelle = mouvements (les mouvements incluent déjà le solde initial)
-      // Si NON: tresorerieActuelle = soldeInitial + mouvements
-      
-      console.log(`🤔 ANALYSE: Solde initial=${soldeInitial.toFixed(2)}€, Mouvements=${mouvements.toFixed(2)}€`)
-      
-      // TEST: Si les mouvements sont déjà cumulatifs, ils devraient être proches de la vraie trésorerie
-      const tresorerieMethode1 = mouvements // Mouvements = soldes cumulés
-      const tresorerieMethode2 = soldeInitial + mouvements // Addition classique
-      
-      console.log(`💰 MÉTHODE 1 (mouvements seuls): ${tresorerieMethode1.toFixed(2)}€`)
-      console.log(`💰 MÉTHODE 2 (initial + mouvements): ${tresorerieMethode2.toFixed(2)}€`)
-      
-      // Pour le moment, utilisons la méthode 1 (mouvements seuls)
-      const tresorerieActuelle = tresorerieMethode1
+      console.log(`💰 TRÉSORERIE - Solde ${endOfPreviousYear}: ${soldeInitial.toFixed(2)}€`)
+      console.log(`💰 TRÉSORERIE - Mouvements ${startOfYear}→${todayStr}: ${mouvements.toFixed(2)}€`)
+      console.log(`💰 TRÉSORERIE - RÉSULTAT FINAL: ${tresorerieActuelle.toFixed(2)}€`)
       
       return [{
         period: todayStr,
