@@ -515,13 +515,25 @@ export const pennylaneApi = {
     
     // Calculer la trésorerie avec les comptes 512 (Banques) uniquement
     const comptes512 = trialBalance.items.filter(account => account.number.startsWith('512'))
-    const tresorerie = comptes512.reduce((total, account) => {
+    
+    console.log(`🔍 DEBUG TRÉSORERIE KPIs - CALCUL DÉTAILLÉ:`)
+    let tresorerie = 0
+    
+    comptes512.forEach((account, index) => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
       const solde = debits - credits // CORRECT: Pour les comptes bancaires (actif), solde = debits - credits
-      console.log(`   Trésorerie 512 - ${account.number}: credits=${credits}, debits=${debits}, solde=${solde}`)
-      return total + solde
-    }, 0)
+      
+      console.log(`   ${index + 1}. ${account.number} (${account.label}):`)
+      console.log(`      credits=${credits} (type: ${typeof credits})`)
+      console.log(`      debits=${debits} (type: ${typeof debits})`)
+      console.log(`      solde=${solde} (type: ${typeof solde})`)
+      console.log(`      tresorerie avant: ${tresorerie}`)
+      
+      tresorerie += solde
+      console.log(`      tresorerie après: ${tresorerie}`)
+      console.log(`      ----`)
+    })
     
     console.log(`💰 Calculs détaillés:`)
     console.log(`   - Ventes 706 (prestations): ${ventes706.toFixed(2)}€`)
