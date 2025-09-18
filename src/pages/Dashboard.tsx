@@ -240,15 +240,16 @@ const Dashboard: React.FC = () => {
           <KPICard
             title="Rentabilité"
             period={formatPeriod()}
-            subtitle={
-              kpis && kpis.hasData && kpis.rentabilite 
-                ? (kpis.rentabilite.projection 
-                    ? `${kpis.rentabilite.message} • ${kpis.rentabilite.projection.message}`
-                    : kpis.rentabilite.message
-                  )
-                : "En attente..."
-            }
+            subtitle={kpis && kpis.hasData && kpis.rentabilite ? kpis.rentabilite.message : "En attente..."}
             value={kpis && kpis.hasData && kpis.rentabilite ? `${kpis.rentabilite.ratio}% (${formatCurrency(kpis.rentabilite.montant)})` : 'Aucune donnée'}
+            projection={
+              kpis && kpis.hasData && kpis.rentabilite?.projection 
+                ? {
+                    value: `${kpis.rentabilite.projection.ratio}% (projection)`,
+                    message: kpis.rentabilite.projection.message
+                  }
+                : undefined
+            }
             change={0}
             changeType={
               kpis && kpis.hasData && kpis.rentabilite 

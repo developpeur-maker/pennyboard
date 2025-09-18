@@ -228,7 +228,7 @@ function calculateProfitabilityRatio(
     
     projection = {
       ratio: projectedRatio,
-      message: `⚠️ Données partielles - Projection : ${projectedRatio}% (basée sur ${prevMonthName})`
+      message: `Mois en cours - Projection basée sur ${prevMonthName}`
     }
     
     console.log(`💡 PROJECTION RENTABILITÉ: Réel ${realRatio}% → Projection ${projectedRatio}% (charges estimées: ${estimatedMissingCharges.toFixed(0)}€)`)

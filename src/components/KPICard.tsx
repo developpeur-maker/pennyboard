@@ -10,6 +10,10 @@ interface KPICardProps {
   changeType: 'increase' | 'decrease' | 'neutral'
   icon?: React.ReactNode
   color?: 'green' | 'turquoise' | 'blue' | 'red' | 'cyan'
+  projection?: {
+    value: string
+    message: string
+  }
 }
 
 const KPICard: React.FC<KPICardProps> = ({ 
@@ -20,7 +24,8 @@ const KPICard: React.FC<KPICardProps> = ({
   change, 
   changeType, 
   icon,
-  color = 'green'
+  color = 'green',
+  projection
 }) => {
   const colorClasses = {
     green: 'text-green-600',
@@ -49,9 +54,19 @@ const KPICard: React.FC<KPICardProps> = ({
           {subtitle && (
             <p className="kpi-subtitle text-sm text-gray-500 mb-4">{subtitle}</p>
           )}
-          <p className={`kpi-value ${colorClasses[color]} text-4xl font-bold mb-4 leading-tight`}>
+          <p className={`kpi-value ${colorClasses[color]} text-4xl font-bold mb-2 leading-tight`}>
             {value}
           </p>
+          {projection && (
+            <div className="mb-4">
+              <p className="text-orange-600 text-xl font-semibold mb-1">
+                {projection.value}
+              </p>
+              <p className="text-sm text-gray-600">
+                {projection.message}
+              </p>
+            </div>
+          )}
         </div>
         {icon && (
           <div className={`p-4 rounded-xl ${bgColorClasses[color]} bg-opacity-50 ml-4`}>
