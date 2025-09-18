@@ -307,7 +307,9 @@ export const pennylaneApi = {
       // Récupérer le trial balance cumulé pour la trésorerie
       const { startDate: cumulStartDate, endDate: cumulEndDate } = getCumulativeDateRange(selectedMonth)
       console.log(`📅 Période cumulée pour trésorerie: ${cumulStartDate} au ${cumulEndDate}`)
+      console.log(`🔍 DEBUG: Appel getTrialBalance CUMULÉ...`)
       const trialBalanceCumul = await getTrialBalance(cumulStartDate, cumulEndDate, 1000)
+      console.log(`🔍 DEBUG: Trial balance cumulé récupéré avec ${trialBalanceCumul.items.length} comptes`)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         console.log('⚠️ Aucune donnée de trial balance trouvée pour getResultatComptable')
@@ -317,6 +319,12 @@ export const pennylaneApi = {
       
       console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance pour getResultatComptable`)
       console.log(`📋 ${trialBalanceCumul.items.length} comptes récupérés du trial balance cumulé pour trésorerie`)
+      
+      // DEBUG: Vérifier les comptes 512 dans les deux trial balances
+      const comptes512Mensuel = trialBalance.items.filter(account => account.number.startsWith('512'))
+      const comptes512Cumul = trialBalanceCumul.items.filter(account => account.number.startsWith('512'))
+      console.log(`🔍 DEBUG: Comptes 512 mensuel (${comptes512Mensuel.length}):`, comptes512Mensuel.map(c => `${c.number}: ${c.debits}€ - ${c.credits}€`))
+      console.log(`🔍 DEBUG: Comptes 512 cumulé (${comptes512Cumul.length}):`, comptes512Cumul.map(c => `${c.number}: ${c.debits}€ - ${c.credits}€`))
       
       // Traiter les données avec les deux trial balances
       const processedData = this.processTrialBalanceData(trialBalance, selectedMonth, trialBalanceCumul)
@@ -498,6 +506,11 @@ export const pennylaneApi = {
     const comptes512 = trialBalanceForTreasury.items.filter(account => account.number.startsWith('512'))
     
     console.log(`🔍 DEBUG TRÉSORERIE KPIs - CALCUL DÉTAILLÉ (${trialBalanceCumul ? 'CUMULÉ' : 'MENSUEL'}):`)
+    console.log(`🔍 COMPTES 512 TROUVÉS: ${comptes512.length} comptes`)
+    comptes512.forEach((account, index) => {
+      console.log(`   ${index + 1}. ${account.number} (${account.label}) - Débits: ${account.debits}, Crédits: ${account.credits}`)
+    })
+    
     let tresorerie = 0
     
     comptes512.forEach((account, index) => {
@@ -517,6 +530,25 @@ export const pennylaneApi = {
     })
     
     console.log(`💰 RÉSULTAT FINAL: Trésorerie ${trialBalanceCumul ? 'CUMULÉE' : 'MENSUELLE'} = ${tresorerie.toFixed(2)}€`)
+    
+    // Si aucun compte 512 dans le cumulé, essayer avec le mensuel
+    if (comptes512.length === 0 && trialBalanceCumul) {
+      console.log(`⚠️ FALLBACK: Aucun compte 512 dans le trial balance cumulé, utilisation du mensuel`)
+      const comptes512Mensuel = trialBalance.items.filter(account => account.number.startsWith('512'))
+      console.log(`🔍 COMPTES 512 MENSUELS TROUVÉS: ${comptes512Mensuel.length} comptes`)
+      
+      let tresorerieFallback = 0
+      comptes512Mensuel.forEach((account, index) => {
+        const credits = this.parseAmount(account.credits)
+        const debits = this.parseAmount(account.debits)
+        const solde = debits - credits
+        tresorerieFallback += solde
+        console.log(`   FALLBACK ${index + 1}. ${account.number}: ${solde.toFixed(2)}€`)
+      })
+      
+      tresorerie = tresorerieFallback
+      console.log(`💰 TRÉSORERIE FALLBACK (MENSUEL): ${tresorerie.toFixed(2)}€`)
+    }
     
     // Créer un seul résultat pour le mois sélectionné
     const result: PennylaneResultatComptable[] = []
