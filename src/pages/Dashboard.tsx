@@ -31,7 +31,7 @@ const Dashboard: React.FC = () => {
   const [isChargesModalOpen, setIsChargesModalOpen] = useState(false)
   const [isRevenusModalOpen, setIsRevenusModalOpen] = useState(false)
   const [isTresorerieModalOpen, setIsTresorerieModalOpen] = useState(false)
-  const { kpis, chargesBreakdown, revenusBreakdown, tresorerieBreakdown, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
+  const { kpis, tresorerie, chargesBreakdown, revenusBreakdown, tresorerieBreakdown, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
 
   // Fonction pour formater la période affichée
   const formatPeriod = () => {
@@ -232,11 +232,11 @@ const Dashboard: React.FC = () => {
           />
           <KPICard
             title="Trésorerie"
-            period={formatPeriod()}
-            subtitle="Liquidités disponibles"
-            value={kpis && kpis.hasData && kpis.solde_tresorerie !== null ? formatCurrency(kpis.solde_tresorerie) : 'Aucune donnée'}
-            change={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? Math.abs(kpis.tresorerie_growth) : 0}
-            changeType={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? (kpis.tresorerie_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
+            period={`au ${new Date().toLocaleDateString('fr-FR')}`}
+            subtitle="Liquidités disponibles aujourd'hui"
+            value={tresorerie && tresorerie.length > 0 ? formatCurrency(tresorerie[0].solde_final) : 'Aucune donnée'}
+            change={0}
+            changeType="neutral"
             icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
             color="cyan"
             onClick={() => setIsTresorerieModalOpen(true)}

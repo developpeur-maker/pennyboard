@@ -75,16 +75,22 @@ export const usePennylaneData = (
       const fiscalYearsData = await pennylaneApi.getFiscalYears()
       setFiscalYears(fiscalYearsData)
 
-      // NOUVELLE APPROCHE: UN SEUL appel API pour tout calculer
-      console.log('📊 Récupération unifiée des données...')
+      // APPROCHE SIMPLE: Appels séparés et clairs
+      console.log('📊 Récupération des données...')
       
-      const allData = await pennylaneApi.getAllDataUnified(selectedMonth, viewMode, selectedYear, selectedFiscalYear)
+      const [kpisData, chargesBreakdownData, revenusBreakdownData, tresorerieData, tresorerieBreakdownData] = await Promise.all([
+        pennylaneApi.getKPIs(selectedMonth),
+        pennylaneApi.processChargesBreakdownFromMonth(selectedMonth),
+        pennylaneApi.processRevenusBreakdownFromMonth(selectedMonth),
+        pennylaneApi.getTresorerieActuelle(), // Trésorerie fixe au jour actuel
+        pennylaneApi.processTresorerieBreakdownFromMonth(selectedMonth)
+      ])
       
-      setKpis(allData.kpis)
-      setTresorerie(allData.tresorerie)
-      setChargesBreakdown(allData.chargesBreakdown)
-      setRevenusBreakdown(allData.revenusBreakdown)
-      setTresorerieBreakdown(allData.tresorerieBreakdown)
+      setKpis(kpisData)
+      setTresorerie(tresorerieData)
+      setChargesBreakdown(chargesBreakdownData)
+      setRevenusBreakdown(revenusBreakdownData)
+      setTresorerieBreakdown(tresorerieBreakdownData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
       console.error('Erreur lors du chargement des données Pennylane:', err)

@@ -1627,6 +1627,70 @@ export const pennylaneApi = {
     }
   },
 
+  // TRÉSORERIE FIXE: Calculer la trésorerie actuelle (indépendante des filtres)
+  async getTresorerieActuelle(): Promise<PennylaneTresorerie[]> {
+    try {
+      console.log('💰 CALCUL TRÉSORERIE ACTUELLE (date du jour)')
+      
+      // Date du jour
+      const today = new Date()
+      const todayStr = today.toISOString().split('T')[0] // Format YYYY-MM-DD
+      
+      // Récupérer les soldes des comptes 512 à la date du jour
+      const trialBalance = await getTrialBalance(todayStr, todayStr, 2000)
+      const comptes512 = trialBalance.items.filter(account => account.number.startsWith('512'))
+      
+      let tresorerieActuelle = 0
+      comptes512.forEach(account => {
+        const credits = this.parseAmount(account.credits)
+        const debits = this.parseAmount(account.debits)
+        const solde = credits - debits
+        tresorerieActuelle += solde
+      })
+      
+      console.log(`💰 Trésorerie actuelle (${todayStr}): ${tresorerieActuelle.toFixed(2)}€`)
+      
+      return [{
+        period: todayStr,
+        solde_initial: 0,
+        encaissements: 0,
+        decaissements: 0,
+        solde_final: tresorerieActuelle,
+        currency: 'EUR'
+      }]
+      
+    } catch (error) {
+      console.error('❌ Erreur calcul trésorerie actuelle:', error)
+      return [{
+        period: new Date().toISOString().split('T')[0],
+        solde_initial: 0,
+        encaissements: 0,
+        decaissements: 0,
+        solde_final: 0,
+        currency: 'EUR'
+      }]
+    }
+  },
+
+  // Breakdowns simplifiés par mois
+  async processChargesBreakdownFromMonth(selectedMonth: string) {
+    const { startDate, endDate } = getMonthDateRange(selectedMonth)
+    const trialBalance = await getTrialBalance(startDate, endDate, 2000)
+    return this.processChargesBreakdown(trialBalance)
+  },
+
+  async processRevenusBreakdownFromMonth(selectedMonth: string) {
+    const { startDate, endDate } = getMonthDateRange(selectedMonth)
+    const trialBalance = await getTrialBalance(startDate, endDate, 2000)
+    return this.processRevenusBreakdown(trialBalance)
+  },
+
+  async processTresorerieBreakdownFromMonth(selectedMonth: string) {
+    const { startDate, endDate } = getMonthDateRange(selectedMonth)
+    const trialBalance = await getTrialBalance(startDate, endDate, 2000)
+    return this.processTresorerieBreakdown(trialBalance)
+  },
+
   // NOUVELLE FONCTION UNIFIÉE: Un seul appel API pour toutes les données
   async getAllDataUnified(
     selectedMonth: string = '2025-09',
