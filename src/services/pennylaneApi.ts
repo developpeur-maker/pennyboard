@@ -580,11 +580,12 @@ export const pennylaneApi = {
       return total + debits - credits
     }, 0)
     
-  // APPROCHE DIRECTE: Récupérer le solde de trésorerie à l'instant T (cumulé)
-  const trialBalanceForTreasury = trialBalanceCumul || trialBalance
+  // APPROCHE DIRECTE: Utiliser le trial balance mensuel car le cumulé ne contient pas les comptes 512
+  // Le trial balance cumulé semble être limité à 1000 comptes et exclut les comptes 512
+  const trialBalanceForTreasury = trialBalance // Utiliser TOUJOURS le mensuel
   const comptes512 = trialBalanceForTreasury.items.filter(account => account.number.startsWith('512'))
     
-    console.log(`🔍 DEBUG TRÉSORERIE KPIs - CALCUL DÉTAILLÉ (${trialBalanceCumul ? 'CUMULÉ' : 'MENSUEL'}):`)
+    console.log(`🔍 DEBUG TRÉSORERIE KPIs - CALCUL DÉTAILLÉ (MENSUEL - Forcé):`)
     console.log(`🔍 COMPTES 512 TROUVÉS: ${comptes512.length} comptes`)
     comptes512.forEach((account, index) => {
       const credits = this.parseAmount(account.credits)
@@ -607,7 +608,7 @@ export const pennylaneApi = {
       tresorerie += solde
     })
     
-    console.log(`💰 TRÉSORERIE FINALE (${trialBalanceCumul ? 'CUMULÉE' : 'MENSUELLE'}): ${tresorerie.toFixed(2)}€`)
+    console.log(`💰 TRÉSORERIE FINALE (MENSUELLE - Forcé): ${tresorerie.toFixed(2)}€`)
     
     // Si aucun compte 512 dans le cumulé, essayer avec le mensuel
     if (comptes512.length === 0 && trialBalanceCumul) {
