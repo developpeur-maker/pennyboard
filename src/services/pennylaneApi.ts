@@ -340,7 +340,7 @@ export const pennylaneApi = {
       console.log(`🔍 DEBUG: Comptes 512 cumulé (${comptes512Cumul.length}):`, comptes512Cumul.map(c => `${c.number}: ${c.debits}€ - ${c.credits}€`))
       
       // Traiter les données avec les deux trial balances
-      const processedData = this.processTrialBalanceData(trialBalance, selectedMonth, trialBalanceCumul)
+      const processedData = await this.processTrialBalanceData(trialBalance, selectedMonth, trialBalanceCumul)
       console.log('📊 Données traitées par processTrialBalanceData:', processedData.length, 'éléments')
       console.log('🔍 Premier élément:', processedData[0])
       
@@ -350,6 +350,73 @@ export const pennylaneApi = {
       console.error('Erreur lors de la récupération du résultat comptable:', error)
       return []
     }
+  },
+
+  // NOUVELLE MÉTHODE: Calculer la trésorerie en cascade mois par mois
+  async calculateTresorerieCascade(selectedMonth: string): Promise<number> {
+    try {
+      console.log(`🔄 CALCUL TRÉSORERIE CASCADE pour ${selectedMonth}`)
+      
+      const [selectedYear, selectedMonthNum] = selectedMonth.split('-')
+      const previousYear = (parseInt(selectedYear) - 1).toString()
+      
+      // 1. Récupérer le solde initial au 31 décembre de l'année précédente
+      const initialDate = `${previousYear}-12-31`
+      console.log(`📅 Récupération solde initial au ${initialDate}`)
+      
+      const initialTrialBalance = await getTrialBalance(initialDate, initialDate, 2000)
+      const initialComptes512 = initialTrialBalance.items.filter(account => account.number.startsWith('512'))
+      
+      let tresorerieInitiale = 0
+      initialComptes512.forEach(account => {
+        const credits = this.parseAmount(account.credits)
+        const debits = this.parseAmount(account.debits)
+        const solde = credits - debits // Utiliser la formule corrigée
+        tresorerieInitiale += solde
+      })
+      
+      console.log(`💰 Trésorerie initiale (${initialDate}): ${tresorerieInitiale.toFixed(2)}€`)
+      
+      // 2. Calculer en cascade mois par mois jusqu'au mois demandé
+      let tresorerieCourante = tresorerieInitiale
+      
+      for (let mois = 1; mois <= parseInt(selectedMonthNum); mois++) {
+        const moisStr = mois.toString().padStart(2, '0')
+        const periodeDebut = `${selectedYear}-${moisStr}-01`
+        const periodeFin = this.getLastDayOfMonth(selectedYear, moisStr)
+        
+        console.log(`🔄 Calcul mouvement ${moisStr}/${selectedYear} (${periodeDebut} au ${periodeFin})`)
+        
+        // Récupérer les mouvements du mois (différence entre début et fin de mois)
+        const trialBalanceMois = await getTrialBalance(periodeDebut, periodeFin, 2000)
+        const comptes512Mois = trialBalanceMois.items.filter(account => account.number.startsWith('512'))
+        
+        let mouvementMois = 0
+        comptes512Mois.forEach(account => {
+          const credits = this.parseAmount(account.credits)
+          const debits = this.parseAmount(account.debits)
+          // Pour les mouvements mensuels, c'est la différence nette du mois
+          const mouvement = credits - debits
+          mouvementMois += mouvement
+        })
+        
+        tresorerieCourante += mouvementMois
+        console.log(`   Mouvement ${moisStr}: ${mouvementMois.toFixed(2)}€ → Trésorerie: ${tresorerieCourante.toFixed(2)}€`)
+      }
+      
+      console.log(`✅ Trésorerie finale cascade (${selectedMonth}): ${tresorerieCourante.toFixed(2)}€`)
+      return tresorerieCourante
+      
+    } catch (error) {
+      console.error('❌ Erreur calcul trésorerie cascade:', error)
+      return 0
+    }
+  },
+
+  // Fonction utilitaire pour obtenir le dernier jour du mois
+  getLastDayOfMonth(year: string, month: string): string {
+    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
+    return `${year}-${month}-${lastDay.toString().padStart(2, '0')}`
   },
 
   // Récupérer la trésorerie basée sur le trial balance
@@ -457,11 +524,11 @@ export const pennylaneApi = {
   },
 
   // Traiter les données du trial balance pour calculer les métriques
-  processTrialBalanceData(
+  async processTrialBalanceData(
     trialBalance: TrialBalanceResponse, 
     selectedMonth: string = '2025-09',
     trialBalanceCumul?: TrialBalanceResponse
-  ): PennylaneResultatComptable[] {
+  ): Promise<PennylaneResultatComptable[]> {
     // Analyser les comptes par classe
     const comptes7 = trialBalance.items.filter(account => account.number.startsWith('7')) // Revenus
     const comptes6 = trialBalance.items.filter(account => account.number.startsWith('6')) // Charges
@@ -513,10 +580,13 @@ export const pennylaneApi = {
       return total + debits - credits
     }, 0)
     
-    // Calculer la trésorerie avec les comptes 512 (Banques) uniquement
-    // Utiliser le trial balance cumulé (avec per_page=2000) pour avoir les vrais soldes cumulés
-    const trialBalanceForTreasury = trialBalanceCumul || trialBalance
-    const comptes512 = trialBalanceForTreasury.items.filter(account => account.number.startsWith('512'))
+  // NOUVELLE APPROCHE: Calculer la trésorerie en cascade mois par mois
+  const tresorerieCascade = await this.calculateTresorerieCascade(selectedMonth)
+  console.log(`💰 TRÉSORERIE CALCULÉE EN CASCADE: ${tresorerieCascade.toFixed(2)}€`)
+  
+  // Ancienne méthode (gardée pour debug)
+  const trialBalanceForTreasury = trialBalanceCumul || trialBalance
+  const comptes512 = trialBalanceForTreasury.items.filter(account => account.number.startsWith('512'))
     
     console.log(`🔍 DEBUG TRÉSORERIE KPIs - CALCUL DÉTAILLÉ (${trialBalanceCumul ? 'CUMULÉ' : 'MENSUEL'}):`)
     console.log(`🔍 COMPTES 512 TROUVÉS: ${comptes512.length} comptes`)
@@ -579,7 +649,7 @@ export const pennylaneApi = {
       total_produits_exploitation: totalProduitsExploitation, // Total des produits d'exploitation (tous les comptes 7)
       charges: charges,
       resultat_net: totalProduitsExploitation - charges, // Bénéfice = Revenus totaux - Charges
-      tresorerie_calculee: tresorerie, // TRÉSORERIE CALCULÉE ICI !
+      tresorerie_calculee: tresorerieCascade, // NOUVELLE TRÉSORERIE CASCADE !
       currency: 'EUR',
       prestations_services: chiffreAffairesNet, // CA Net pour les prestations
       ventes_biens: 0, // Pas de vente de biens pour DIMO DIAGNOSTIC
