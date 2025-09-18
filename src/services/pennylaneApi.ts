@@ -197,17 +197,26 @@ function calculateProfitabilityRatio(
   resultat: number, 
   previousMonthCharges?: number,
   isCurrentMonth: boolean = false
-): { ratio: number, message: string, montant: number } {
+): { ratio: number, message: string, montant: number, projection?: { ratio: number, message: string } } {
   if (ca === 0) return { ratio: 0, message: "Aucun chiffre d'affaires", montant: resultat };
   
-  let finalResultat = resultat
-  let projectionMessage = ""
+  // TOUJOURS garder le ratio réel (sans modification)
+  const realRatio = Math.round((resultat / ca) * 100);
   
-  // Si c'est le mois en cours ET qu'on a les charges du mois précédent
+  let baseMessage = "";
+  if (realRatio > 25) baseMessage = "Excellente rentabilité ! 🎉";
+  else if (realRatio > 15) baseMessage = "Très bonne rentabilité 👍";
+  else if (realRatio > 10) baseMessage = "Bonne rentabilité ✅";
+  else if (realRatio > 5) baseMessage = "Rentabilité correcte 📊";
+  else if (realRatio > 0) baseMessage = "Rentabilité faible ⚠️";
+  else baseMessage = "Activité déficitaire 🔴";
+  
+  // Si c'est le mois en cours, calculer une projection séparée
+  let projection = undefined
   if (isCurrentMonth && previousMonthCharges && previousMonthCharges > 0) {
-    // Projection : estimer les charges manquantes (salaires, loyers, etc.)
     const estimatedMissingCharges = previousMonthCharges * 0.7 // 70% des charges du mois précédent
-    finalResultat = resultat - estimatedMissingCharges
+    const projectedResultat = resultat - estimatedMissingCharges
+    const projectedRatio = Math.round((projectedResultat / ca) * 100);
     
     const monthNames = [
       'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
@@ -217,23 +226,20 @@ function calculateProfitabilityRatio(
     prevMonth.setMonth(prevMonth.getMonth() - 1)
     const prevMonthName = monthNames[prevMonth.getMonth()]
     
-    projectionMessage = ` (projection basée sur ${prevMonthName})`
-    console.log(`💡 PROJECTION RENTABILITÉ: Résultat réel ${resultat.toFixed(0)}€ - charges estimées ${estimatedMissingCharges.toFixed(0)}€ = ${finalResultat.toFixed(0)}€`)
+    projection = {
+      ratio: projectedRatio,
+      message: `⚠️ Données partielles - Projection : ${projectedRatio}% (basée sur ${prevMonthName})`
+    }
+    
+    console.log(`💡 PROJECTION RENTABILITÉ: Réel ${realRatio}% → Projection ${projectedRatio}% (charges estimées: ${estimatedMissingCharges.toFixed(0)}€)`)
   }
   
-  const ratio = Math.round((finalResultat / ca) * 100);
-  
-  let baseMessage = "";
-  if (ratio > 25) baseMessage = "Excellente rentabilité ! 🎉";
-  else if (ratio > 15) baseMessage = "Très bonne rentabilité 👍";
-  else if (ratio > 10) baseMessage = "Bonne rentabilité ✅";
-  else if (ratio > 5) baseMessage = "Rentabilité correcte 📊";
-  else if (ratio > 0) baseMessage = "Rentabilité faible ⚠️";
-  else baseMessage = "Activité déficitaire 🔴";
-  
-  const message = baseMessage + projectionMessage
-  
-  return { ratio, message, montant: finalResultat };
+  return { 
+    ratio: realRatio, 
+    message: baseMessage, 
+    montant: resultat,
+    projection
+  };
 }
 
 // Services API

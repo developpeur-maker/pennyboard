@@ -13,6 +13,10 @@ interface KPIData {
     ratio: number
     message: string
     montant: number
+    projection?: {
+      ratio: number
+      message: string
+    }
   } | null
   // Nouvelles comparaisons
   ca_growth: number | null

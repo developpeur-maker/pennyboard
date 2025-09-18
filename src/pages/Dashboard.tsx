@@ -238,19 +238,16 @@ const Dashboard: React.FC = () => {
             color="blue"
           />
           <KPICard
-            title="Trésorerie"
-            period={formatPeriod()}
-            subtitle="Liquidités disponibles"
-            value={kpis && kpis.hasData && kpis.solde_tresorerie !== null ? formatCurrency(kpis.solde_tresorerie) : 'Aucune donnée'}
-            change={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? Math.abs(kpis.tresorerie_growth) : 0}
-            changeType={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? (kpis.tresorerie_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
-            icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
-            color="cyan"
-          />
-          <KPICard
             title="Rentabilité"
             period={formatPeriod()}
-            subtitle={kpis && kpis.hasData && kpis.rentabilite ? kpis.rentabilite.message : "En attente..."}
+            subtitle={
+              kpis && kpis.hasData && kpis.rentabilite 
+                ? (kpis.rentabilite.projection 
+                    ? `${kpis.rentabilite.message} • ${kpis.rentabilite.projection.message}`
+                    : kpis.rentabilite.message
+                  )
+                : "En attente..."
+            }
             value={kpis && kpis.hasData && kpis.rentabilite ? `${kpis.rentabilite.ratio}% (${formatCurrency(kpis.rentabilite.montant)})` : 'Aucune donnée'}
             change={0}
             changeType={
@@ -260,6 +257,16 @@ const Dashboard: React.FC = () => {
             }
             icon={<Calculator className="w-5 h-5 text-purple-600" />}
             color="turquoise"
+          />
+          <KPICard
+            title="Trésorerie"
+            period={formatPeriod()}
+            subtitle="Liquidités disponibles"
+            value={kpis && kpis.hasData && kpis.solde_tresorerie !== null ? formatCurrency(kpis.solde_tresorerie) : 'Aucune donnée'}
+            change={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? Math.abs(kpis.tresorerie_growth) : 0}
+            changeType={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? (kpis.tresorerie_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
+            icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
+            color="cyan"
           />
         </div>
       </div>
