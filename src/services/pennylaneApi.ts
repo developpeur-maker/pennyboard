@@ -1628,6 +1628,7 @@ export const pennylaneApi = {
       // Si on a déjà les données, les réutiliser
       if (this.tresorerieData) {
         console.log('♻️ Réutilisation des données en cache')
+        console.log('🔍 Cache contient:', this.tresorerieData.breakdown?.length, 'comptes')
         return this.tresorerieData.summary
       }
       
@@ -1689,6 +1690,8 @@ export const pennylaneApi = {
       
       // Mettre en cache pour éviter les doublons
       this.tresorerieData = { summary, breakdown }
+      console.log('💾 Cache créé avec:', breakdown.length, 'comptes')
+      console.log('🔍 Premier compte du cache:', breakdown[0])
       
       return summary
       
@@ -1723,13 +1726,17 @@ export const pennylaneApi = {
     
     // Si on a les données en cache, les utiliser
     if (this.tresorerieData && this.tresorerieData.breakdown) {
-      console.log('♻️ Breakdown récupéré depuis le cache')
+      console.log('♻️ Breakdown récupéré depuis le cache:', this.tresorerieData.breakdown.length, 'comptes')
+      console.log('🔍 Premier compte breakdown:', this.tresorerieData.breakdown[0])
       return this.tresorerieData.breakdown
     }
     
     // Sinon, déclencher le calcul principal qui va remplir le cache
-    console.log('🔄 Calcul principal pour remplir le cache...')
+    console.log('🔄 Cache vide, calcul principal pour remplir le cache...')
     await this.getTresorerieActuelle()
+    
+    // Vérifier le cache après calcul
+    console.log('🔍 Après calcul, cache contient:', this.tresorerieData?.breakdown?.length, 'comptes')
     
     // Maintenant on a le cache, le retourner
     return this.tresorerieData?.breakdown || []
