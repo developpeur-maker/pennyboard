@@ -194,6 +194,18 @@ function getMonthDateRange(selectedMonth: string): { startDate: string, endDate:
   return { startDate, endDate }
 }
 
+// Nouvelle fonction pour la trésorerie : du 1er janvier à la fin du mois sélectionné
+function getCumulativeDateRange(selectedMonth: string): { startDate: string, endDate: string } {
+  const [year, month] = selectedMonth.split('-')
+  const startDate = `${year}-01-01` // DEPUIS LE 1ER JANVIER
+  
+  // Calculer le dernier jour du mois sélectionné
+  const lastDayOfMonth = new Date(parseInt(year), parseInt(month), 0).getDate()
+  const endDate = `${year}-${month}-${lastDayOfMonth.toString().padStart(2, '0')}`
+  
+  return { startDate, endDate }
+}
+
 function calculateProfitabilityRatio(
   ca: number, 
   resultat: number, 
@@ -288,11 +300,14 @@ export const pennylaneApi = {
     try {
       console.log(`📊 Récupération du résultat comptable pour ${selectedMonth}...`)
       
-      // Convertir le mois sélectionné en dates
+      // Récupérer le trial balance pour le mois sélectionné (revenus/charges)
       const { startDate, endDate } = getMonthDateRange(selectedMonth)
-      
-      // Récupérer le trial balance pour le mois sélectionné
       const trialBalance = await getTrialBalance(startDate, endDate, 1000)
+      
+      // Récupérer le trial balance cumulé pour la trésorerie
+      const { startDate: cumulStartDate, endDate: cumulEndDate } = getCumulativeDateRange(selectedMonth)
+      console.log(`📅 Période cumulée pour trésorerie: ${cumulStartDate} au ${cumulEndDate}`)
+      const trialBalanceCumul = await getTrialBalance(cumulStartDate, cumulEndDate, 1000)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         console.log('⚠️ Aucune donnée de trial balance trouvée pour getResultatComptable')
@@ -301,9 +316,10 @@ export const pennylaneApi = {
       }
       
       console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance pour getResultatComptable`)
+      console.log(`📋 ${trialBalanceCumul.items.length} comptes récupérés du trial balance cumulé pour trésorerie`)
       
-      // Traiter les données pour le mois sélectionné
-      const processedData = this.processTrialBalanceData(trialBalance, selectedMonth)
+      // Traiter les données avec les deux trial balances
+      const processedData = this.processTrialBalanceData(trialBalance, selectedMonth, trialBalanceCumul)
       console.log('📊 Données traitées par processTrialBalanceData:', processedData.length, 'éléments')
       console.log('🔍 Premier élément:', processedData[0])
       
@@ -420,7 +436,11 @@ export const pennylaneApi = {
   },
 
   // Traiter les données du trial balance pour calculer les métriques
-  processTrialBalanceData(trialBalance: TrialBalanceResponse, selectedMonth: string = '2025-09'): PennylaneResultatComptable[] {
+  processTrialBalanceData(
+    trialBalance: TrialBalanceResponse, 
+    selectedMonth: string = '2025-09',
+    trialBalanceCumul?: TrialBalanceResponse
+  ): PennylaneResultatComptable[] {
     // Analyser les comptes par classe
     const comptes7 = trialBalance.items.filter(account => account.number.startsWith('7')) // Revenus
     const comptes6 = trialBalance.items.filter(account => account.number.startsWith('6')) // Charges
@@ -473,9 +493,11 @@ export const pennylaneApi = {
     }, 0)
     
     // Calculer la trésorerie avec les comptes 512 (Banques) uniquement
-    const comptes512 = trialBalance.items.filter(account => account.number.startsWith('512'))
+    // Calculer la TRÉSORERIE avec les soldes CUMULÉS si disponible
+    const trialBalanceForTreasury = trialBalanceCumul || trialBalance
+    const comptes512 = trialBalanceForTreasury.items.filter(account => account.number.startsWith('512'))
     
-    console.log(`🔍 DEBUG TRÉSORERIE KPIs - CALCUL DÉTAILLÉ:`)
+    console.log(`🔍 DEBUG TRÉSORERIE KPIs - CALCUL DÉTAILLÉ (${trialBalanceCumul ? 'CUMULÉ' : 'MENSUEL'}):`)
     let tresorerie = 0
     
     comptes512.forEach((account, index) => {
@@ -494,7 +516,7 @@ export const pennylaneApi = {
       console.log(`      ----`)
     })
     
-    console.log(`💰 RÉSULTAT FINAL: Trésorerie = ${tresorerie.toFixed(2)}€`)
+    console.log(`💰 RÉSULTAT FINAL: Trésorerie ${trialBalanceCumul ? 'CUMULÉE' : 'MENSUELLE'} = ${tresorerie.toFixed(2)}€`)
     
     // Créer un seul résultat pour le mois sélectionné
     const result: PennylaneResultatComptable[] = []
