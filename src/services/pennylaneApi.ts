@@ -449,8 +449,9 @@ export const pennylaneApi = {
       
       console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance pour la trésorerie (soldes cumulés)`)
       
-      // Traiter les données pour obtenir les vrais soldes bancaires
-      return this.processTreasuryFromTrialBalance(trialBalance, selectedMonth)
+      // FONCTION DÉSACTIVÉE - Utilise maintenant getTresorerieActuelle()
+      console.log('⚠️ Ancienne fonction de trésorerie désactivée')
+      return []
       
     } catch (error) {
       console.error('Erreur lors de la récupération de la trésorerie:', error)
