@@ -320,7 +320,9 @@ export const pennylaneApi = {
       // Récupérer le trial balance cumulé pour la trésorerie
       const { startDate: cumulStartDate, endDate: cumulEndDate } = getCumulativeDateRange(selectedMonth)
       console.log(`📅 Période cumulée pour trésorerie: ${cumulStartDate} au ${cumulEndDate}`)
+      console.log(`🔍 DEBUG: Appel getTrialBalance CUMULÉ...`)
       const trialBalanceCumul = await getTrialBalance(cumulStartDate, cumulEndDate, 2000)
+      console.log(`🔍 DEBUG: Trial balance cumulé récupéré avec ${trialBalanceCumul.items.length} comptes`)
       
       if (!trialBalance.items || trialBalance.items.length === 0) {
         console.log('⚠️ Aucune donnée de trial balance trouvée pour getResultatComptable')
@@ -331,9 +333,14 @@ export const pennylaneApi = {
       console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance pour getResultatComptable`)
       console.log(`📋 ${trialBalanceCumul.items.length} comptes récupérés du trial balance cumulé pour trésorerie`)
       
+      // DEBUG: Vérifier les comptes 512 dans les deux trial balances
+      const comptes512Mensuel = trialBalance.items.filter(account => account.number.startsWith('512'))
+      const comptes512Cumul = trialBalanceCumul.items.filter(account => account.number.startsWith('512'))
+      console.log(`🔍 DEBUG: Comptes 512 mensuel (${comptes512Mensuel.length}):`, comptes512Mensuel.map(c => `${c.number}: ${c.debits}€ - ${c.credits}€`))
+      console.log(`🔍 DEBUG: Comptes 512 cumulé (${comptes512Cumul.length}):`, comptes512Cumul.map(c => `${c.number}: ${c.debits}€ - ${c.credits}€`))
       
       // Traiter les données avec les deux trial balances
-      const processedData = await this.processTrialBalanceData(trialBalance, selectedMonth, trialBalanceCumul)
+      const processedData = this.processTrialBalanceData(trialBalance, selectedMonth, trialBalanceCumul)
       console.log('📊 Données traitées par processTrialBalanceData:', processedData.length, 'éléments')
       console.log('🔍 Premier élément:', processedData[0])
       
@@ -343,73 +350,6 @@ export const pennylaneApi = {
       console.error('Erreur lors de la récupération du résultat comptable:', error)
       return []
     }
-  },
-
-  // NOUVELLE MÉTHODE: Calculer la trésorerie en cascade mois par mois
-  async calculateTresorerieCascade(selectedMonth: string): Promise<number> {
-    try {
-      console.log(`🔄 CALCUL TRÉSORERIE CASCADE pour ${selectedMonth}`)
-      
-      const [selectedYear, selectedMonthNum] = selectedMonth.split('-')
-      const previousYear = (parseInt(selectedYear) - 1).toString()
-      
-      // 1. Récupérer le solde initial au 31 décembre de l'année précédente
-      const initialDate = `${previousYear}-12-31`
-      console.log(`📅 Récupération solde initial au ${initialDate}`)
-      
-      const initialTrialBalance = await getTrialBalance(initialDate, initialDate, 2000)
-      const initialComptes512 = initialTrialBalance.items.filter(account => account.number.startsWith('512'))
-      
-      let tresorerieInitiale = 0
-      initialComptes512.forEach(account => {
-        const credits = this.parseAmount(account.credits)
-        const debits = this.parseAmount(account.debits)
-        const solde = credits - debits // Utiliser la formule corrigée
-        tresorerieInitiale += solde
-      })
-      
-      console.log(`💰 Trésorerie initiale (${initialDate}): ${tresorerieInitiale.toFixed(2)}€`)
-      
-      // 2. Calculer en cascade mois par mois jusqu'au mois demandé
-      let tresorerieCourante = tresorerieInitiale
-      
-      for (let mois = 1; mois <= parseInt(selectedMonthNum); mois++) {
-        const moisStr = mois.toString().padStart(2, '0')
-        const periodeDebut = `${selectedYear}-${moisStr}-01`
-        const periodeFin = this.getLastDayOfMonth(selectedYear, moisStr)
-        
-        console.log(`🔄 Calcul mouvement ${moisStr}/${selectedYear} (${periodeDebut} au ${periodeFin})`)
-        
-        // Récupérer les mouvements du mois (différence entre début et fin de mois)
-        const trialBalanceMois = await getTrialBalance(periodeDebut, periodeFin, 2000)
-        const comptes512Mois = trialBalanceMois.items.filter(account => account.number.startsWith('512'))
-        
-        let mouvementMois = 0
-        comptes512Mois.forEach(account => {
-          const credits = this.parseAmount(account.credits)
-          const debits = this.parseAmount(account.debits)
-          // Pour les mouvements mensuels, c'est la différence nette du mois
-          const mouvement = credits - debits
-          mouvementMois += mouvement
-        })
-        
-        tresorerieCourante += mouvementMois
-        console.log(`   Mouvement ${moisStr}: ${mouvementMois.toFixed(2)}€ → Trésorerie: ${tresorerieCourante.toFixed(2)}€`)
-      }
-      
-      console.log(`✅ Trésorerie finale cascade (${selectedMonth}): ${tresorerieCourante.toFixed(2)}€`)
-      return tresorerieCourante
-      
-    } catch (error) {
-      console.error('❌ Erreur calcul trésorerie cascade:', error)
-      return 0
-    }
-  },
-
-  // Fonction utilitaire pour obtenir le dernier jour du mois
-  getLastDayOfMonth(year: string, month: string): string {
-    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
-    return `${year}-${month}-${lastDay.toString().padStart(2, '0')}`
   },
 
   // Récupérer la trésorerie basée sur le trial balance
@@ -449,9 +389,8 @@ export const pennylaneApi = {
       
       console.log(`📋 ${trialBalance.items.length} comptes récupérés du trial balance pour la trésorerie (soldes cumulés)`)
       
-      // FONCTION DÉSACTIVÉE - Utilise maintenant getTresorerieActuelle()
-      console.log('⚠️ Ancienne fonction de trésorerie désactivée')
-      return []
+      // Traiter les données pour obtenir les vrais soldes bancaires
+      return this.processTreasuryFromTrialBalance(trialBalance, selectedMonth)
       
     } catch (error) {
       console.error('Erreur lors de la récupération de la trésorerie:', error)
@@ -518,12 +457,11 @@ export const pennylaneApi = {
   },
 
   // Traiter les données du trial balance pour calculer les métriques
-  async processTrialBalanceData(
+  processTrialBalanceData(
     trialBalance: TrialBalanceResponse, 
     selectedMonth: string = '2025-09',
     trialBalanceCumul?: TrialBalanceResponse
-  ): Promise<PennylaneResultatComptable[]> {
-    console.log(`🔧 processTrialBalanceData: ${trialBalance.items.length} comptes principaux, ${trialBalanceCumul?.items.length || 0} comptes cumulés`)
+  ): PennylaneResultatComptable[] {
     // Analyser les comptes par classe
     const comptes7 = trialBalance.items.filter(account => account.number.startsWith('7')) // Revenus
     const comptes6 = trialBalance.items.filter(account => account.number.startsWith('6')) // Charges
@@ -575,9 +513,55 @@ export const pennylaneApi = {
       return total + debits - credits
     }, 0)
     
-  // ANCIENNE LOGIQUE DE TRÉSORERIE SUPPRIMÉE - Utilise maintenant getTresorerieActuelle()
-  console.log('⚠️ Ancienne logique de trésorerie dans getKPIs supprimée')
-  const tresorerie = 0 // Valeur par défaut
+    // Calculer la trésorerie avec les comptes 512 (Banques) uniquement
+    // Utiliser le trial balance cumulé (avec per_page=2000) pour avoir les vrais soldes cumulés
+    const trialBalanceForTreasury = trialBalanceCumul || trialBalance
+    const comptes512 = trialBalanceForTreasury.items.filter(account => account.number.startsWith('512'))
+    
+    console.log(`🔍 DEBUG TRÉSORERIE KPIs - CALCUL DÉTAILLÉ (${trialBalanceCumul ? 'CUMULÉ' : 'MENSUEL'}):`)
+    console.log(`🔍 COMPTES 512 TROUVÉS: ${comptes512.length} comptes`)
+    comptes512.forEach((account, index) => {
+      console.log(`   ${index + 1}. ${account.number} (${account.label}) - Débits: ${account.debits}, Crédits: ${account.credits}`)
+    })
+    
+    let tresorerie = 0
+    
+    comptes512.forEach((account, index) => {
+      const credits = this.parseAmount(account.credits)
+      const debits = this.parseAmount(account.debits)
+      const solde = debits - credits // CORRECT: Pour les comptes bancaires (actif), solde = debits - credits
+      
+      console.log(`   ${index + 1}. ${account.number} (${account.label}):`)
+      console.log(`      credits=${credits} (type: ${typeof credits})`)
+      console.log(`      debits=${debits} (type: ${typeof debits})`)
+      console.log(`      solde=${solde} (type: ${typeof solde})`)
+      console.log(`      tresorerie avant: ${tresorerie}`)
+      
+      tresorerie += solde
+      console.log(`      tresorerie après: ${tresorerie}`)
+      console.log(`      ----`)
+    })
+    
+    console.log(`💰 RÉSULTAT FINAL: Trésorerie ${trialBalanceCumul ? 'CUMULÉE' : 'MENSUELLE'} = ${tresorerie.toFixed(2)}€`)
+    
+    // Si aucun compte 512 dans le cumulé, essayer avec le mensuel
+    if (comptes512.length === 0 && trialBalanceCumul) {
+      console.log(`⚠️ FALLBACK: Aucun compte 512 dans le trial balance cumulé, utilisation du mensuel`)
+      const comptes512Mensuel = trialBalance.items.filter(account => account.number.startsWith('512'))
+      console.log(`🔍 COMPTES 512 MENSUELS TROUVÉS: ${comptes512Mensuel.length} comptes`)
+      
+      let tresorerieFallback = 0
+      comptes512Mensuel.forEach((account, index) => {
+        const credits = this.parseAmount(account.credits)
+        const debits = this.parseAmount(account.debits)
+        const solde = debits - credits
+        tresorerieFallback += solde
+        console.log(`   FALLBACK ${index + 1}. ${account.number}: ${solde.toFixed(2)}€`)
+      })
+      
+      tresorerie = tresorerieFallback
+      console.log(`💰 TRÉSORERIE FALLBACK (MENSUEL): ${tresorerie.toFixed(2)}€`)
+    }
     
     // Créer un seul résultat pour le mois sélectionné
     const result: PennylaneResultatComptable[] = []
@@ -589,7 +573,7 @@ export const pennylaneApi = {
       total_produits_exploitation: totalProduitsExploitation, // Total des produits d'exploitation (tous les comptes 7)
       charges: charges,
       resultat_net: totalProduitsExploitation - charges, // Bénéfice = Revenus totaux - Charges
-      tresorerie_calculee: tresorerie, // TRÉSORERIE DIRECTE (cumulée depuis janvier)
+      tresorerie_calculee: tresorerie, // TRÉSORERIE CALCULÉE ICI !
       currency: 'EUR',
       prestations_services: chiffreAffairesNet, // CA Net pour les prestations
       ventes_biens: 0, // Pas de vente de biens pour DIMO DIAGNOSTIC
@@ -658,6 +642,7 @@ export const pennylaneApi = {
     
     // Debug: Analyser TOUS les comptes de classe 5 pour comprendre
     const comptes5 = trialBalance.items.filter(account => account.number.startsWith('5'))
+    console.log(`🔍 DEBUG - Tous les comptes classe 5: ${comptes5.length}`)
     comptes5.forEach(account => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
@@ -688,7 +673,7 @@ export const pennylaneApi = {
     comptes512.forEach((account, index) => {
       const credits = this.parseAmount(account.credits)
       const debits = this.parseAmount(account.debits)
-      const solde = credits - debits // CORRECTION: Pour avoir des valeurs positives comme dans Pennylane
+      const solde = debits - credits // CORRECT: Pour les comptes bancaires (actif), solde = debits - credits
       
       console.log(`   ${index + 1}. ${account.number} (${account.label}):`)
       console.log(`      credits=${credits} (type: ${typeof credits})`)
@@ -1572,262 +1557,6 @@ export const pennylaneApi = {
         total_charges_exploitation: createComparison(total_charges_exploitation_current, total_charges_exploitation_previous)
       },
       resultat_exploitation: createComparison(resultat_exploitation_current, resultat_exploitation_previous)
-    }
-  },
-
-  // TRÉSORERIE UNIFIÉE - Calcul + Breakdown en un seul appel
-  tresorerieData: null as any, // Cache pour éviter les doublons
-  
-  async getTresorerieActuelle(): Promise<PennylaneTresorerie[]> {
-    try {
-      console.log('💰 TRÉSORERIE - Récupération des données')
-      
-      // Si on a déjà les données, les réutiliser
-      if (this.tresorerieData) {
-        console.log('♻️ Réutilisation des données en cache')
-        console.log('🔍 Cache contient:', this.tresorerieData.breakdown?.length, 'comptes')
-        return this.tresorerieData.summary
-      }
-      
-      // Dates
-      const aujourd_hui = new Date().toISOString().split('T')[0]
-      const debut_annee = '2025-01-01'
-      
-      console.log(`📅 Période: ${debut_annee} → ${aujourd_hui}`)
-      
-      // Appel API UNIQUE
-      const response = await fetch('/api/pennylane/trial-balance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          period_start: debut_annee,
-          period_end: aujourd_hui,
-          per_page: 1000
-        })
-      })
-      
-      if (!response.ok) {
-        throw new Error(`Erreur API: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      console.log(`📊 ${data.items?.length || 0} comptes récupérés`)
-      
-      // Filtrer comptes 512
-      const comptes_bancaires = (data.items || []).filter((compte: any) => compte.number.startsWith('512'))
-      console.log(`🏦 ${comptes_bancaires.length} comptes bancaires (512)`)
-      
-      // Calculer total ET préparer breakdown
-      let total = 0
-      const breakdown = comptes_bancaires.map((compte: any) => {
-        const credits = parseFloat(compte.credits || '0')
-        const debits = parseFloat(compte.debits || '0')
-        const solde = debits - credits
-        console.log(`   • ${compte.number}: ${solde.toFixed(2)}€`)
-        total += solde
-        
-        return {
-          code: compte.number,
-          label: compte.number,
-          description: compte.label || compte.number,
-          amount: solde
-        }
-      })
-      
-      console.log(`💰 TOTAL FINAL: ${total.toFixed(2)}€`)
-      
-      const summary = [{
-        period: aujourd_hui,
-        solde_initial: 0,
-        encaissements: 0,
-        decaissements: 0,
-        solde_final: total,
-        currency: 'EUR'
-      }]
-      
-      // Mettre en cache pour éviter les doublons
-      this.tresorerieData = { summary, breakdown }
-      console.log('💾 Cache créé avec:', breakdown.length, 'comptes')
-      console.log('🔍 Premier compte du cache:', breakdown[0])
-      
-      return summary
-      
-    } catch (error) {
-      console.error('❌ Erreur:', error)
-      return [{
-        period: new Date().toISOString().split('T')[0],
-        solde_initial: 0,
-        encaissements: 0,
-        decaissements: 0,
-        solde_final: 0,
-        currency: 'EUR'
-      }]
-    }
-  },
-
-  // Breakdowns simplifiés par mois
-  async processChargesBreakdownFromMonth(selectedMonth: string) {
-    const { startDate, endDate } = getMonthDateRange(selectedMonth)
-    const trialBalance = await getTrialBalance(startDate, endDate, 2000)
-    return this.processChargesBreakdown(trialBalance)
-  },
-
-  async processRevenusBreakdownFromMonth(selectedMonth: string) {
-    const { startDate, endDate } = getMonthDateRange(selectedMonth)
-    const trialBalance = await getTrialBalance(startDate, endDate, 2000)
-    return this.processRevenusBreakdown(trialBalance)
-  },
-
-  async processTresorerieBreakdownFromMonth(_selectedMonth: string) {
-    console.log('💰 BREAKDOWN TRÉSORERIE - Utilisation du cache')
-    
-    // Si on a les données en cache, les utiliser
-    if (this.tresorerieData && this.tresorerieData.breakdown) {
-      console.log('♻️ Breakdown récupéré depuis le cache:', this.tresorerieData.breakdown.length, 'comptes')
-      console.log('🔍 Premier compte breakdown:', this.tresorerieData.breakdown[0])
-      return this.tresorerieData.breakdown
-    }
-    
-    // Sinon, déclencher le calcul principal qui va remplir le cache
-    console.log('🔄 Cache vide, calcul principal pour remplir le cache...')
-    await this.getTresorerieActuelle()
-    
-    // Vérifier le cache après calcul
-    console.log('🔍 Après calcul, cache contient:', this.tresorerieData?.breakdown?.length, 'comptes')
-    
-    // Maintenant on a le cache, le retourner
-    return this.tresorerieData?.breakdown || []
-  },
-
-  // NOUVELLE FONCTION UNIFIÉE: Un seul appel API pour toutes les données
-  async getAllDataUnified(
-    selectedMonth: string = '2025-09',
-    _viewMode: 'month' | 'year' = 'month',
-    _selectedYear: string = '2025',
-    _selectedFiscalYear?: string
-  ) {
-    try {
-      console.log(`🚀 RÉCUPÉRATION UNIFIÉE pour ${selectedMonth}`)
-      
-      // 1. UN SEUL appel trial balance cumulé (depuis janvier jusqu'au mois sélectionné)
-      const [selectedYearStr] = selectedMonth.split('-')
-      const startDate = `${selectedYearStr}-01-01`
-      const endDate = this.getLastDayOfMonth(selectedYearStr, selectedMonth.split('-')[1])
-      
-      console.log(`📅 Période unifiée: ${startDate} au ${endDate}`)
-      const trialBalanceCumul = await getTrialBalance(startDate, endDate, 2000)
-      
-      // 2. UN appel pour le mois sélectionné seul (pour avoir tous les comptes)
-      const trialBalanceMensuel = await getTrialBalance(
-        `${selectedYearStr}-${selectedMonth.split('-')[1]}-01`,
-        endDate,
-        2000
-      )
-      
-      // 3. UN appel pour le mois précédent (pour les comparaisons)
-      const previousDate = new Date(selectedMonth + '-01')
-      previousDate.setMonth(previousDate.getMonth() - 1)
-      const prevYear = previousDate.getFullYear().toString()
-      const prevMonth = (previousDate.getMonth() + 1).toString().padStart(2, '0')
-      const previousMonth = `${prevYear}-${prevMonth}`
-      
-      const previousTrialBalance = await getTrialBalance(
-        `${prevYear}-${prevMonth}-01`,
-        this.getLastDayOfMonth(prevYear, prevMonth),
-        2000
-      ).catch(() => null)
-      
-      console.log(`📊 Trial balance cumulé: ${trialBalanceCumul.items.length} comptes`)
-      console.log(`📊 Trial balance mensuel: ${trialBalanceMensuel.items.length} comptes`)
-      
-      // 4. Traiter toutes les données : mensuel pour tout, cumulé pour les breakdowns
-      const resultatComptable = await this.processTrialBalanceData(trialBalanceMensuel, selectedMonth, trialBalanceCumul)
-      const currentResultat = resultatComptable[0]
-      
-      let previousResultat = null
-      if (previousTrialBalance) {
-        const prevData = await this.processTrialBalanceData(previousTrialBalance, previousMonth)
-        previousResultat = prevData[0]
-      }
-      
-      // 4. Calculer tous les KPIs
-      const kpis = this.calculateAllKPIs(currentResultat, previousResultat, selectedMonth)
-      
-      // 5. Calculer tous les breakdowns
-      const chargesBreakdown = this.processChargesBreakdown(trialBalanceCumul)
-      const revenusBreakdown = this.processRevenusBreakdown(trialBalanceCumul)
-      const tresorerieBreakdown = this.processTresorerieBreakdown(trialBalanceCumul)
-      
-      // 6. Calculer la trésorerie (pour compatibilité)
-      const tresorerie = [{
-        period: selectedMonth,
-        solde_initial: 0,
-        encaissements: 0,
-        decaissements: 0,
-        solde_final: currentResultat.tresorerie_calculee,
-        currency: 'EUR'
-      }]
-      
-      console.log(`✅ TOUTES LES DONNÉES CALCULÉES - Trésorerie: ${currentResultat.tresorerie_calculee}€`)
-      
-      return {
-        kpis,
-        tresorerie,
-        chargesBreakdown,
-        revenusBreakdown,
-        tresorerieBreakdown
-      }
-      
-    } catch (error) {
-      console.error('❌ Erreur récupération unifiée:', error)
-      throw error
-    }
-  },
-
-  // Calculer tous les KPIs à partir des données traitées
-  calculateAllKPIs(currentResultat: any, previousResultat: any, selectedMonth: string) {
-    const calculateGrowth = (current: number, previous: number | null): number | null => {
-      if (!previous || previous === 0) return null
-      const growth = ((current - previous) / Math.abs(previous)) * 100
-      return Math.round(growth * 100) / 100
-    }
-
-    const ventesGrowth = calculateGrowth(currentResultat.ventes_706 || 0, previousResultat?.ventes_706 || null)
-    const caGrowth = calculateGrowth(currentResultat.chiffre_affaires || 0, previousResultat?.chiffre_affaires || null)
-    const totalProduitsGrowth = calculateGrowth(currentResultat.total_produits_exploitation || 0, previousResultat?.total_produits_exploitation || null)
-    const chargesGrowth = calculateGrowth(currentResultat.charges || 0, previousResultat?.charges || null)
-    const resultatGrowth = calculateGrowth(currentResultat.resultat_net || 0, previousResultat?.resultat_net || null)
-    const tresorerieGrowth = calculateGrowth(currentResultat.tresorerie_calculee || 0, previousResultat?.tresorerie_calculee || null)
-
-    // Détecter si c'est le mois en cours
-    const today = new Date()
-    const currentMonthKey = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`
-    const isCurrentMonth = selectedMonth === currentMonthKey
-
-    // Calculer la rentabilité
-    const rentabilite = calculateProfitabilityRatio(
-      currentResultat.chiffre_affaires || 0,
-      currentResultat.resultat_net || 0,
-      previousResultat?.charges || undefined,
-      isCurrentMonth
-    )
-
-    return {
-      ventes_706: currentResultat.ventes_706,
-      chiffre_affaires: currentResultat.chiffre_affaires,
-      total_produits_exploitation: currentResultat.total_produits_exploitation,
-      charges: currentResultat.charges,
-      resultat_net: currentResultat.resultat_net,
-      solde_tresorerie: currentResultat.tresorerie_calculee,
-      growth: caGrowth,
-      hasData: true,
-      rentabilite,
-      ventes_growth: ventesGrowth,
-      ca_growth: caGrowth,
-      total_produits_growth: totalProduitsGrowth,
-      charges_growth: chargesGrowth,
-      resultat_growth: resultatGrowth,
-      tresorerie_growth: tresorerieGrowth
     }
   }
 }

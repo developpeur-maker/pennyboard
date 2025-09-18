@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { pennylaneApi, PennylaneTresorerie } from '../services/pennylaneApi'
+import { pennylaneApi, PennylaneResultatComptable, PennylaneTresorerie } from '../services/pennylaneApi'
 
 interface KPIData {
   ventes_706: number | null // VRAIES VENTES (compte 706 uniquement)
@@ -31,7 +31,9 @@ interface KPIData {
 
 interface UsePennylaneDataReturn {
   kpis: KPIData | null
+  resultatComptable: PennylaneResultatComptable[]
   tresorerie: PennylaneTresorerie[]
+  incomeStatement: any | null
   fiscalYears: Array<{id: string, name: string, start_date: string, end_date: string}>
   chargesBreakdown: Array<{code: string, label: string, description: string, amount: number}>
   revenusBreakdown: Array<{code: string, label: string, description: string, amount: number}>
@@ -48,7 +50,9 @@ export const usePennylaneData = (
   selectedYear: string = '2025'
 ): UsePennylaneDataReturn => {
   const [kpis, setKpis] = useState<KPIData | null>(null)
+  const [resultatComptable, setResultatComptable] = useState<PennylaneResultatComptable[]>([])
   const [tresorerie, setTresorerie] = useState<PennylaneTresorerie[]>([])
+  const [incomeStatement, setIncomeStatement] = useState<any | null>(null)
   const [fiscalYears, setFiscalYears] = useState<Array<{id: string, name: string, start_date: string, end_date: string}>>([])
   const [chargesBreakdown, setChargesBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [revenusBreakdown, setRevenusBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
@@ -75,19 +79,27 @@ export const usePennylaneData = (
       const fiscalYearsData = await pennylaneApi.getFiscalYears()
       setFiscalYears(fiscalYearsData)
 
-      // APPROCHE SIMPLE: Appels séparés et clairs
-      console.log('📊 Récupération des données...')
-      
-      const [kpisData, chargesBreakdownData, revenusBreakdownData, tresorerieData, tresorerieBreakdownData] = await Promise.all([
+      // Charger toutes les données en parallèle
+      const [kpisData, resultatData, tresorerieData, trialBalanceData, previousTrialBalanceData] = await Promise.all([
         pennylaneApi.getKPIs(selectedMonth),
-        pennylaneApi.processChargesBreakdownFromMonth(selectedMonth),
-        pennylaneApi.processRevenusBreakdownFromMonth(selectedMonth),
-        pennylaneApi.getTresorerieActuelle(), // Trésorerie fixe au jour actuel
-        pennylaneApi.processTresorerieBreakdownFromMonth(selectedMonth)
+        pennylaneApi.getResultatComptable(selectedMonth),
+        pennylaneApi.getTresorerie(selectedMonth, viewMode, selectedYear),
+        selectedFiscalYear ? pennylaneApi.getTrialBalanceForFiscalYear(selectedFiscalYear) : pennylaneApi.getTrialBalanceData(selectedMonth),
+        selectedFiscalYear ? null : pennylaneApi.getPreviousMonthData(selectedMonth)
       ])
-      
+
+      // Calculer le compte de résultat avec comparaisons
+      const incomeStatementData = pennylaneApi.calculateIncomeStatement(trialBalanceData, previousTrialBalanceData)
+
+      // Calculer le breakdown des charges, revenus et trésorerie
+      const chargesBreakdownData = pennylaneApi.processChargesBreakdown(trialBalanceData)
+      const revenusBreakdownData = pennylaneApi.processRevenusBreakdown(trialBalanceData)
+      const tresorerieBreakdownData = pennylaneApi.processTresorerieBreakdown(trialBalanceData)
+
       setKpis(kpisData)
+      setResultatComptable(resultatData)
       setTresorerie(tresorerieData)
+      setIncomeStatement(incomeStatementData)
       setChargesBreakdown(chargesBreakdownData)
       setRevenusBreakdown(revenusBreakdownData)
       setTresorerieBreakdown(tresorerieBreakdownData)
@@ -105,7 +117,9 @@ export const usePennylaneData = (
 
   return {
     kpis,
+    resultatComptable,
     tresorerie,
+    incomeStatement,
     fiscalYears,
     chargesBreakdown,
     revenusBreakdown,
