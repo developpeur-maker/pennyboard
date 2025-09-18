@@ -1638,31 +1638,36 @@ export const pennylaneApi = {
         soldeInitial += (credits - debits)
       })
       
-      // 2. MOUVEMENTS de janvier à aujourd'hui
-      const startOfYear = `${currentYear}-01-01`
-      const mouvementsResponse = await getTrialBalance(startOfYear, todayStr, 1000)
-      const comptes512Mouvements = mouvementsResponse.items.filter(account => account.number.startsWith('512'))
+      // 2. SOLDE ACTUEL au jour d'aujourd'hui (pas les mouvements !)
+      const soldeActuelResponse = await getTrialBalance(todayStr, todayStr, 1000)
+      const comptes512Actuels = soldeActuelResponse.items.filter(account => account.number.startsWith('512'))
       
-      let mouvements = 0
-      comptes512Mouvements.forEach(account => {
+      let soldeActuel = 0
+      comptes512Actuels.forEach(account => {
         const credits = this.parseAmount(account.credits)
         const debits = this.parseAmount(account.debits)
-        mouvements += (credits - debits)
+        soldeActuel += (credits - debits)
       })
       
       // 3. CALCUL FINAL - MÉTHODE COMPTABLE CORRECTE
-      // Trésorerie = Solde fin d'exercice précédent + Mouvements jusqu'à la date recherchée
-      const tresorerieActuelle = soldeInitial + mouvements
+      // Option A: Solde initial + mouvements (mais les mouvements sont à 0)
+      // Option B: Utiliser directement le solde actuel de l'API
+      const tresorerieMethodeA = soldeInitial // Solde initial seulement (car mouvements = 0)
+      const tresorerieMethodeB = soldeActuel  // Solde actuel direct
       
       console.log(`💰 TRÉSORERIE - Solde ${endOfPreviousYear}: ${soldeInitial.toFixed(2)}€`)
-      console.log(`💰 TRÉSORERIE - Mouvements ${startOfYear}→${todayStr}: ${mouvements.toFixed(2)}€`)
-      console.log(`💰 TRÉSORERIE - RÉSULTAT FINAL: ${tresorerieActuelle.toFixed(2)}€`)
+      console.log(`💰 TRÉSORERIE - Solde actuel ${todayStr}: ${soldeActuel.toFixed(2)}€`)
+      console.log(`💰 TRÉSORERIE - MÉTHODE A (solde initial): ${tresorerieMethodeA.toFixed(2)}€`)
+      console.log(`💰 TRÉSORERIE - MÉTHODE B (solde actuel): ${tresorerieMethodeB.toFixed(2)}€`)
+      
+      // Utiliser le solde actuel (méthode B)
+      const tresorerieActuelle = tresorerieMethodeB
       
       return [{
         period: todayStr,
         solde_initial: soldeInitial,
-        encaissements: mouvements > 0 ? mouvements : 0,
-        decaissements: mouvements < 0 ? Math.abs(mouvements) : 0,
+        encaissements: 0,
+        decaissements: 0,
         solde_final: tresorerieActuelle,
         currency: 'EUR'
       }]
