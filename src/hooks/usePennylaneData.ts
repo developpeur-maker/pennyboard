@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { pennylaneApi, PennylaneResultatComptable, PennylaneTresorerie } from '../services/pennylaneApi'
+import { pennylaneApi, PennylaneTresorerie } from '../services/pennylaneApi'
 
 interface KPIData {
   ventes_706: number | null // VRAIES VENTES (compte 706 uniquement)
@@ -31,9 +31,7 @@ interface KPIData {
 
 interface UsePennylaneDataReturn {
   kpis: KPIData | null
-  resultatComptable: PennylaneResultatComptable[]
   tresorerie: PennylaneTresorerie[]
-  incomeStatement: any | null
   fiscalYears: Array<{id: string, name: string, start_date: string, end_date: string}>
   chargesBreakdown: Array<{code: string, label: string, description: string, amount: number}>
   revenusBreakdown: Array<{code: string, label: string, description: string, amount: number}>
@@ -50,9 +48,7 @@ export const usePennylaneData = (
   selectedYear: string = '2025'
 ): UsePennylaneDataReturn => {
   const [kpis, setKpis] = useState<KPIData | null>(null)
-  const [resultatComptable, setResultatComptable] = useState<PennylaneResultatComptable[]>([])
   const [tresorerie, setTresorerie] = useState<PennylaneTresorerie[]>([])
-  const [incomeStatement, setIncomeStatement] = useState<any | null>(null)
   const [fiscalYears, setFiscalYears] = useState<Array<{id: string, name: string, start_date: string, end_date: string}>>([])
   const [chargesBreakdown, setChargesBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [revenusBreakdown, setRevenusBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
@@ -79,30 +75,16 @@ export const usePennylaneData = (
       const fiscalYearsData = await pennylaneApi.getFiscalYears()
       setFiscalYears(fiscalYearsData)
 
-      // Charger toutes les données en parallèle
-      const [kpisData, resultatData, tresorerieData, trialBalanceData, previousTrialBalanceData] = await Promise.all([
-        pennylaneApi.getKPIs(selectedMonth),
-        pennylaneApi.getResultatComptable(selectedMonth),
-        pennylaneApi.getTresorerie(selectedMonth, viewMode, selectedYear),
-        selectedFiscalYear ? pennylaneApi.getTrialBalanceForFiscalYear(selectedFiscalYear) : pennylaneApi.getTrialBalanceData(selectedMonth),
-        selectedFiscalYear ? null : pennylaneApi.getPreviousMonthData(selectedMonth)
-      ])
-
-      // Calculer le compte de résultat avec comparaisons
-      const incomeStatementData = pennylaneApi.calculateIncomeStatement(trialBalanceData, previousTrialBalanceData)
-
-      // Calculer le breakdown des charges, revenus et trésorerie
-      const chargesBreakdownData = pennylaneApi.processChargesBreakdown(trialBalanceData)
-      const revenusBreakdownData = pennylaneApi.processRevenusBreakdown(trialBalanceData)
-      const tresorerieBreakdownData = pennylaneApi.processTresorerieBreakdown(trialBalanceData)
-
-      setKpis(kpisData)
-      setResultatComptable(resultatData)
-      setTresorerie(tresorerieData)
-      setIncomeStatement(incomeStatementData)
-      setChargesBreakdown(chargesBreakdownData)
-      setRevenusBreakdown(revenusBreakdownData)
-      setTresorerieBreakdown(tresorerieBreakdownData)
+      // NOUVELLE APPROCHE: UN SEUL appel API pour tout calculer
+      console.log('📊 Récupération unifiée des données...')
+      
+      const allData = await pennylaneApi.getAllDataUnified(selectedMonth, viewMode, selectedYear, selectedFiscalYear)
+      
+      setKpis(allData.kpis)
+      setTresorerie(allData.tresorerie)
+      setChargesBreakdown(allData.chargesBreakdown)
+      setRevenusBreakdown(allData.revenusBreakdown)
+      setTresorerieBreakdown(allData.tresorerieBreakdown)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
       console.error('Erreur lors du chargement des données Pennylane:', err)
@@ -117,9 +99,7 @@ export const usePennylaneData = (
 
   return {
     kpis,
-    resultatComptable,
     tresorerie,
-    incomeStatement,
     fiscalYears,
     chargesBreakdown,
     revenusBreakdown,

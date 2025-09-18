@@ -48,22 +48,6 @@ const Dashboard: React.FC = () => {
     }
   }
 
-  // Fonction pour obtenir le message de santé financière
-  const getHealthMessage = () => {
-    if (!kpis || !kpis.hasData) return "Données en cours de chargement...";
-    
-    const resultat = kpis.resultat_net || 0;
-    const tresorerie = kpis.solde_tresorerie || 0;
-    
-    if (resultat > 0 && tresorerie > 50000) {
-      return `Excellente santé ! Vous avez généré ${formatCurrency(resultat)} de bénéfice ce mois-ci. 🎉`;
-    } else if (resultat > 0) {
-      return `Bonne performance ! ${formatCurrency(resultat)} de bénéfice ce mois-ci. 👍`;
-    } else if (resultat < 0) {
-      return `Attention : perte de ${formatCurrency(Math.abs(resultat))} ce mois-ci. 🔴`;
-    }
-    return "Situation équilibrée ce mois-ci. 📊";
-  };
 
   // Fonction pour formater les montants
   const formatCurrency = (amount: number) => {
@@ -182,21 +166,6 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Message de santé financière */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-4 rounded-lg mb-6">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">ℹ️</span>
-            </div>
-          </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-blue-900">
-              {getHealthMessage()}
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* KPI Cards - Layout élargi pour mieux remplir l'écran */}
       <div className="w-full">

@@ -1623,5 +1623,129 @@ export const pennylaneApi = {
       },
       resultat_exploitation: createComparison(resultat_exploitation_current, resultat_exploitation_previous)
     }
+  },
+
+  // NOUVELLE FONCTION UNIFIÉE: Un seul appel API pour toutes les données
+  async getAllDataUnified(
+    selectedMonth: string = '2025-09',
+    _viewMode: 'month' | 'year' = 'month',
+    _selectedYear: string = '2025',
+    _selectedFiscalYear?: string
+  ) {
+    try {
+      console.log(`🚀 RÉCUPÉRATION UNIFIÉE pour ${selectedMonth}`)
+      
+      // 1. UN SEUL appel trial balance cumulé (depuis janvier jusqu'au mois sélectionné)
+      const [selectedYearStr] = selectedMonth.split('-')
+      const startDate = `${selectedYearStr}-01-01`
+      const endDate = this.getLastDayOfMonth(selectedYearStr, selectedMonth.split('-')[1])
+      
+      console.log(`📅 Période unifiée: ${startDate} au ${endDate}`)
+      const trialBalanceCumul = await getTrialBalance(startDate, endDate, 2000)
+      
+      // 2. UN appel pour le mois précédent (pour les comparaisons)
+      const previousDate = new Date(selectedMonth + '-01')
+      previousDate.setMonth(previousDate.getMonth() - 1)
+      const prevYear = previousDate.getFullYear().toString()
+      const prevMonth = (previousDate.getMonth() + 1).toString().padStart(2, '0')
+      const previousMonth = `${prevYear}-${prevMonth}`
+      
+      const previousTrialBalance = await getTrialBalance(
+        `${prevYear}-${prevMonth}-01`,
+        this.getLastDayOfMonth(prevYear, prevMonth),
+        2000
+      ).catch(() => null)
+      
+      console.log(`📊 Trial balance cumulé: ${trialBalanceCumul.items.length} comptes`)
+      
+      // 3. Traiter toutes les données à partir de ces 2 appels
+      const resultatComptable = await this.processTrialBalanceData(trialBalanceCumul, selectedMonth)
+      const currentResultat = resultatComptable[0]
+      
+      let previousResultat = null
+      if (previousTrialBalance) {
+        const prevData = await this.processTrialBalanceData(previousTrialBalance, previousMonth)
+        previousResultat = prevData[0]
+      }
+      
+      // 4. Calculer tous les KPIs
+      const kpis = this.calculateAllKPIs(currentResultat, previousResultat, selectedMonth)
+      
+      // 5. Calculer tous les breakdowns
+      const chargesBreakdown = this.processChargesBreakdown(trialBalanceCumul)
+      const revenusBreakdown = this.processRevenusBreakdown(trialBalanceCumul)
+      const tresorerieBreakdown = this.processTresorerieBreakdown(trialBalanceCumul)
+      
+      // 6. Calculer la trésorerie (pour compatibilité)
+      const tresorerie = [{
+        period: selectedMonth,
+        solde_initial: 0,
+        encaissements: 0,
+        decaissements: 0,
+        solde_final: currentResultat.tresorerie_calculee,
+        currency: 'EUR'
+      }]
+      
+      console.log(`✅ TOUTES LES DONNÉES CALCULÉES - Trésorerie: ${currentResultat.tresorerie_calculee}€`)
+      
+      return {
+        kpis,
+        tresorerie,
+        chargesBreakdown,
+        revenusBreakdown,
+        tresorerieBreakdown
+      }
+      
+    } catch (error) {
+      console.error('❌ Erreur récupération unifiée:', error)
+      throw error
+    }
+  },
+
+  // Calculer tous les KPIs à partir des données traitées
+  calculateAllKPIs(currentResultat: any, previousResultat: any, selectedMonth: string) {
+    const calculateGrowth = (current: number, previous: number | null): number | null => {
+      if (!previous || previous === 0) return null
+      const growth = ((current - previous) / Math.abs(previous)) * 100
+      return Math.round(growth * 100) / 100
+    }
+
+    const ventesGrowth = calculateGrowth(currentResultat.ventes_706 || 0, previousResultat?.ventes_706 || null)
+    const caGrowth = calculateGrowth(currentResultat.chiffre_affaires || 0, previousResultat?.chiffre_affaires || null)
+    const totalProduitsGrowth = calculateGrowth(currentResultat.total_produits_exploitation || 0, previousResultat?.total_produits_exploitation || null)
+    const chargesGrowth = calculateGrowth(currentResultat.charges || 0, previousResultat?.charges || null)
+    const resultatGrowth = calculateGrowth(currentResultat.resultat_net || 0, previousResultat?.resultat_net || null)
+    const tresorerieGrowth = calculateGrowth(currentResultat.tresorerie_calculee || 0, previousResultat?.tresorerie_calculee || null)
+
+    // Détecter si c'est le mois en cours
+    const today = new Date()
+    const currentMonthKey = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`
+    const isCurrentMonth = selectedMonth === currentMonthKey
+
+    // Calculer la rentabilité
+    const rentabilite = calculateProfitabilityRatio(
+      currentResultat.chiffre_affaires || 0,
+      currentResultat.resultat_net || 0,
+      previousResultat?.charges || undefined,
+      isCurrentMonth
+    )
+
+    return {
+      ventes_706: currentResultat.ventes_706,
+      chiffre_affaires: currentResultat.chiffre_affaires,
+      total_produits_exploitation: currentResultat.total_produits_exploitation,
+      charges: currentResultat.charges,
+      resultat_net: currentResultat.resultat_net,
+      solde_tresorerie: currentResultat.tresorerie_calculee,
+      growth: caGrowth,
+      hasData: true,
+      rentabilite,
+      ventes_growth: ventesGrowth,
+      ca_growth: caGrowth,
+      total_produits_growth: totalProduitsGrowth,
+      charges_growth: chargesGrowth,
+      resultat_growth: resultatGrowth,
+      tresorerie_growth: tresorerieGrowth
+    }
   }
 }
