@@ -10,17 +10,9 @@
     "preview": "vite preview",
     "deploy": "npm run build",
     "init-db": "node scripts/init-db.js",
-    "test-sync": "node scripts/test-sync.js",
-    "test-sync-api": "node scripts/test-sync-api.js",
-    "test-vercel-sync": "node scripts/test-vercel-sync.js",
     "test-db-connection": "node scripts/test-db-connection.js",
     "check-db-data": "node scripts/check-db-data.js",
-    "check-api-data": "node scripts/check-api-data.js",
-    "test-pennylane-direct": "node scripts/test-pennylane-direct.js",
-    "test-pennylane-correct": "node scripts/test-pennylane-correct.js",
-    "test-pennylane-vercel": "node scripts/test-pennylane-vercel.js",
-    "test-pennylane-correct-syntax": "node scripts/test-pennylane-correct-syntax.js",
-    "test-pennylane-vercel-correct": "node scripts/test-pennylane-vercel-correct.js"
+    "check-api-data": "node scripts/check-api-data.js"
   },
   "dependencies": {
     "@types/pg": "^8.15.5",

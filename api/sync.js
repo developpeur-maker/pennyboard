@@ -214,6 +214,7 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
   // Calculer les KPIs de base
   let ventes_706 = 0
   let chiffre_affaires = 0
+  let produits = 0
   let charges = 0
   let tresorerie = 0
   
@@ -232,13 +233,20 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
       chiffre_affaires += credit
     }
     
+    // Produits (classe 7) - pour la rentabilité
+    if (accountNumber.startsWith('7')) {
+      produits += credit
+    }
+    
     // Charges (classe 6)
     if (accountNumber.startsWith('6')) {
       charges += debit
     }
     
-    // Trésorerie (classe 512)
+    // Trésorerie (classe 512) - solde cumulé depuis le début d'exercice
     if (accountNumber.startsWith('512')) {
+      // Le solde de trésorerie est le solde cumulé des comptes 512
+      // (débit - crédit) donne le solde positif si en faveur de l'entreprise
       tresorerie += debit - credit
     }
   })
@@ -246,8 +254,9 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
   return {
     ventes_706,
     chiffre_affaires,
+    produits,
     charges,
-    resultat_net: chiffre_affaires - charges,
+    resultat_net: produits - charges,
     tresorerie,
     currency: 'EUR',
     period: month
@@ -262,7 +271,7 @@ function calculateChargesBreakdown(trialBalance) {
     const accountNumber = item.number || ''
     if (accountNumber.startsWith('6')) {
       const classCode = accountNumber.substring(0, 2)
-      const debit = parseFloat(item.debit || '0')
+      const debit = parseFloat(item.debits || '0')
       
       if (!breakdown[classCode]) {
         breakdown[classCode] = { total: 0, accounts: [] }
@@ -288,7 +297,7 @@ function calculateRevenusBreakdown(trialBalance) {
     const accountNumber = item.number || ''
     if (accountNumber.startsWith('7')) {
       const classCode = accountNumber.substring(0, 3)
-      const credit = parseFloat(item.credit || '0')
+      const credit = parseFloat(item.credits || '0')
       
       if (!breakdown[classCode]) {
         breakdown[classCode] = { total: 0, accounts: [] }
@@ -313,8 +322,8 @@ function calculateTresorerieBreakdown(trialBalance) {
   items.forEach((item) => {
     const accountNumber = item.number || ''
     if (accountNumber.startsWith('512')) {
-      const debit = parseFloat(item.debit || '0')
-      const credit = parseFloat(item.credit || '0')
+      const debit = parseFloat(item.debits || '0')
+      const credit = parseFloat(item.credits || '0')
       const balance = debit - credit
       
       if (!breakdown[accountNumber]) {
