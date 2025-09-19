@@ -80,12 +80,13 @@ export const usePennylaneData = (
       setFiscalYears(fiscalYearsData)
 
       // Charger toutes les données en parallèle
-      const [kpisData, resultatData, tresorerieData, trialBalanceData, previousTrialBalanceData] = await Promise.all([
+      const [kpisData, resultatData, tresorerieData, trialBalanceData, previousTrialBalanceData, tresorerieActuelle] = await Promise.all([
         pennylaneApi.getKPIs(selectedMonth),
         pennylaneApi.getResultatComptable(selectedMonth),
         pennylaneApi.getTresorerie(selectedMonth, viewMode, selectedYear),
         selectedFiscalYear ? pennylaneApi.getTrialBalanceForFiscalYear(selectedFiscalYear) : pennylaneApi.getTrialBalanceData(selectedMonth),
-        selectedFiscalYear ? null : pennylaneApi.getPreviousMonthData(selectedMonth)
+        selectedFiscalYear ? null : pennylaneApi.getPreviousMonthData(selectedMonth),
+        pennylaneApi.getTresorerieActuelle(selectedMonth)
       ])
 
       // Calculer le compte de résultat avec comparaisons
@@ -95,6 +96,9 @@ export const usePennylaneData = (
       const chargesBreakdownData = pennylaneApi.processChargesBreakdown(trialBalanceData)
       const revenusBreakdownData = pennylaneApi.processRevenusBreakdown(trialBalanceData)
       const tresorerieBreakdownData = pennylaneApi.processTresorerieBreakdown(trialBalanceData)
+
+      // Log de la trésorerie actuelle
+      console.log(`💰 TRÉSORERIE ACTUELLE (nouvelle fonction): ${tresorerieActuelle.toFixed(2)}€`)
 
       setKpis(kpisData)
       setResultatComptable(resultatData)

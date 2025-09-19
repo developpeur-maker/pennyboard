@@ -1559,5 +1559,74 @@ export const pennylaneApi = {
       },
       resultat_exploitation: createComparison(resultat_exploitation_current, resultat_exploitation_previous)
     }
+  },
+
+  // NOUVELLE FONCTION TRÉSORERIE - SIMPLE ET PROPRE
+  async getTresorerieActuelle(selectedMonth: string = '2025-09'): Promise<number> {
+    try {
+      console.log(`💰 NOUVELLE FONCTION TRÉSORERIE pour ${selectedMonth}`)
+      
+      // Calculer la période : du 1er janvier à la fin du mois sélectionné
+      const [year, month] = selectedMonth.split('-')
+      const startDate = `${year}-01-01`
+      
+      // Calculer le dernier jour du mois sélectionné
+      const monthNum = parseInt(month)
+      const lastDay = new Date(parseInt(year), monthNum, 0).getDate()
+      const endDate = `${year}-${month.padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
+      
+      console.log(`💰 Période demandée: ${startDate} au ${endDate}`)
+      
+      // Appel direct à l'API pour récupérer le trial balance cumulé
+      const trialBalance = await getTrialBalance(startDate, endDate, 2000)
+      
+      console.log(`💰 Trial balance récupéré: ${trialBalance.items.length} comptes`)
+      
+      // Filtrer uniquement les comptes 512 (banques)
+      const comptes512 = trialBalance.items.filter(account => account.number.startsWith('512'))
+      
+      console.log(`💰 Comptes 512 trouvés: ${comptes512.length}`)
+      
+      if (comptes512.length === 0) {
+        console.log('⚠️ AUCUN compte 512 trouvé !')
+        return 0
+      }
+      
+      // ANALYSE DÉTAILLÉE DES DONNÉES
+      console.log(`🔍 ANALYSE DÉTAILLÉE DES COMPTES 512:`)
+      comptes512.forEach((account, index) => {
+        const credits = this.parseAmount(account.credits)
+        const debits = this.parseAmount(account.debits)
+        const solde = debits - credits
+        
+        console.log(`   ${index + 1}. ${account.number} (${account.label}):`)
+        console.log(`      - Crédits: ${credits}€ (type: ${typeof credits})`)
+        console.log(`      - Débits: ${debits}€ (type: ${typeof debits})`)
+        console.log(`      - Solde: ${solde}€ (débits - crédits)`)
+        console.log(`      - Période: ${startDate} au ${endDate}`)
+        console.log(`      - Données cumulées ou mensuelles ? À analyser...`)
+        console.log(`      ----`)
+      })
+      
+      // Calculer la trésorerie totale
+      let tresorerie = 0
+      
+      comptes512.forEach((account, index) => {
+        const credits = this.parseAmount(account.credits)
+        const debits = this.parseAmount(account.debits)
+        const solde = debits - credits // Pour les comptes bancaires (actif), solde = debits - credits
+        
+        tresorerie += solde
+      })
+      
+      console.log(`💰 TRÉSORERIE FINALE: ${tresorerie.toFixed(2)}€`)
+      console.log(`🔍 QUESTION: Ces données sont-elles cumulées depuis le 1er janvier ou seulement du mois en cours ?`)
+      
+      return tresorerie
+      
+    } catch (error) {
+      console.error('❌ Erreur dans getTresorerieActuelle:', error)
+      return 0
+    }
   }
 }
