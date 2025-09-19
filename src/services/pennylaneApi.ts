@@ -1561,23 +1561,18 @@ export const pennylaneApi = {
     }
   },
 
-  // NOUVELLE FONCTION TRÉSORERIE - SIMPLE ET PROPRE
+  // NOUVELLE FONCTION TRÉSORERIE - UTILISE LES DONNÉES MENSUELLES
   async getTresorerieActuelle(selectedMonth: string = '2025-09'): Promise<number> {
     try {
       console.log(`💰 NOUVELLE FONCTION TRÉSORERIE pour ${selectedMonth}`)
       
-      // Calculer la période : du 1er janvier à la fin du mois sélectionné
-      const [year, month] = selectedMonth.split('-')
-      const startDate = `${year}-01-01`
+      // SOLUTION: Utiliser les données mensuelles car l'API ne retourne pas les comptes 512 en cumulé
+      const { startDate, endDate } = getMonthDateRange(selectedMonth)
       
-      // Calculer le dernier jour du mois sélectionné
-      const monthNum = parseInt(month)
-      const lastDay = new Date(parseInt(year), monthNum, 0).getDate()
-      const endDate = `${year}-${month.padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
+      console.log(`💰 Période MENSUELLE demandée: ${startDate} au ${endDate}`)
+      console.log(`💡 RAISON: L'API ne retourne pas les comptes 512 en données cumulées`)
       
-      console.log(`💰 Période demandée: ${startDate} au ${endDate}`)
-      
-      // Appel direct à l'API pour récupérer le trial balance cumulé
+      // Appel direct à l'API pour récupérer le trial balance mensuel
       const trialBalance = await getTrialBalance(startDate, endDate, 2000)
       
       console.log(`💰 Trial balance récupéré: ${trialBalance.items.length} comptes`)
@@ -1588,12 +1583,12 @@ export const pennylaneApi = {
       console.log(`💰 Comptes 512 trouvés: ${comptes512.length}`)
       
       if (comptes512.length === 0) {
-        console.log('⚠️ AUCUN compte 512 trouvé !')
+        console.log('⚠️ AUCUN compte 512 trouvé même en mensuel !')
         return 0
       }
       
-      // ANALYSE DÉTAILLÉE DES DONNÉES
-      console.log(`🔍 ANALYSE DÉTAILLÉE DES COMPTES 512:`)
+      // ANALYSE DÉTAILLÉE DES DONNÉES MENSUELLES
+      console.log(`🔍 ANALYSE DÉTAILLÉE DES COMPTES 512 (MENSUEL):`)
       comptes512.forEach((account, index) => {
         const credits = this.parseAmount(account.credits)
         const debits = this.parseAmount(account.debits)
@@ -1603,8 +1598,8 @@ export const pennylaneApi = {
         console.log(`      - Crédits: ${credits}€ (type: ${typeof credits})`)
         console.log(`      - Débits: ${debits}€ (type: ${typeof debits})`)
         console.log(`      - Solde: ${solde}€ (débits - crédits)`)
-        console.log(`      - Période: ${startDate} au ${endDate}`)
-        console.log(`      - Données cumulées ou mensuelles ? À analyser...`)
+        console.log(`      - Période: ${startDate} au ${endDate} (MENSUEL)`)
+        console.log(`      - Données mensuelles du mois ${selectedMonth}`)
         console.log(`      ----`)
       })
       
@@ -1619,8 +1614,8 @@ export const pennylaneApi = {
         tresorerie += solde
       })
       
-      console.log(`💰 TRÉSORERIE FINALE: ${tresorerie.toFixed(2)}€`)
-      console.log(`🔍 QUESTION: Ces données sont-elles cumulées depuis le 1er janvier ou seulement du mois en cours ?`)
+      console.log(`💰 TRÉSORERIE FINALE (MENSUEL): ${tresorerie.toFixed(2)}€`)
+      console.log(`✅ SOLUTION: Utilisation des données mensuelles car l'API ne fournit pas les comptes 512 en cumulé`)
       
       return tresorerie
       
