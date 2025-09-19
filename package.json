@@ -19,7 +19,8 @@
     "test-pennylane-direct": "node scripts/test-pennylane-direct.js",
     "test-pennylane-correct": "node scripts/test-pennylane-correct.js",
     "test-pennylane-vercel": "node scripts/test-pennylane-vercel.js",
-    "test-pennylane-correct-syntax": "node scripts/test-pennylane-correct-syntax.js"
+    "test-pennylane-correct-syntax": "node scripts/test-pennylane-correct-syntax.js",
+    "test-pennylane-vercel-correct": "node scripts/test-pennylane-vercel-correct.js"
   },
   "dependencies": {
     "@types/pg": "^8.15.5",
