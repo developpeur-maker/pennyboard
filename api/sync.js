@@ -155,24 +155,34 @@ module.exports = async function handler(req, res) {
   }
 }
 
-// Fonction pour récupérer les données Pennylane
+// Fonction pour récupérer les données Pennylane via l'endpoint existant
 async function getTrialBalanceFromPennylane(startDate, endDate) {
   try {
-    const response = await fetch(`https://api.pennylane.io/api/v1/trial-balance?start_date=${startDate}&end_date=${endDate}`, {
+    console.log(`📊 Appel de l'API Pennylane pour ${startDate} à ${endDate}`)
+    
+    // Utiliser l'endpoint existant du projet
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000'
+    
+    const response = await fetch(`${baseUrl}/api/trial-balance?start_date=${startDate}&end_date=${endDate}`, {
       headers: {
-        'Authorization': `Bearer ${process.env.VITE_PENNYLANE_API_KEY}`,
+        'x-api-key': process.env.API_KEY,
         'Content-Type': 'application/json'
       }
     })
     
     if (!response.ok) {
-      throw new Error(`Erreur API Pennylane: ${response.status}`)
+      throw new Error(`Erreur API Pennylane: ${response.status} - ${response.statusText}`)
     }
     
     const data = await response.json()
+    console.log(`✅ Données Pennylane récupérées: ${data.items?.length || 0} comptes`)
     return data
   } catch (error) {
     console.error('❌ Erreur lors de la récupération des données Pennylane:', error)
+    console.log('⚠️ Utilisation des données de test en fallback')
+    
     // Fallback vers des données de test
     return {
       items: [

@@ -3,9 +3,7 @@ import { PennylaneResultatComptable, PennylaneTresorerie } from '../services/pen
 import { 
   getKPIsFromDatabase, 
   getBreakdownsFromDatabase,
-  fallbackToPennylaneApi,
-  isDataStale,
-  getDataAge
+  fallbackToPennylaneApi
 } from '../services/databaseApi'
 
 interface KPIData {
@@ -81,22 +79,7 @@ export const usePennylaneData = (
       if (dbResponse.success && dbResponse.data) {
         console.log('✅ Données récupérées depuis la base de données')
         
-        // Vérifier si les données sont à jour
-        const dataAge = getDataAge(new Date().toISOString())
-        const isStale = isDataStale(new Date().toISOString(), 24)
-        
-        if (isStale) {
-          console.log(`⚠️ Données obsolètes (${dataAge}h), fallback vers l'API Pennylane`)
-          // Fallback vers l'API directe
-          const fallbackResponse = await fallbackToPennylaneApi(selectedMonth)
-          if (fallbackResponse.success && fallbackResponse.data) {
-            console.log('✅ Fallback réussi, utilisation des données Pennylane')
-            await processFallbackData(fallbackResponse.data)
-            return
-          }
-        }
-        
-        // Utiliser les données de la base
+        // Utiliser les données de la base (elles sont déjà synchronisées)
         await processDatabaseData(dbResponse.data)
         return
       }
