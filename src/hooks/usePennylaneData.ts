@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { pennylaneApi, PennylaneResultatComptable, PennylaneTresorerie } from '../services/pennylaneApi'
+import { PennylaneResultatComptable, PennylaneTresorerie } from '../services/pennylaneApi'
 import { 
-  getCurrentMonthData, 
   getKPIsFromDatabase, 
   getBreakdownsFromDatabase,
   fallbackToPennylaneApi,
@@ -58,10 +57,10 @@ export const usePennylaneData = (
   selectedYear: string = '2025'
 ): UsePennylaneDataReturn => {
   const [kpis, setKpis] = useState<KPIData | null>(null)
-  const [resultatComptable, setResultatComptable] = useState<PennylaneResultatComptable[]>([])
-  const [tresorerie, setTresorerie] = useState<PennylaneTresorerie[]>([])
-  const [incomeStatement, setIncomeStatement] = useState<any | null>(null)
-  const [fiscalYears, setFiscalYears] = useState<Array<{id: string, name: string, start_date: string, end_date: string}>>([])
+  const [resultatComptable] = useState<PennylaneResultatComptable[]>([])
+  const [tresorerie] = useState<PennylaneTresorerie[]>([])
+  const [incomeStatement] = useState<any | null>(null)
+  const [fiscalYears] = useState<Array<{id: string, name: string, start_date: string, end_date: string}>>([])
   const [chargesBreakdown, setChargesBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [revenusBreakdown, setRevenusBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [tresorerieBreakdown, setTresorerieBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
@@ -83,8 +82,8 @@ export const usePennylaneData = (
         console.log('✅ Données récupérées depuis la base de données')
         
         // Vérifier si les données sont à jour
-        const dataAge = getDataAge(dbResponse.data.updated_at || new Date().toISOString())
-        const isStale = isDataStale(dbResponse.data.updated_at || new Date().toISOString(), 24)
+        const dataAge = getDataAge(new Date().toISOString())
+        const isStale = isDataStale(new Date().toISOString(), 24)
         
         if (isStale) {
           console.log(`⚠️ Données obsolètes (${dataAge}h), fallback vers l'API Pennylane`)
@@ -276,14 +275,6 @@ export const usePennylaneData = (
     }
     
     return descriptions[code] || 'Classe comptable'
-  }
-
-    } catch (error) {
-      console.error('❌ Erreur lors du chargement des données:', error)
-      setError(error instanceof Error ? error.message : 'Erreur inconnue')
-    } finally {
-      setLoading(false)
-    }
   }
 
   useEffect(() => {

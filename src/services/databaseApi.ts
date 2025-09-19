@@ -144,16 +144,19 @@ export async function fallbackToPennylaneApi(month: string) {
   console.log(`⚠️ Fallback vers l'API Pennylane directe pour ${month}`)
   
   // Importer dynamiquement pour éviter les dépendances circulaires
-  const { getKPIs, processChargesBreakdownFromMonth, processRevenusBreakdownFromMonth, getTresorerieActuelle, processTresorerieBreakdownFromMonth } = await import('./pennylaneApi')
+  const { pennylaneApi } = await import('./pennylaneApi')
   
   try {
-    const [kpisData, chargesBreakdown, revenusBreakdown, tresorerieActuelle, tresorerieBreakdown] = await Promise.all([
-      getKPIs(month),
-      processChargesBreakdownFromMonth(month),
-      processRevenusBreakdownFromMonth(month),
-      getTresorerieActuelle(month),
-      processTresorerieBreakdownFromMonth(month)
+    const [kpisData, tresorerieActuelle] = await Promise.all([
+      pennylaneApi.getKPIs(month),
+      pennylaneApi.getTresorerieActuelle(month)
     ])
+    
+    // Pour les breakdowns, nous devons récupérer le trial balance d'abord
+    const trialBalance = await pennylaneApi.getTrialBalanceData(month)
+    const chargesBreakdown = pennylaneApi.processChargesBreakdown(trialBalance)
+    const revenusBreakdown = pennylaneApi.processRevenusBreakdown(trialBalance)
+    const tresorerieBreakdown = pennylaneApi.processTresorerieBreakdown(trialBalance)
 
     return {
       success: true,
