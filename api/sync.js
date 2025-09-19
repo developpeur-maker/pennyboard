@@ -83,7 +83,7 @@ module.exports = async function handler(req, res) {
               revenus_breakdown = $7,
               tresorerie_breakdown = $8,
               is_current_month = $9,
-              sync_version = sync_version + 1,
+              sync_version = monthly_data.sync_version + 1,
               updated_at = CURRENT_TIMESTAMP
           `, [
             month, year, monthNumber,
