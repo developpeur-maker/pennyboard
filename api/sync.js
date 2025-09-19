@@ -57,14 +57,8 @@ module.exports = async function handler(req, res) {
           
           console.log(`📊 Récupération du trial balance pour ${startDate} à ${endDate}`)
           
-          // Pour l'instant, créons des données de test
-          const trialBalance = {
-            items: [
-              { number: '706000', label: 'Prestations de services', debit: '0', credit: '10000' },
-              { number: '601000', label: 'Achats', debit: '5000', credit: '0' },
-              { number: '512000', label: 'Banque', debit: '10000', credit: '0' }
-            ]
-          }
+          // Récupérer les vraies données Pennylane
+          const trialBalance = await getTrialBalanceFromPennylane(startDate, endDate)
           
           // Calculer les KPIs à partir du trial balance
           const kpis = calculateKPIsFromTrialBalance(trialBalance, month)
@@ -158,6 +152,35 @@ module.exports = async function handler(req, res) {
     }
     
     res.status(500).json({ error: 'Échec de la synchronisation' })
+  }
+}
+
+// Fonction pour récupérer les données Pennylane
+async function getTrialBalanceFromPennylane(startDate, endDate) {
+  try {
+    const response = await fetch(`https://api.pennylane.io/api/v1/trial-balance?start_date=${startDate}&end_date=${endDate}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.VITE_PENNYLANE_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Erreur API Pennylane: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('❌ Erreur lors de la récupération des données Pennylane:', error)
+    // Fallback vers des données de test
+    return {
+      items: [
+        { number: '706000', label: 'Prestations de services', debit: '0', credit: '10000' },
+        { number: '601000', label: 'Achats', debit: '5000', credit: '0' },
+        { number: '512000', label: 'Banque', debit: '10000', credit: '0' }
+      ]
+    }
   }
 }
 
