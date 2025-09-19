@@ -10,7 +10,10 @@
     "preview": "vite preview",
     "deploy": "npm run build",
     "init-db": "node scripts/init-db.js",
-    "test-sync": "node scripts/test-sync.js"
+    "test-sync": "node scripts/test-sync.js",
+    "test-sync-api": "node scripts/test-sync-api.js",
+    "test-vercel-sync": "node scripts/test-vercel-sync.js",
+    "test-db-connection": "node scripts/test-db-connection.js"
   },
   "dependencies": {
     "@types/pg": "^8.15.5",
