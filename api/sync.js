@@ -155,15 +155,19 @@ module.exports = async function handler(req, res) {
   }
 }
 
-// Fonction pour récupérer les données Pennylane directement
+// Fonction pour récupérer les données Pennylane via l'endpoint local
 async function getTrialBalanceFromPennylane(startDate, endDate) {
   try {
-    console.log(`📊 Appel direct de l'API Pennylane pour ${startDate} à ${endDate}`)
+    console.log(`📊 Appel de l'API Pennylane via l'endpoint local pour ${startDate} à ${endDate}`)
     
-    // Appel direct à l'API Pennylane
-    const response = await fetch(`https://api.pennylane.io/api/v1/trial-balance?start_date=${startDate}&end_date=${endDate}`, {
+    // Utiliser l'endpoint local qui fonctionne déjà
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000'
+    
+    const response = await fetch(`${baseUrl}/api/trial-balance?start_date=${startDate}&end_date=${endDate}`, {
       headers: {
-        'Authorization': `Bearer ${process.env.VITE_PENNYLANE_API_KEY}`,
+        'x-api-key': process.env.API_KEY,
         'Content-Type': 'application/json'
       }
     })
