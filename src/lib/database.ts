@@ -2,7 +2,7 @@ import { Pool } from 'pg'
 
 // Configuration de la connexion PostgreSQL
 const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
+  connectionString: process.env.NEON_URL || process.env.POSTGRES_URL,
   ssl: {
     rejectUnauthorized: false
   }
