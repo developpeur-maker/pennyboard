@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react'
 import { pennylaneApi, PennylaneResultatComptable, PennylaneTresorerie } from '../services/pennylaneApi'
+import { 
+  getCurrentMonthData, 
+  getKPIsFromDatabase, 
+  getBreakdownsFromDatabase,
+  fallbackToPennylaneApi,
+  isDataStale,
+  getDataAge
+} from '../services/databaseApi'
 
 interface KPIData {
   ventes_706: number | null // VRAIES VENTES (compte 706 uniquement)
@@ -65,51 +73,214 @@ export const usePennylaneData = (
       setLoading(true)
       setError(null)
 
-      // Tester la connexion d'abord
-      console.log('🔍 Test de connexion à l\'API Pennylane...')
-      const connectionTest = await pennylaneApi.testConnection()
+      console.log('🔄 Chargement des données...')
+
+      // Essayer d'abord la base de données
+      console.log('📊 Tentative de récupération depuis la base de données...')
+      const dbResponse = await getKPIsFromDatabase(selectedMonth)
       
-      if (!connectionTest) {
-        throw new Error('Impossible de se connecter à l\'API Pennylane. Vérifiez votre clé API.')
+      if (dbResponse.success && dbResponse.data) {
+        console.log('✅ Données récupérées depuis la base de données')
+        
+        // Vérifier si les données sont à jour
+        const dataAge = getDataAge(dbResponse.data.updated_at || new Date().toISOString())
+        const isStale = isDataStale(dbResponse.data.updated_at || new Date().toISOString(), 24)
+        
+        if (isStale) {
+          console.log(`⚠️ Données obsolètes (${dataAge}h), fallback vers l'API Pennylane`)
+          // Fallback vers l'API directe
+          const fallbackResponse = await fallbackToPennylaneApi(selectedMonth)
+          if (fallbackResponse.success && fallbackResponse.data) {
+            console.log('✅ Fallback réussi, utilisation des données Pennylane')
+            await processFallbackData(fallbackResponse.data)
+            return
+          }
+        }
+        
+        // Utiliser les données de la base
+        await processDatabaseData(dbResponse.data)
+        return
+      }
+      
+      // Fallback vers l'API Pennylane directe
+      console.log('⚠️ Base de données indisponible, fallback vers l\'API Pennylane')
+      const fallbackResponse = await fallbackToPennylaneApi(selectedMonth)
+      
+      if (fallbackResponse.success && fallbackResponse.data) {
+        console.log('✅ Fallback réussi, utilisation des données Pennylane')
+        await processFallbackData(fallbackResponse.data)
+      } else {
+        throw new Error('Impossible de récupérer les données depuis la base de données ou l\'API Pennylane')
       }
 
-      console.log('✅ Connexion réussie, chargement des données...')
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des données:', error)
+      setError(error instanceof Error ? error.message : 'Erreur inconnue')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-      // Charger les exercices fiscaux d'abord
-      const fiscalYearsData = await pennylaneApi.getFiscalYears()
-      setFiscalYears(fiscalYearsData)
+  // Traiter les données de la base de données
+  const processDatabaseData = async (data: any) => {
+    try {
+      // Récupérer les breakdowns depuis la base
+      const breakdownResponse = await getBreakdownsFromDatabase(selectedMonth)
+      
+      if (breakdownResponse.success && breakdownResponse.data) {
+        setChargesBreakdown(convertBreakdownToArray(breakdownResponse.data.charges_breakdown))
+        setRevenusBreakdown(convertBreakdownToArray(breakdownResponse.data.revenus_breakdown))
+        setTresorerieBreakdown(convertTresorerieBreakdownToArray(breakdownResponse.data.tresorerie_breakdown))
+      }
 
-      // Charger toutes les données en parallèle
-      const [kpisData, resultatData, tresorerieData, trialBalanceData, previousTrialBalanceData, tresorerieActuelle] = await Promise.all([
-        pennylaneApi.getKPIs(selectedMonth),
-        pennylaneApi.getResultatComptable(selectedMonth),
-        pennylaneApi.getTresorerie(selectedMonth, viewMode, selectedYear),
-        selectedFiscalYear ? pennylaneApi.getTrialBalanceForFiscalYear(selectedFiscalYear) : pennylaneApi.getTrialBalanceData(selectedMonth),
-        selectedFiscalYear ? null : pennylaneApi.getPreviousMonthData(selectedMonth),
-        pennylaneApi.getTresorerieActuelle(selectedMonth)
-      ])
+      // Traiter les KPIs
+      const kpisData = data.kpis || {}
+      const processedKpis: KPIData = {
+        ventes_706: kpisData.ventes_706 || 0,
+        chiffre_affaires: kpisData.chiffre_affaires || 0,
+        total_produits_exploitation: kpisData.chiffre_affaires || 0,
+        charges: kpisData.charges || 0,
+        resultat_net: kpisData.resultat_net || 0,
+        solde_tresorerie: kpisData.tresorerie || 0,
+        growth: 0, // À calculer si nécessaire
+        hasData: true,
+        rentabilite: kpisData.resultat_net && kpisData.chiffre_affaires ? {
+          ratio: (kpisData.resultat_net / kpisData.chiffre_affaires) * 100,
+          message: 'Rentabilité calculée',
+          montant: kpisData.resultat_net
+        } : null,
+        ventes_growth: 0,
+        ca_growth: 0,
+        total_produits_growth: 0,
+        charges_growth: 0,
+        resultat_growth: 0,
+        tresorerie_growth: 0
+      }
 
-      // Calculer le compte de résultat avec comparaisons
-      const incomeStatementData = pennylaneApi.calculateIncomeStatement(trialBalanceData, previousTrialBalanceData)
+      setKpis(processedKpis)
+      console.log('✅ Données de la base de données traitées avec succès')
+      
+    } catch (error) {
+      console.error('❌ Erreur lors du traitement des données de la base:', error)
+      throw error
+    }
+  }
 
-      // Calculer le breakdown des charges, revenus et trésorerie
-      const chargesBreakdownData = pennylaneApi.processChargesBreakdown(trialBalanceData)
-      const revenusBreakdownData = pennylaneApi.processRevenusBreakdown(trialBalanceData)
-      const tresorerieBreakdownData = pennylaneApi.processTresorerieBreakdown(trialBalanceData)
+  // Traiter les données du fallback Pennylane
+  const processFallbackData = async (data: any) => {
+    try {
+      // Traiter les KPIs
+      const kpisData = data.kpis || {}
+      const processedKpis: KPIData = {
+        ventes_706: kpisData.ventes_706 || 0,
+        chiffre_affaires: kpisData.chiffre_affaires || 0,
+        total_produits_exploitation: kpisData.chiffre_affaires || 0,
+        charges: kpisData.charges || 0,
+        resultat_net: kpisData.resultat_net || 0,
+        solde_tresorerie: data.tresorerie_actuelle || 0,
+        growth: 0,
+        hasData: true,
+        rentabilite: kpisData.resultat_net && kpisData.chiffre_affaires ? {
+          ratio: (kpisData.resultat_net / kpisData.chiffre_affaires) * 100,
+          message: 'Rentabilité calculée (données en temps réel)',
+          montant: kpisData.resultat_net
+        } : null,
+        ventes_growth: 0,
+        ca_growth: 0,
+        total_produits_growth: 0,
+        charges_growth: 0,
+        resultat_growth: 0,
+        tresorerie_growth: 0
+      }
 
-      // Log de la trésorerie actuelle
-      console.log(`💰 TRÉSORERIE ACTUELLE (nouvelle fonction): ${tresorerieActuelle.toFixed(2)}€`)
+      setKpis(processedKpis)
+      
+      // Traiter les breakdowns
+      if (data.charges_breakdown) {
+        setChargesBreakdown(convertBreakdownToArray(data.charges_breakdown))
+      }
+      if (data.revenus_breakdown) {
+        setRevenusBreakdown(convertBreakdownToArray(data.revenus_breakdown))
+      }
+      if (data.tresorerie_breakdown) {
+        setTresorerieBreakdown(convertTresorerieBreakdownToArray(data.tresorerie_breakdown))
+      }
 
-      setKpis(kpisData)
-      setResultatComptable(resultatData)
-      setTresorerie(tresorerieData)
-      setIncomeStatement(incomeStatementData)
-      setChargesBreakdown(chargesBreakdownData)
-      setRevenusBreakdown(revenusBreakdownData)
-      setTresorerieBreakdown(tresorerieBreakdownData)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
-      console.error('Erreur lors du chargement des données Pennylane:', err)
+      console.log('✅ Données du fallback Pennylane traitées avec succès')
+      
+    } catch (error) {
+      console.error('❌ Erreur lors du traitement des données du fallback:', error)
+      throw error
+    }
+  }
+
+  // Convertir les breakdowns en format array
+  const convertBreakdownToArray = (breakdown: any): Array<{code: string, label: string, description: string, amount: number}> => {
+    const result: Array<{code: string, label: string, description: string, amount: number}> = []
+    
+    Object.entries(breakdown).forEach(([code, data]: [string, any]) => {
+      if (data && typeof data === 'object' && data.total > 0) {
+        result.push({
+          code,
+          label: `${code} - ${getClassDescription(code)}`,
+          description: getClassDescription(code),
+          amount: data.total
+        })
+      }
+    })
+    
+    return result.sort((a, b) => b.amount - a.amount)
+  }
+
+  // Convertir les breakdowns de trésorerie en format array
+  const convertTresorerieBreakdownToArray = (breakdown: any): Array<{code: string, label: string, description: string, amount: number}> => {
+    const result: Array<{code: string, label: string, description: string, amount: number}> = []
+    
+    Object.entries(breakdown).forEach(([code, data]: [string, any]) => {
+      if (data && typeof data === 'object' && data.balance !== 0) {
+        result.push({
+          code,
+          label: `${code} - ${data.label || 'Compte bancaire'}`,
+          description: data.label || 'Compte bancaire',
+          amount: Math.abs(data.balance)
+        })
+      }
+    })
+    
+    return result.sort((a, b) => b.amount - a.amount)
+  }
+
+  // Obtenir la description d'une classe comptable
+  const getClassDescription = (code: string): string => {
+    const descriptions: { [key: string]: string } = {
+      '60': 'Achats',
+      '61': 'Services extérieurs',
+      '62': 'Autres services extérieurs',
+      '63': 'Impôts et taxes',
+      '64': 'Charges de personnel',
+      '65': 'Autres charges',
+      '66': 'Charges financières',
+      '67': 'Charges exceptionnelles',
+      '68': 'Dotations aux amortissements',
+      '69': 'Participation des salariés',
+      '70': 'Ventes',
+      '71': 'Production stockée',
+      '72': 'Production immobilisée',
+      '73': 'Variations de stocks',
+      '74': 'Subventions d\'exploitation',
+      '75': 'Autres produits de gestion courante',
+      '76': 'Produits financiers',
+      '77': 'Produits exceptionnels',
+      '78': 'Reprises sur amortissements',
+      '79': 'Transferts de charges'
+    }
+    
+    return descriptions[code] || 'Classe comptable'
+  }
+
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des données:', error)
+      setError(error instanceof Error ? error.message : 'Erreur inconnue')
     } finally {
       setLoading(false)
     }

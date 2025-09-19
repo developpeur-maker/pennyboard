@@ -100,29 +100,7 @@ async function apiCall<T>(endpoint: string): Promise<T> {
   }
 }
 
-// Fonction pour récupérer les ledger entries (qui contiennent les informations comptables)
-export async function getLedgerEntries(page: number = 1, perPage: number = 1000): Promise<any> {
-  try {
-    console.log(`📊 Récupération des ledger entries (page ${page})...`)
-    
-    // Construire les paramètres de requête de manière sécurisée
-    const params = new URLSearchParams({
-      page: page.toString(),
-      per_page: perPage.toString()
-    })
-    
-    const response = await apiCall<{success: boolean, raw_data: any}>(`accounts?${params.toString()}`)
-    
-    if (response.success && response.raw_data) {
-      return response.raw_data
-    }
-    
-    throw new Error('Format de réponse inattendu')
-  } catch (error) {
-    console.error('❌ Erreur lors de la récupération des ledger entries:', error)
-    throw error
-  }
-}
+// Fonction supprimée : getLedgerEntries - Plus nécessaire avec le trial balance
 
 // Fonction pour récupérer le trial balance (balance des comptes) - TOUTES LES PAGES
 export async function getTrialBalance(periodStart: string = '2025-01-01', periodEnd: string = '2025-01-31', perPage: number = 1000): Promise<TrialBalanceResponse> {
@@ -400,62 +378,7 @@ export const pennylaneApi = {
   },
 
 
-  // Traiter les écritures comptables filtrées par mois pour calculer les métriques
-  processLedgerEntriesByMonth(ledgerEntries: any, selectedMonth: string = '2025-09'): PennylaneResultatComptable[] {
-    console.log(`📊 Traitement des écritures comptables pour ${selectedMonth}...`)
-    
-    // Convertir le mois sélectionné en dates
-    const [year, month] = selectedMonth.split('-')
-    const startDate = new Date(parseInt(year), parseInt(month) - 1, 1)
-    const endDate = new Date(parseInt(year), parseInt(month), 0) // Dernier jour du mois
-    
-    console.log(`📅 Filtrage des écritures du ${startDate.toISOString().split('T')[0]} au ${endDate.toISOString().split('T')[0]}`)
-    
-    // Filtrer les écritures par mois
-    const entriesForMonth = ledgerEntries.items.filter((entry: any) => {
-      if (!entry.date) return false
-      const entryDate = new Date(entry.date)
-      return entryDate >= startDate && entryDate <= endDate
-    })
-    
-    console.log(`📋 ${entriesForMonth.length} écritures trouvées pour ${selectedMonth} (sur ${ledgerEntries.items.length} total)`)
-    
-    // Pour l'instant, nous utilisons une approche simplifiée
-    // Dans une vraie implémentation, nous récupérerions les détails de chaque écriture
-    // et calculerions les montants réels par compte
-    
-    // Estimation basée sur le nombre d'écritures et le mois
-    const baseAmount = entriesForMonth.length * 1000 // Estimation 1000€ par écriture
-    
-    // Créer des données simulées mais réalistes basées sur le mois
-    const chiffreAffairesNet = baseAmount * 0.8 // 80% du montant estimé
-    const totalProduitsExploitation = baseAmount * 0.9 // 90% du montant estimé
-    const charges = baseAmount * 0.6 // 60% du montant estimé
-    
-    const result: PennylaneResultatComptable[] = [{
-      period: selectedMonth,
-      ventes_706: 0, // Pas de données spécifiques dans cette fonction de fallback
-      chiffre_affaires: chiffreAffairesNet,
-      total_produits_exploitation: totalProduitsExploitation,
-      charges: charges,
-      resultat_net: totalProduitsExploitation - charges,
-      tresorerie_calculee: 0, // Pas de calcul de trésorerie dans cette fonction
-      currency: 'EUR',
-      prestations_services: chiffreAffairesNet * 0.8,
-      ventes_biens: chiffreAffairesNet * 0.2,
-      achats: charges * 0.3,
-      charges_externes: charges * 0.4,
-      charges_personnel: charges * 0.3
-    }]
-    
-    console.log(`💰 Données calculées pour ${selectedMonth}:`)
-    console.log(`   - CA Net: ${chiffreAffairesNet.toFixed(2)}€`)
-    console.log(`   - Total Produits: ${totalProduitsExploitation.toFixed(2)}€`)
-    console.log(`   - Charges: ${charges.toFixed(2)}€`)
-    console.log(`   - Résultat: ${(totalProduitsExploitation - charges).toFixed(2)}€`)
-    
-    return result
-  },
+  // Fonction supprimée : processLedgerEntriesByMonth - Plus nécessaire avec le trial balance
 
   // Traiter les données du trial balance pour calculer les métriques
   processTrialBalanceData(
@@ -586,53 +509,7 @@ export const pennylaneApi = {
     return result
   },
 
-  // Traiter les données des ledger entries pour calculer les métriques (fallback)
-  processLedgerEntriesData(ledgerEntries: any[]): PennylaneResultatComptable[] {
-    console.log(`📊 Traitement de ${ledgerEntries.length} écritures comptables...`)
-    
-    // Pour l'instant, nous utilisons une approche simplifiée
-    // Dans une vraie implémentation, nous récupérerions les lignes détaillées de chaque écriture
-    // pour obtenir les montants et codes comptables exacts
-    
-    console.log(`📋 Écritures comptables trouvées: ${ledgerEntries.length}`)
-    console.log(`⚠️ Note: Les montants sont estimés car nous n'avons pas accès aux lignes détaillées`)
-    
-    // Estimation basée sur le nombre d'écritures
-    // Dans un vrai système, nous analyserions les labels et récupérerions les lignes
-    const chiffreAffairesEstime = ledgerEntries.length * 150 // Estimation 150€ par écriture
-    const chargesEstimees = ledgerEntries.length * 80 // Estimation 80€ par écriture
-    
-    // Créer les 12 derniers mois
-    const result: PennylaneResultatComptable[] = []
-    const currentDate = new Date()
-    
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
-      const period = date.toISOString().slice(0, 7) // Format YYYY-MM
-      
-      // Répartir les montants estimés sur 12 mois
-      const chiffreAffaires = chiffreAffairesEstime / 12
-      const charges = chargesEstimees / 12
-      
-      result.push({
-        period,
-        ventes_706: chiffreAffaires, // Estimation: tous les revenus sont des prestations
-        chiffre_affaires: chiffreAffaires,
-        total_produits_exploitation: chiffreAffaires, // Même valeur pour le fallback
-        charges: charges,
-        resultat_net: chiffreAffaires - charges,
-        tresorerie_calculee: 0, // Pas de calcul de trésorerie dans cette fonction
-        currency: 'EUR',
-        prestations_services: chiffreAffaires, // Tous les revenus sont des prestations
-        ventes_biens: 0, // Pas de vente de biens pour DIMO DIAGNOSTIC
-        achats: 0, // À calculer séparément si nécessaire
-        charges_externes: charges * 0.8, // Estimation
-        charges_personnel: charges * 0.2 // Estimation
-      })
-    }
-    
-    return result
-  },
+  // Fonction supprimée : processLedgerEntriesData - Plus nécessaire avec le trial balance
 
 
   // Traiter les données de trésorerie à partir du trial balance

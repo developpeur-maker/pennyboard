@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getMonthlyData } from '../src/lib/init-database'
+import pool from '../src/lib/database'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -14,42 +14,82 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { month } = req.query
-    
+    const { month, type } = req.query
+
     if (!month || typeof month !== 'string') {
-      return res.status(400).json({ error: 'Month parameter required' })
+      return res.status(400).json({ error: 'Le paramètre "month" est requis.' })
     }
 
-    console.log(`📊 Récupération des données pour ${month}...`)
-    
-    // Récupérer les données depuis la base
-    const result = await getMonthlyData(month)
-    
-    if (!result) {
-      return res.status(404).json({ 
-        error: 'No data found for this month',
-        month: month
-      })
+    console.log(`📊 Récupération des données pour ${month} (type: ${type || 'all'})`)
+
+    const client = await pool.connect()
+    try {
+      // Récupérer les données du mois spécifié
+      const result = await client.query(`
+        SELECT 
+          month, year, month_number,
+          trial_balance, kpis, charges_breakdown, 
+          revenus_breakdown, tresorerie_breakdown,
+          is_current_month, updated_at
+        FROM monthly_data 
+        WHERE month = $1
+      `, [month])
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ 
+          error: `Aucune donnée trouvée pour le mois ${month}`,
+          suggestion: 'Vérifiez que la synchronisation a été effectuée'
+        })
+      }
+
+      const data = result.rows[0]
+      
+      // Retourner les données selon le type demandé
+      if (type === 'kpis') {
+        res.status(200).json({
+          month: data.month,
+          kpis: data.kpis,
+          is_current_month: data.is_current_month,
+          updated_at: data.updated_at
+        })
+      } else if (type === 'breakdown') {
+        res.status(200).json({
+          month: data.month,
+          charges_breakdown: data.charges_breakdown,
+          revenus_breakdown: data.revenus_breakdown,
+          tresorerie_breakdown: data.tresorerie_breakdown,
+          updated_at: data.updated_at
+        })
+      } else if (type === 'trial_balance') {
+        res.status(200).json({
+          month: data.month,
+          trial_balance: data.trial_balance,
+          updated_at: data.updated_at
+        })
+      } else {
+        // Retourner toutes les données
+        res.status(200).json({
+          month: data.month,
+          year: data.year,
+          month_number: data.month_number,
+          kpis: data.kpis,
+          charges_breakdown: data.charges_breakdown,
+          revenus_breakdown: data.revenus_breakdown,
+          tresorerie_breakdown: data.tresorerie_breakdown,
+          trial_balance: data.trial_balance,
+          is_current_month: data.is_current_month,
+          updated_at: data.updated_at
+        })
+      }
+      
+    } finally {
+      client.release()
     }
-
-    // Vérifier si les données sont récentes (moins de 12h)
-    const dataAge = Date.now() - new Date(result.updated_at).getTime()
-    const isStale = dataAge > 12 * 60 * 60 * 1000 // 12 heures
-
-    res.status(200).json({
-      success: true,
-      month: month,
-      data: result.data,
-      updated_at: result.updated_at,
-      is_stale: isStale,
-      age_hours: Math.round(dataAge / (60 * 60 * 1000))
-    })
-
   } catch (error) {
-    console.error('❌ Erreur récupération données:', error)
+    console.error('❌ Erreur lors de la récupération des données:', error)
     res.status(500).json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Erreur inconnue'
+      error: 'Échec de la récupération des données',
+      details: error instanceof Error ? error.message : 'Erreur inconnue'
     })
   }
 }

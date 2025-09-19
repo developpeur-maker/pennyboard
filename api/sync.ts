@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { initDatabase, insertMonthlyData, logSync } from '../src/lib/init-database'
-import { testConnection } from '../src/lib/database'
+import pool from '../src/lib/database'
+import { getTrialBalance } from '../src/services/pennylaneApi'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -14,57 +14,257 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
+  const startTime = Date.now()
+  let apiCallsCount = 0
+  let recordsProcessed = 0
+
   try {
-    console.log('🔄 Début de la synchronisation...')
-    
-    // Tester la connexion à la base
-    const isConnected = await testConnection()
-    if (!isConnected) {
-      throw new Error('Impossible de se connecter à la base de données')
+    console.log('🔄 Début de la synchronisation Pennylane...')
+
+    const client = await pool.connect()
+    try {
+      // Récupérer les 12 derniers mois à synchroniser
+      const monthsToSync = []
+      const currentDate = new Date()
+      
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+        const month = date.toISOString().slice(0, 7) // Format YYYY-MM
+        const year = date.getFullYear()
+        const monthNumber = date.getMonth() + 1
+        
+        monthsToSync.push({ month, year, monthNumber, date })
+      }
+
+      console.log(`📅 Synchronisation de ${monthsToSync.length} mois:`, monthsToSync.map(m => m.month))
+
+      // Synchroniser chaque mois
+      for (const { month, year, monthNumber, date } of monthsToSync) {
+        console.log(`🔄 Synchronisation du mois ${month}...`)
+        
+        try {
+          // Calculer les dates de début et fin du mois
+          const startDate = new Date(year, monthNumber - 1, 1).toISOString().split('T')[0]
+          const endDate = new Date(year, monthNumber, 0).toISOString().split('T')[0]
+          
+          console.log(`📊 Récupération du trial balance pour ${startDate} à ${endDate}`)
+          
+          // Récupérer les données du trial balance
+          const trialBalance = await getTrialBalance(startDate, endDate, 2000)
+          apiCallsCount++
+          
+          console.log(`✅ Trial balance récupéré: ${trialBalance.items.length} comptes`)
+          
+          // Calculer les KPIs à partir du trial balance
+          const kpis = calculateKPIsFromTrialBalance(trialBalance, month)
+          const chargesBreakdown = calculateChargesBreakdown(trialBalance)
+          const revenusBreakdown = calculateRevenusBreakdown(trialBalance)
+          const tresorerieBreakdown = calculateTresorerieBreakdown(trialBalance)
+          
+          // Déterminer si c'est le mois actuel
+          const isCurrentMonth = month === currentDate.toISOString().slice(0, 7)
+          
+          // Stocker dans la base de données
+          await client.query(`
+            INSERT INTO monthly_data (
+              month, year, month_number, trial_balance, kpis, 
+              charges_breakdown, revenus_breakdown, tresorerie_breakdown,
+              is_current_month, sync_version
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 1)
+            ON CONFLICT (month) DO UPDATE SET
+              trial_balance = $4,
+              kpis = $5,
+              charges_breakdown = $6,
+              revenus_breakdown = $7,
+              tresorerie_breakdown = $8,
+              is_current_month = $9,
+              sync_version = sync_version + 1,
+              updated_at = CURRENT_TIMESTAMP
+          `, [
+            month, year, monthNumber,
+            JSON.stringify(trialBalance),
+            JSON.stringify(kpis),
+            JSON.stringify(chargesBreakdown),
+            JSON.stringify(revenusBreakdown),
+            JSON.stringify(tresorerieBreakdown),
+            isCurrentMonth
+          ])
+          
+          recordsProcessed++
+          console.log(`✅ Mois ${month} synchronisé avec succès`)
+          
+        } catch (monthError) {
+          console.error(`❌ Erreur pour le mois ${month}:`, monthError)
+          // Continuer avec les autres mois même si un échoue
+        }
+      }
+
+      // Enregistrer le log de synchronisation
+      const duration = Date.now() - startTime
+      await client.query(`
+        INSERT INTO sync_logs (sync_type, status, message, months_synced, records_processed, duration_ms, api_calls_count)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `, [
+        'full',
+        'success',
+        `Synchronisation réussie de ${recordsProcessed} mois`,
+        monthsToSync.map(m => m.month),
+        recordsProcessed,
+        duration,
+        apiCallsCount
+      ])
+
+      console.log(`✅ Synchronisation terminée: ${recordsProcessed} mois, ${apiCallsCount} appels API, ${duration}ms`)
+      res.status(200).json({ 
+        message: 'Synchronisation réussie',
+        monthsSynced: recordsProcessed,
+        apiCalls: apiCallsCount,
+        duration: duration
+      })
+      
+    } finally {
+      client.release()
     }
-
-    // Initialiser la base si nécessaire
-    await initDatabase()
-
-    // Ici, nous allons synchroniser les données
-    // Pour l'instant, créons un exemple
-    const exampleData = {
-      kpis: {
-        ventes_706: 100000,
-        chiffre_affaires: 120000,
-        charges: 80000,
-        resultat_net: 40000,
-        tresorerie: 50000
-      },
-      trial_balance: {
-        items: [],
-        total_items: 0
-      },
-      last_sync: new Date().toISOString()
-    }
-
-    // Insérer les données pour le mois actuel
-    const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
-    await insertMonthlyData(currentMonth, exampleData)
-
-    // Logger la synchronisation
-    await logSync('monthly', 'success', `Synchronisation réussie pour ${currentMonth}`)
-
-    res.status(200).json({ 
-      success: true, 
-      message: 'Synchronisation réussie',
-      month: currentMonth
-    })
-
   } catch (error) {
-    console.error('❌ Erreur de synchronisation:', error)
+    console.error('❌ Erreur lors de la synchronisation:', error)
     
-    // Logger l'erreur
-    await logSync('monthly', 'error', error instanceof Error ? error.message : 'Erreur inconnue')
+    // Enregistrer l'erreur dans les logs
+    try {
+      const client = await pool.connect()
+      await client.query(`
+        INSERT INTO sync_logs (sync_type, status, message, duration_ms, api_calls_count)
+        VALUES ($1, $2, $3, $4, $5)
+      `, ['full', 'error', error.message, Date.now() - startTime, apiCallsCount])
+      client.release()
+    } catch (logError) {
+      console.error('❌ Erreur lors de l\'enregistrement du log:', logError)
+    }
     
-    res.status(500).json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Erreur inconnue'
-    })
+    res.status(500).json({ error: 'Échec de la synchronisation' })
   }
+}
+
+// Fonctions de calcul des KPIs (simplifiées pour la synchronisation)
+function calculateKPIsFromTrialBalance(trialBalance: any, month: string) {
+  const items = trialBalance.items || []
+  
+  // Calculer les KPIs de base
+  let ventes_706 = 0
+  let chiffre_affaires = 0
+  let charges = 0
+  let tresorerie = 0
+  
+  items.forEach((item: any) => {
+    const accountNumber = item.number || ''
+    const debit = parseFloat(item.debit || '0')
+    const credit = parseFloat(item.credit || '0')
+    
+    // Ventes 706
+    if (accountNumber.startsWith('706')) {
+      ventes_706 += credit
+    }
+    
+    // Chiffre d'affaires (classe 7)
+    if (accountNumber.startsWith('7')) {
+      chiffre_affaires += credit
+    }
+    
+    // Charges (classe 6)
+    if (accountNumber.startsWith('6')) {
+      charges += debit
+    }
+    
+    // Trésorerie (classe 512)
+    if (accountNumber.startsWith('512')) {
+      tresorerie += debit - credit
+    }
+  })
+  
+  return {
+    ventes_706,
+    chiffre_affaires,
+    charges,
+    resultat_net: chiffre_affaires - charges,
+    tresorerie,
+    currency: 'EUR',
+    period: month
+  }
+}
+
+function calculateChargesBreakdown(trialBalance: any) {
+  const items = trialBalance.items || []
+  const breakdown: any = {}
+  
+  items.forEach((item: any) => {
+    const accountNumber = item.number || ''
+    if (accountNumber.startsWith('6')) {
+      const classCode = accountNumber.substring(0, 2)
+      const debit = parseFloat(item.debit || '0')
+      
+      if (!breakdown[classCode]) {
+        breakdown[classCode] = { total: 0, accounts: [] }
+      }
+      
+      breakdown[classCode].total += debit
+      breakdown[classCode].accounts.push({
+        number: accountNumber,
+        label: item.label || '',
+        amount: debit
+      })
+    }
+  })
+  
+  return breakdown
+}
+
+function calculateRevenusBreakdown(trialBalance: any) {
+  const items = trialBalance.items || []
+  const breakdown: any = {}
+  
+  items.forEach((item: any) => {
+    const accountNumber = item.number || ''
+    if (accountNumber.startsWith('7')) {
+      const classCode = accountNumber.substring(0, 3)
+      const credit = parseFloat(item.credit || '0')
+      
+      if (!breakdown[classCode]) {
+        breakdown[classCode] = { total: 0, accounts: [] }
+      }
+      
+      breakdown[classCode].total += credit
+      breakdown[classCode].accounts.push({
+        number: accountNumber,
+        label: item.label || '',
+        amount: credit
+      })
+    }
+  })
+  
+  return breakdown
+}
+
+function calculateTresorerieBreakdown(trialBalance: any) {
+  const items = trialBalance.items || []
+  const breakdown: any = {}
+  
+  items.forEach((item: any) => {
+    const accountNumber = item.number || ''
+    if (accountNumber.startsWith('512')) {
+      const debit = parseFloat(item.debit || '0')
+      const credit = parseFloat(item.credit || '0')
+      const balance = debit - credit
+      
+      if (!breakdown[accountNumber]) {
+        breakdown[accountNumber] = {
+          number: accountNumber,
+          label: item.label || '',
+          balance: 0
+        }
+      }
+      
+      breakdown[accountNumber].balance += balance
+    }
+  })
+  
+  return breakdown
 }
