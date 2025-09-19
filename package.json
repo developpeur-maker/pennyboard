@@ -17,7 +17,9 @@
     "check-db-data": "node scripts/check-db-data.js",
     "check-api-data": "node scripts/check-api-data.js",
     "test-pennylane-direct": "node scripts/test-pennylane-direct.js",
-    "test-pennylane-correct": "node scripts/test-pennylane-correct.js"
+    "test-pennylane-correct": "node scripts/test-pennylane-correct.js",
+    "test-pennylane-vercel": "node scripts/test-pennylane-vercel.js",
+    "test-pennylane-correct-syntax": "node scripts/test-pennylane-correct-syntax.js"
   },
   "dependencies": {
     "@types/pg": "^8.15.5",
