@@ -1,7 +1,7 @@
-const { NextApiRequest, NextApiResponse } = require('next')
-const pool = require('../src/lib/database').default
+// API de récupération des données simplifiée
+const { Pool } = require('pg')
 
-module.exports = async function handler(req: NextApiRequest, res: NextApiResponse) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -21,6 +21,14 @@ module.exports = async function handler(req: NextApiRequest, res: NextApiRespons
     }
 
     console.log(`📊 Récupération des données pour ${month} (type: ${type || 'all'})`)
+
+    // Connexion à la base de données
+    const pool = new Pool({
+      connectionString: process.env.POSTGRES_URL,
+      ssl: {
+        rejectUnauthorized: false
+      }
+    })
 
     const client = await pool.connect()
     try {
@@ -89,7 +97,7 @@ module.exports = async function handler(req: NextApiRequest, res: NextApiRespons
     console.error('❌ Erreur lors de la récupération des données:', error)
     res.status(500).json({ 
       error: 'Échec de la récupération des données',
-      details: error instanceof Error ? error.message : 'Erreur inconnue'
+      details: error.message
     })
   }
 }
