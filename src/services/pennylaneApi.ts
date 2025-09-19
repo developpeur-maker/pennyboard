@@ -1611,7 +1611,7 @@ export const pennylaneApi = {
       // Calculer la trésorerie totale
       let tresorerie = 0
       
-      comptes512.forEach((account, index) => {
+      comptes512.forEach((account) => {
         const credits = this.parseAmount(account.credits)
         const debits = this.parseAmount(account.debits)
         const solde = debits - credits // Pour les comptes bancaires (actif), solde = debits - credits
