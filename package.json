@@ -13,12 +13,15 @@
     "test-sync": "node scripts/test-sync.js",
     "test-sync-api": "node scripts/test-sync-api.js",
     "test-vercel-sync": "node scripts/test-vercel-sync.js",
-    "test-db-connection": "node scripts/test-db-connection.js"
+    "test-db-connection": "node scripts/test-db-connection.js",
+    "check-db-data": "node scripts/check-db-data.js",
+    "check-api-data": "node scripts/check-api-data.js"
   },
   "dependencies": {
     "@types/pg": "^8.15.5",
     "clsx": "^2.0.0",
     "lucide-react": "^0.294.0",
+    "node-fetch": "^3.3.2",
     "pg": "^8.16.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
