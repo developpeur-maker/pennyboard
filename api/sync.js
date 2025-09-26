@@ -324,19 +324,20 @@ function calculateChargesBreakdown(trialBalance) {
   items.forEach((item) => {
     const accountNumber = item.number || ''
     if (accountNumber.startsWith('6')) {
-      const classCode = accountNumber.substring(0, 2)
       const debit = parseFloat(item.debits || '0')
       
-      if (!breakdown[classCode]) {
-        breakdown[classCode] = { total: 0, accounts: [] }
+      // Utiliser le vrai libellé du compte depuis l'API Pennylane
+      const label = item.label || `Compte ${accountNumber}`
+      
+      if (!breakdown[accountNumber]) {
+        breakdown[accountNumber] = {
+          number: accountNumber,
+          label: label,
+          amount: 0
+        }
       }
       
-      breakdown[classCode].total += debit
-      breakdown[classCode].accounts.push({
-        number: accountNumber,
-        label: item.label || '',
-        amount: debit
-      })
+      breakdown[accountNumber].amount += debit
     }
   })
   
@@ -354,10 +355,13 @@ function calculateRevenusBreakdown(trialBalance) {
       const credit = parseFloat(item.credits || '0')
       const amount = credit - debit
       
+      // Utiliser le vrai libellé du compte depuis l'API Pennylane
+      const label = item.label || `Compte ${accountNumber}`
+      
       if (!breakdown[accountNumber]) {
         breakdown[accountNumber] = {
           number: accountNumber,
-          label: item.label || `Compte ${accountNumber}`,
+          label: label,
           amount: 0
         }
       }

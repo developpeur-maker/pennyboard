@@ -203,7 +203,9 @@ export const usePennylaneData = (
       if (data && typeof data === 'object') {
         // Gérer les deux structures possibles
         const amount = data.amount || data.total || 0
-        const label = data.label || `${code} - ${getClassDescription(code)}`
+        let label = data.label || `${code} - ${getClassDescription(code)}`
+        
+        // Utiliser le label tel qu'il est stocké dans la base de données
         
         if (amount > 0) {
           result.push({
