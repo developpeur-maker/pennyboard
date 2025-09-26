@@ -254,12 +254,8 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
       charges += debit
     }
     
-    // Trésorerie (classe 512) - solde cumulé depuis le début d'exercice
-    if (accountNumber.startsWith('512')) {
-      // Le solde de trésorerie est le solde cumulé des comptes 512
-      // (débit - crédit) donne le solde positif si en faveur de l'entreprise
-      tresorerie += debit - credit
-    }
+    // Trésorerie sera calculée séparément avec calculateCumulativeTreasury
+    // Pas de calcul ici pour éviter la double comptabilisation
   })
   
   return {

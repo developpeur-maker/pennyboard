@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { PennylaneResultatComptable, PennylaneTresorerie } from '../services/pennylaneApi'
 import { 
-  getKPIsFromDatabase, 
   getBreakdownsFromDatabase,
-  fallbackToPennylaneApi
+  getAllDataFromDatabase
 } from '../services/databaseApi'
 
 interface KPIData {
@@ -84,7 +83,7 @@ export const usePennylaneData = (
 
       // Essayer d'abord la base de données
       console.log('📊 Tentative de récupération depuis la base de données...')
-      const dbResponse = await getKPIsFromDatabase(selectedMonth)
+      const dbResponse = await getAllDataFromDatabase(selectedMonth)
       
       if (dbResponse.success && dbResponse.data) {
         console.log('✅ Données récupérées depuis la base de données')
@@ -94,16 +93,29 @@ export const usePennylaneData = (
         return
       }
       
-      // Fallback vers l'API Pennylane directe
-      console.log('⚠️ Base de données indisponible, fallback vers l\'API Pennylane')
-      const fallbackResponse = await fallbackToPennylaneApi(selectedMonth)
-      
-      if (fallbackResponse.success && fallbackResponse.data) {
-        console.log('✅ Fallback réussi, utilisation des données Pennylane')
-        await processFallbackData(fallbackResponse.data)
-      } else {
-        throw new Error('Impossible de récupérer les données depuis la base de données ou l\'API Pennylane')
-      }
+      // Pas de fallback - afficher "Aucune donnée"
+      console.log('⚠️ Aucune donnée disponible dans la base de données')
+      setKpis({
+        ventes_706: null,
+        chiffre_affaires: null,
+        total_produits_exploitation: null,
+        charges: null,
+        resultat_net: null,
+        solde_tresorerie: null,
+        growth: null,
+        hasData: false,
+        rentabilite: null,
+        ventes_growth: null,
+        ca_growth: null,
+        total_produits_growth: null,
+        charges_growth: null,
+        resultat_growth: null,
+        tresorerie_growth: null
+      })
+      setChargesBreakdown([])
+      setRevenusBreakdown([])
+      setTresorerieBreakdown([])
+      setLastSyncDate(null)
 
     } catch (error) {
       console.error('❌ Erreur lors du chargement des données:', error)
@@ -164,53 +176,6 @@ export const usePennylaneData = (
     }
   }
 
-  // Traiter les données du fallback Pennylane
-  const processFallbackData = async (data: any) => {
-    try {
-      // Traiter les KPIs
-      const kpisData = data.kpis || {}
-      const processedKpis: KPIData = {
-        ventes_706: kpisData.ventes_706 || 0,
-        chiffre_affaires: kpisData.chiffre_affaires || 0,
-        total_produits_exploitation: kpisData.chiffre_affaires || 0,
-        charges: kpisData.charges || 0,
-        resultat_net: kpisData.resultat_net || 0,
-        solde_tresorerie: data.tresorerie_actuelle || 0,
-        growth: 0,
-        hasData: true,
-        rentabilite: kpisData.resultat_net && kpisData.chiffre_affaires ? {
-          ratio: (kpisData.resultat_net / kpisData.chiffre_affaires) * 100,
-          message: 'Rentabilité calculée (données en temps réel)',
-          montant: kpisData.resultat_net
-        } : null,
-        ventes_growth: 0,
-        ca_growth: 0,
-        total_produits_growth: 0,
-        charges_growth: 0,
-        resultat_growth: 0,
-        tresorerie_growth: 0
-      }
-
-      setKpis(processedKpis)
-      
-      // Traiter les breakdowns
-      if (data.charges_breakdown) {
-        setChargesBreakdown(convertBreakdownToArray(data.charges_breakdown))
-      }
-      if (data.revenus_breakdown) {
-        setRevenusBreakdown(convertBreakdownToArray(data.revenus_breakdown))
-      }
-      if (data.tresorerie_breakdown) {
-        setTresorerieBreakdown(convertTresorerieBreakdownToArray(data.tresorerie_breakdown))
-      }
-
-      console.log('✅ Données du fallback Pennylane traitées avec succès')
-      
-    } catch (error) {
-      console.error('❌ Erreur lors du traitement des données du fallback:', error)
-      throw error
-    }
-  }
 
   // Convertir les breakdowns en format array
   const convertBreakdownToArray = (breakdown: any): Array<{code: string, label: string, description: string, amount: number}> => {
