@@ -143,8 +143,7 @@ module.exports = async function handler(req, res) {
         message: 'Synchronisation réussie',
         monthsSynced: recordsProcessed,
         apiCalls: apiCallsCount,
-        duration: duration,
-        recordsInDB: checkResult.rows[0].count
+        duration: duration
       })
       
     } finally {
@@ -240,12 +239,10 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
       revenus_totaux += (credit - debit)
     }
     
-    // Charges (classe 6) - Solde débiteur des comptes de charges
+    // Charges (classe 6) - Tous les soldes (positifs et négatifs)
     if (accountNumber.startsWith('6')) {
       const solde = debit - credit
-      if (solde > 0) { // Seulement les soldes débiteurs (charges réelles)
-        charges += solde
-      }
+      charges += solde // Inclure tous les soldes, même négatifs
     }
     
     // Trésorerie sera calculée séparément avec calculateCumulativeTreasury

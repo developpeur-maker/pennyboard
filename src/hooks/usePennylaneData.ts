@@ -207,7 +207,7 @@ export const usePennylaneData = (
         
         // Utiliser le label tel qu'il est stocké dans la base de données
         
-        if (amount > 0) {
+        if (amount !== 0) { // Inclure tous les montants (positifs et négatifs)
           result.push({
             code,
             label: label,
