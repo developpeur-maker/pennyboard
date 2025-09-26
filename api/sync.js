@@ -21,12 +21,6 @@ module.exports = async function handler(req, res) {
   try {
     console.log('🔄 Début de la synchronisation Pennylane...')
 
-    // Nettoyer les données de test existantes
-    console.log('🧹 Nettoyage des données de test...')
-    await client.query('DELETE FROM monthly_data WHERE kpis->>\'ventes_706\' = \'10000\'')
-    await client.query('DELETE FROM sync_logs WHERE message LIKE \'%test%\' OR message LIKE \'%fallback%\'')
-    console.log('✅ Données de test supprimées')
-
     // Connexion à la base de données
     const pool = new Pool({
       connectionString: process.env.POSTGRES_URL,
@@ -38,6 +32,12 @@ module.exports = async function handler(req, res) {
     const client = await pool.connect()
     
     try {
+      // Nettoyer les données de test existantes
+      console.log('🧹 Nettoyage des données de test...')
+      await client.query('DELETE FROM monthly_data WHERE kpis->>\'ventes_706\' = \'10000\'')
+      await client.query('DELETE FROM sync_logs WHERE message LIKE \'%test%\' OR message LIKE \'%fallback%\'')
+      console.log('✅ Données de test supprimées')
+
       // Récupérer les 12 derniers mois à synchroniser
       const monthsToSync = []
       const currentDate = new Date()
