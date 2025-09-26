@@ -192,20 +192,6 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Message de santé financière */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-4 rounded-lg mb-6">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">ℹ️</span>
-            </div>
-          </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-blue-900">
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* KPI Cards - Layout élargi pour mieux remplir l'écran */}
       <div className="w-full">

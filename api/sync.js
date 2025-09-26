@@ -295,34 +295,10 @@ async function calculateCumulativeTreasury(client, targetMonth) {
       return 0
     }
     
-    // Si l'API retourne les soldes finaux (pas les mouvements), utiliser le solde du mois cible
-    const targetMonthData = monthsResult.rows.find(row => row.month === targetMonth)
-    
-    if (targetMonthData) {
-      console.log(`📊 Utilisation du solde final du mois ${targetMonth}`)
-      const trialBalance = targetMonthData.trial_balance
-      const items = trialBalance.items || []
-      
-      let treasury = 0
-      items.forEach((item) => {
-        const accountNumber = item.number || ''
-        if (accountNumber.startsWith('512')) {
-          const debit = parseFloat(item.debits || '0')
-          const credit = parseFloat(item.credits || '0')
-          // Solde final : débit - crédit
-          treasury += debit - credit
-          console.log(`  - Compte ${accountNumber}: débit=${debit}, crédit=${credit}, solde=${debit - credit}`)
-        }
-      })
-      
-      console.log(`✅ Trésorerie finale calculée: ${treasury}€`)
-      return treasury
-    }
-    
-    // Sinon, calculer la trésorerie cumulée en additionnant tous les mouvements
-    let cumulativeTreasury = 0
-    
+    // Calculer la trésorerie cumulée en additionnant tous les mouvements depuis le début d'exercice
     console.log(`📊 Calcul cumulé pour ${monthsResult.rows.length} mois depuis le début d'exercice`)
+    
+    let cumulativeTreasury = 0
     
     for (const row of monthsResult.rows) {
       const trialBalance = row.trial_balance
