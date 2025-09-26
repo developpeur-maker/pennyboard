@@ -371,15 +371,12 @@ function calculateChargesSalarialesBreakdown(trialBalance) {
       // Utiliser le vrai libellé du compte depuis l'API Pennylane
       const label = item.label || `Compte ${accountNumber}`
       
-      if (!breakdown[accountNumber]) {
-        breakdown[accountNumber] = {
-          number: accountNumber,
-          label: label,
-          amount: 0
-        }
+      // Inclure tous les comptes 64, même avec un solde de 0
+      breakdown[accountNumber] = {
+        number: accountNumber,
+        label: label,
+        amount: solde
       }
-      
-      breakdown[accountNumber].amount += solde
     }
   })
   

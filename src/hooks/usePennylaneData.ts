@@ -216,7 +216,8 @@ export const usePennylaneData = (
         
         // Utiliser le label tel qu'il est stocké dans la base de données
         
-        if (amount !== 0) { // Inclure tous les montants (positifs et négatifs)
+        // Pour les charges salariales, inclure tous les comptes 64 même avec un solde de 0
+        if (code.startsWith('64') || amount !== 0) {
           result.push({
             code,
             label: label,

@@ -328,17 +328,6 @@ const Dashboard: React.FC = () => {
             color="turquoise"
           />
           <KPICard
-            title="Masse Salariale"
-            period={formatPeriod()}
-            subtitle="Charges de personnel"
-            value={kpis && kpis.hasData && kpis.charges_salariales !== null ? formatCurrency(kpis.charges_salariales) : 'Aucune donnée'}
-            change={0}
-            changeType="neutral"
-            icon={<Users className="w-5 h-5 text-orange-600" />}
-            color="red"
-            onClick={() => setIsChargesSalarialesModalOpen(true)}
-          />
-          <KPICard
             title="Trésorerie"
             period={formatPeriod()}
             subtitle="Liquidités disponibles"
@@ -348,6 +337,17 @@ const Dashboard: React.FC = () => {
             icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
             color="cyan"
             onClick={() => setIsTresorerieModalOpen(true)}
+          />
+          <KPICard
+            title="Masse Salariale"
+            period={formatPeriod()}
+            subtitle="Charges de personnel"
+            value={kpis && kpis.hasData && kpis.charges_salariales !== null ? formatCurrency(kpis.charges_salariales) : 'Aucune donnée'}
+            change={0}
+            changeType="neutral"
+            icon={<Users className="w-5 h-5 text-orange-600" />}
+            color="red"
+            onClick={() => setIsChargesSalarialesModalOpen(true)}
           />
         </div>
       </div>
