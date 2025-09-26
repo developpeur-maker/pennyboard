@@ -145,6 +145,9 @@ export const usePennylaneData = (
   const processDatabaseData = async (data: any) => {
     try {
       console.log('🔄 Traitement des données de la base de données...')
+      console.log('🔍 Toutes les données reçues:', data)
+      console.log('🔍 charges_salariales_breakdown existe?', !!data.charges_salariales_breakdown)
+      console.log('🔍 charges_salariales_breakdown valeur:', data.charges_salariales_breakdown)
       
       // Utiliser les breakdowns directement depuis les données reçues
       if (data.charges_breakdown) {
@@ -155,6 +158,13 @@ export const usePennylaneData = (
         const chargesSalarialesArray = convertBreakdownToArray(data.charges_salariales_breakdown)
         console.log('🔍 Charges salariales array converti:', chargesSalarialesArray)
         setChargesSalarialesBreakdown(chargesSalarialesArray)
+      } else if (data.charges_breakdown) {
+        // Solution temporaire : filtrer les comptes 64 depuis les charges
+        console.log('⚠️ charges_salariales_breakdown non trouvé, filtrage depuis charges_breakdown')
+        const allCharges = convertBreakdownToArray(data.charges_breakdown)
+        const chargesSalariales = allCharges.filter(item => item.code.startsWith('64'))
+        console.log('🔍 Charges salariales filtrées:', chargesSalariales)
+        setChargesSalarialesBreakdown(chargesSalariales)
       }
       if (data.revenus_breakdown) {
         setRevenusBreakdown(convertBreakdownToArray(data.revenus_breakdown))
