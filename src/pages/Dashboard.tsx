@@ -298,15 +298,18 @@ const Dashboard: React.FC = () => {
             title="Rentabilité"
             period={formatPeriod()}
             subtitle={
-              kpis && kpis.hasData && kpis.rentabilite?.projection
-                ? kpis.rentabilite.projection.message
-                : (kpis && kpis.hasData && kpis.rentabilite ? kpis.rentabilite.message : "En attente...")
+              kpis && kpis.hasData && kpis.rentabilite
+                ? (kpis.rentabilite.projection
+                    ? `${formatCurrency(kpis.rentabilite.projection.montant)} - ${kpis.rentabilite.projection.message}`
+                    : `${formatCurrency(kpis.rentabilite.montant)} - ${kpis.rentabilite.message}`
+                  )
+                : "En attente..."
             }
             value={
               kpis && kpis.hasData && kpis.rentabilite
                 ? (kpis.rentabilite.projection
-                    ? `${kpis.rentabilite.projection.ratio}% (${formatCurrency(kpis.rentabilite.projection.montant)})`
-                    : `${kpis.rentabilite.ratio}% (${formatCurrency(kpis.rentabilite.montant)})`
+                    ? `${kpis.rentabilite.projection.ratio}%`
+                    : `${kpis.rentabilite.ratio}%`
                   )
                 : 'Aucune donnée'
             }

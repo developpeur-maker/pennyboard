@@ -230,9 +230,9 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
     const debit = parseFloat(item.debits || '0')
     const credit = parseFloat(item.credits || '0')
     
-    // Ventes 706 (compte 706 uniquement)
+    // Ventes 706 (compte 706 uniquement) - Solde créditeur
     if (accountNumber.startsWith('706')) {
-      ventes_706 += credit
+      ventes_706 += (credit - debit)
     }
     
     // Revenus totaux (tous les comptes de la classe 7)
@@ -240,8 +240,8 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
       revenus_totaux += (credit - debit)
     }
     
-    // Charges (classe 6)
-    if (accountNumber.startsWith('6')) {
+    // Charges (classe 6) - Exclure les amortissements (comptes 68)
+    if (accountNumber.startsWith('6') && !accountNumber.startsWith('68')) {
       charges += debit
     }
     
