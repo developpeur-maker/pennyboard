@@ -66,6 +66,11 @@ module.exports = async function handler(req, res) {
           
           // Récupérer les vraies données Pennylane
           const trialBalance = await getTrialBalanceFromPennylane(startDate, endDate)
+          console.log(`📊 Trial balance reçu:`, {
+            hasItems: !!trialBalance.items,
+            itemsLength: trialBalance.items?.length || 0,
+            firstItem: trialBalance.items?.[0] || null
+          })
           
           // Calculer les KPIs à partir du trial balance
           const kpis = calculateKPIsFromTrialBalance(trialBalance, month)
@@ -73,11 +78,20 @@ module.exports = async function handler(req, res) {
           const revenusBreakdown = calculateRevenusBreakdown(trialBalance)
           const tresorerieBreakdown = calculateTresorerieBreakdown(trialBalance)
           
+          console.log(`📊 KPIs calculés pour ${month}:`, kpis)
+          console.log(`📊 Breakdowns calculés:`, {
+            charges: Object.keys(chargesBreakdown).length,
+            revenus: Object.keys(revenusBreakdown).length,
+            tresorerie: Object.keys(tresorerieBreakdown).length
+          })
+          
           // Déterminer si c'est le mois actuel
           const isCurrentMonth = month === currentDate.toISOString().slice(0, 7)
           
+          console.log(`💾 Stockage en base de données pour ${month}...`)
+          
           // Stocker dans la base de données
-          await client.query(`
+          const insertResult = await client.query(`
             INSERT INTO monthly_data (
               month, year, month_number, trial_balance, kpis, 
               charges_breakdown, revenus_breakdown, tresorerie_breakdown,
@@ -101,6 +115,12 @@ module.exports = async function handler(req, res) {
             JSON.stringify(tresorerieBreakdown),
             isCurrentMonth
           ])
+          
+          console.log(`✅ Résultat de l'insertion:`, {
+            command: insertResult.command,
+            rowCount: insertResult.rowCount,
+            oid: insertResult.oid
+          })
           
           recordsProcessed++
           console.log(`✅ Mois ${month} synchronisé avec succès`)
@@ -127,6 +147,16 @@ module.exports = async function handler(req, res) {
         console.log(`✅ Trésorerie cumulée mise à jour pour ${month}: ${cumulativeTreasury}€`)
       }
 
+      // Vérifier les données stockées
+      console.log(`🔍 Vérification des données stockées...`)
+      const checkResult = await client.query('SELECT COUNT(*) as count FROM monthly_data')
+      console.log(`📊 Nombre d'enregistrements dans monthly_data: ${checkResult.rows[0].count}`)
+      
+      if (checkResult.rows[0].count > 0) {
+        const sampleData = await client.query('SELECT month, kpis FROM monthly_data LIMIT 3')
+        console.log(`📊 Échantillon des données:`, sampleData.rows)
+      }
+
       // Enregistrer le log de synchronisation
       const duration = Date.now() - startTime
       await client.query(`
@@ -147,7 +177,8 @@ module.exports = async function handler(req, res) {
         message: 'Synchronisation réussie',
         monthsSynced: recordsProcessed,
         apiCalls: apiCallsCount,
-        duration: duration
+        duration: duration,
+        recordsInDB: checkResult.rows[0].count
       })
       
     } finally {
