@@ -219,33 +219,44 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Indicateur de synchronisation */}
-      {lastSyncDate && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-green-700">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Dernière synchronisation : {new Date(lastSyncDate).toLocaleString('fr-FR')}</span>
-            </div>
-            <button
-              onClick={handleManualSync}
-              disabled={isSyncing}
-              className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSyncing ? (
-                <>
-                  <RefreshCw className="w-3 h-3 animate-spin" />
-                  Synchronisation...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-3 h-3" />
-                  Synchroniser
-                </>
-              )}
-            </button>
+      <div className={`border rounded-lg p-3 ${lastSyncDate ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            {lastSyncDate ? (
+              <>
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-green-700">Dernière synchronisation : {new Date(lastSyncDate).toLocaleString('fr-FR')}</span>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                <span className="text-yellow-700">Aucune synchronisation récente</span>
+              </>
+            )}
           </div>
+          <button
+            onClick={handleManualSync}
+            disabled={isSyncing}
+            className={`flex items-center gap-2 px-3 py-1 text-white text-xs rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              lastSyncDate 
+                ? 'bg-green-600 hover:bg-green-700' 
+                : 'bg-yellow-600 hover:bg-yellow-700'
+            }`}
+          >
+            {isSyncing ? (
+              <>
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                Synchronisation...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-3 h-3" />
+                Synchroniser
+              </>
+            )}
+          </button>
         </div>
-      )}
+      </div>
 
 
       {/* KPI Cards - Layout élargi pour mieux remplir l'écran */}
