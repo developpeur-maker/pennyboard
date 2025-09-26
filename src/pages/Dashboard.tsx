@@ -31,6 +31,7 @@ const Dashboard: React.FC = () => {
   const [isChargesModalOpen, setIsChargesModalOpen] = useState(false)
   const [isRevenusModalOpen, setIsRevenusModalOpen] = useState(false)
   const [isTresorerieModalOpen, setIsTresorerieModalOpen] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
   const { kpis, chargesBreakdown, revenusBreakdown, tresorerieBreakdown, lastSyncDate, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
 
   // Fonction pour formater la période affichée
@@ -73,6 +74,41 @@ const Dashboard: React.FC = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount)
+  }
+
+  // Fonction de synchronisation manuelle
+  const handleManualSync = async () => {
+    try {
+      setIsSyncing(true)
+      console.log('🔄 Début de la synchronisation manuelle...')
+      
+      const response = await fetch('/api/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'pennyboard_secret_key_2025'
+        }
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Synchronisation réussie:', result)
+        
+        // Actualiser les données après synchronisation
+        await refetch()
+        
+        alert('✅ Synchronisation réussie ! Les données ont été mises à jour.')
+      } else {
+        const error = await response.json()
+        console.error('❌ Erreur de synchronisation:', error)
+        alert(`❌ Erreur de synchronisation: ${error.error || 'Erreur inconnue'}`)
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la synchronisation:', error)
+      alert('❌ Erreur lors de la synchronisation. Veuillez réessayer.')
+    } finally {
+      setIsSyncing(false)
+    }
   }
 
 
@@ -185,9 +221,28 @@ const Dashboard: React.FC = () => {
       {/* Indicateur de synchronisation */}
       {lastSyncDate && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-          <div className="flex items-center gap-2 text-sm text-green-700">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>Dernière synchronisation : {new Date(lastSyncDate).toLocaleString('fr-FR')}</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-green-700">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span>Dernière synchronisation : {new Date(lastSyncDate).toLocaleString('fr-FR')}</span>
+            </div>
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSyncing ? (
+                <>
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  Synchronisation...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3 h-3" />
+                  Synchroniser
+                </>
+              )}
+            </button>
           </div>
         </div>
       )}

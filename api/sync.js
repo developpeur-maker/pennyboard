@@ -2,7 +2,8 @@
 const { Pool } = require('pg')
 
 module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
+  // Accepter GET (pour cron) et POST (pour synchronisation manuelle)
+  if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
