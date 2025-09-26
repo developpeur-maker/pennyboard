@@ -249,10 +249,12 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
       charges += solde // Inclure tous les soldes, même négatifs
     }
     
-    // Charges salariales (comptes 64x - Personnel)
+    // Charges salariales (comptes 64x - Personnel) - Exclure les extournes (soldes négatifs)
     if (accountNumber.startsWith('64')) {
       const solde = debit - credit
-      charges_salariales += solde
+      if (solde > 0) { // Seulement les soldes positifs (pas d'extournes)
+        charges_salariales += solde
+      }
     }
     
     // Trésorerie sera calculée séparément avec calculateCumulativeTreasury
