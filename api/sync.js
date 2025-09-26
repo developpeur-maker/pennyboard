@@ -62,15 +62,8 @@ module.exports = async function handler(req, res) {
           const startDate = new Date(year, monthNumber - 1, 1).toISOString().split('T')[0]
           const endDate = new Date(year, monthNumber, 0).toISOString().split('T')[0]
           
-          console.log(`📊 Récupération du trial balance pour ${startDate} à ${endDate}`)
-          
           // Récupérer les vraies données Pennylane
           const trialBalance = await getTrialBalanceFromPennylane(startDate, endDate)
-          console.log(`📊 Trial balance reçu:`, {
-            hasItems: !!trialBalance.items,
-            itemsLength: trialBalance.items?.length || 0,
-            firstItem: trialBalance.items?.[0] || null
-          })
           
           // Calculer les KPIs à partir du trial balance
           const kpis = calculateKPIsFromTrialBalance(trialBalance, month)
@@ -78,17 +71,8 @@ module.exports = async function handler(req, res) {
           const revenusBreakdown = calculateRevenusBreakdown(trialBalance)
           const tresorerieBreakdown = calculateTresorerieBreakdown(trialBalance)
           
-          console.log(`📊 KPIs calculés pour ${month}:`, kpis)
-          console.log(`📊 Breakdowns calculés:`, {
-            charges: Object.keys(chargesBreakdown).length,
-            revenus: Object.keys(revenusBreakdown).length,
-            tresorerie: Object.keys(tresorerieBreakdown).length
-          })
-          
           // Déterminer si c'est le mois actuel
           const isCurrentMonth = month === currentDate.toISOString().slice(0, 7)
-          
-          console.log(`💾 Stockage en base de données pour ${month}...`)
           
           // Stocker dans la base de données
           const insertResult = await client.query(`
@@ -116,14 +100,7 @@ module.exports = async function handler(req, res) {
             isCurrentMonth
           ])
           
-          console.log(`✅ Résultat de l'insertion:`, {
-            command: insertResult.command,
-            rowCount: insertResult.rowCount,
-            oid: insertResult.oid
-          })
-          
           recordsProcessed++
-          console.log(`✅ Mois ${month} synchronisé avec succès`)
           
         } catch (monthError) {
           console.error(`❌ Erreur pour le mois ${month}:`, monthError)
@@ -144,17 +121,6 @@ module.exports = async function handler(req, res) {
           WHERE month = $2
         `, [cumulativeTreasury.toString(), month])
         
-        console.log(`✅ Trésorerie cumulée mise à jour pour ${month}: ${cumulativeTreasury}€`)
-      }
-
-      // Vérifier les données stockées
-      console.log(`🔍 Vérification des données stockées...`)
-      const checkResult = await client.query('SELECT COUNT(*) as count FROM monthly_data')
-      console.log(`📊 Nombre d'enregistrements dans monthly_data: ${checkResult.rows[0].count}`)
-      
-      if (checkResult.rows[0].count > 0) {
-        const sampleData = await client.query('SELECT month, kpis FROM monthly_data LIMIT 3')
-        console.log(`📊 Échantillon des données:`, sampleData.rows)
       }
 
       // Enregistrer le log de synchronisation
@@ -222,12 +188,7 @@ module.exports = async function handler(req, res) {
 // Fonction pour récupérer les données Pennylane directement
 async function getTrialBalanceFromPennylane(startDate, endDate) {
   try {
-    console.log(`📊 Appel direct de l'API Pennylane pour ${startDate} à ${endDate}`)
-    
-    // Appel direct de l'API Pennylane
     const url = `https://app.pennylane.com/api/external/v2/trial_balance?period_start=${startDate}&period_end=${endDate}&is_auxiliary=false&page=1&per_page=1000`
-    console.log(`🔗 URL Pennylane: ${url}`)
-    console.log(`🔑 API Key présente: ${process.env.VITE_PENNYLANE_API_KEY ? 'Oui' : 'Non'}`)
     
     const response = await fetch(url, {
       headers: {
@@ -236,36 +197,20 @@ async function getTrialBalanceFromPennylane(startDate, endDate) {
       }
     })
     
-    console.log(`📊 Status de la réponse: ${response.status} ${response.statusText}`)
-    
     if (!response.ok) {
       const errorText = await response.text()
-      console.error(`❌ Erreur HTTP: ${errorText}`)
       throw new Error(`Erreur API Pennylane: ${response.status} - ${response.statusText} - ${errorText}`)
     }
     
     const responseData = await response.json()
-    console.log(`✅ Réponse API Pennylane reçue:`, JSON.stringify(responseData, null, 2))
     
-    // Les données Pennylane sont directement dans responseData
-    console.log(`✅ Données Pennylane: ${responseData.items?.length || 0} comptes`)
-    console.log(`📊 Structure des données:`, {
-      hasItems: !!responseData.items,
-      itemsLength: responseData.items?.length || 0,
-      firstItem: responseData.items?.[0] || null
-    })
-    
-    // Si aucune donnée, lancer une erreur
     if (!responseData.items || responseData.items.length === 0) {
-      console.log('⚠️ Aucune donnée Pennylane disponible')
       throw new Error('Aucune donnée disponible dans Pennylane pour cette période')
     }
     
     return responseData
   } catch (error) {
     console.error('❌ Erreur lors de la récupération des données Pennylane:', error)
-    console.error('❌ Stack trace:', error.stack)
-    // Ne plus utiliser de données de test - propager l'erreur
     throw error
   }
 }
@@ -292,7 +237,7 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
     
     // Revenus totaux (tous les comptes de la classe 7)
     if (accountNumber.startsWith('7')) {
-      revenus_totaux += credit
+      revenus_totaux += (credit - debit)
     }
     
     // Charges (classe 6)
@@ -406,17 +351,19 @@ function calculateRevenusBreakdown(trialBalance) {
     const accountNumber = item.number || ''
     if (accountNumber.startsWith('7')) {
       const classCode = accountNumber.substring(0, 3)
+      const debit = parseFloat(item.debits || '0')
       const credit = parseFloat(item.credits || '0')
+      const amount = credit - debit
       
       if (!breakdown[classCode]) {
         breakdown[classCode] = { total: 0, accounts: [] }
       }
       
-      breakdown[classCode].total += credit
+      breakdown[classCode].total += amount
       breakdown[classCode].accounts.push({
         number: accountNumber,
         label: item.label || '',
-        amount: credit
+        amount: amount
       })
     }
   })
