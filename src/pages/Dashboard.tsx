@@ -101,7 +101,7 @@ const Dashboard: React.FC = () => {
       } else {
         const error = await response.json()
         console.error('❌ Erreur de synchronisation:', error)
-        alert(`❌ Erreur de synchronisation: ${error.error || 'Erreur inconnue'}`)
+        alert(`❌ Erreur de synchronisation: ${error.error || 'Erreur inconnue'}\n\nDétails: ${error.details || 'Aucun détail'}\nType: ${error.type || 'Inconnu'}`)
       }
     } catch (error) {
       console.error('❌ Erreur lors de la synchronisation:', error)

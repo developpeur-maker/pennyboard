@@ -155,6 +155,12 @@ module.exports = async function handler(req, res) {
     }
   } catch (error) {
     console.error('❌ Erreur lors de la synchronisation:', error)
+    console.error('❌ Stack trace:', error.stack)
+    console.error('❌ Détails de l\'erreur:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    })
     
     // Enregistrer l'erreur dans les logs
     try {
@@ -168,13 +174,17 @@ module.exports = async function handler(req, res) {
       await client.query(`
         INSERT INTO sync_logs (sync_type, status, message, duration_ms, api_calls_count)
         VALUES ($1, $2, $3, $4, $5)
-      `, ['full', 'error', error.message, Date.now() - startTime, apiCallsCount])
+      `, ['full', 'error', `${error.message} | Stack: ${error.stack}`, Date.now() - startTime, apiCallsCount])
       client.release()
     } catch (logError) {
       console.error('❌ Erreur lors de l\'enregistrement du log:', logError)
     }
     
-    res.status(500).json({ error: 'Échec de la synchronisation' })
+    res.status(500).json({ 
+      error: 'Échec de la synchronisation',
+      details: error.message,
+      type: error.name
+    })
   }
 }
 
@@ -188,23 +198,37 @@ async function getTrialBalanceFromPennylane(startDate, endDate) {
       ? `https://${process.env.VERCEL_URL}` 
       : 'https://pennyboard.vercel.app'
     
-    const response = await fetch(`${baseUrl}/api/trial-balance?period_start=${startDate}&period_end=${endDate}&is_auxiliary=false&page=1&per_page=1000`, {
+    const url = `${baseUrl}/api/trial-balance?period_start=${startDate}&period_end=${endDate}&is_auxiliary=false&page=1&per_page=1000`
+    console.log(`🔗 URL appelée: ${url}`)
+    console.log(`🔑 API Key présente: ${process.env.API_KEY ? 'Oui' : 'Non'}`)
+    
+    const response = await fetch(url, {
       headers: {
         'x-api-key': process.env.API_KEY,
         'Content-Type': 'application/json'
       }
     })
     
+    console.log(`📊 Status de la réponse: ${response.status} ${response.statusText}`)
+    
     if (!response.ok) {
-      throw new Error(`Erreur API Pennylane: ${response.status} - ${response.statusText}`)
+      const errorText = await response.text()
+      console.error(`❌ Erreur HTTP: ${errorText}`)
+      throw new Error(`Erreur API Pennylane: ${response.status} - ${response.statusText} - ${errorText}`)
     }
     
     const responseData = await response.json()
-    console.log(`✅ Réponse API reçue:`, responseData)
+    console.log(`✅ Réponse API reçue:`, JSON.stringify(responseData, null, 2))
     
     // Extraire les vraies données depuis la structure de réponse
     const data = responseData.raw_data || responseData
     console.log(`✅ Données Pennylane extraites: ${data.items?.length || 0} comptes`)
+    console.log(`📊 Structure des données:`, {
+      hasRawData: !!responseData.raw_data,
+      hasItems: !!data.items,
+      itemsLength: data.items?.length || 0,
+      firstItem: data.items?.[0] || null
+    })
     
     // Si aucune donnée, lancer une erreur
     if (!data.items || data.items.length === 0) {
@@ -215,6 +239,7 @@ async function getTrialBalanceFromPennylane(startDate, endDate) {
     return data
   } catch (error) {
     console.error('❌ Erreur lors de la récupération des données Pennylane:', error)
+    console.error('❌ Stack trace:', error.stack)
     // Ne plus utiliser de données de test - propager l'erreur
     throw error
   }
