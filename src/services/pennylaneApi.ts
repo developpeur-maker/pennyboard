@@ -2,6 +2,14 @@
 const API_BASE_URL = '/api'
 const API_KEY = import.meta.env.VITE_PENNYLANE_API_KEY
 
+// Fonction utilitaire pour obtenir le mois actuel
+const getCurrentMonth = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = (now.getMonth() + 1).toString().padStart(2, '0')
+  return `${year}-${month}`
+}
+
 // Types pour les comptes comptables (API v2)
 export interface Account {
   id: number
@@ -287,7 +295,7 @@ export const pennylaneApi = {
 
 
   // Récupérer le résultat comptable basé sur le trial balance
-  async getResultatComptable(selectedMonth: string = '2025-09'): Promise<PennylaneResultatComptable[]> {
+  async getResultatComptable(selectedMonth: string = getCurrentMonth()): Promise<PennylaneResultatComptable[]> {
     try {
       console.log(`📊 Récupération du résultat comptable pour ${selectedMonth}...`)
       
@@ -332,7 +340,7 @@ export const pennylaneApi = {
 
   // Récupérer la trésorerie basée sur le trial balance
   // IMPORTANT: La trésorerie doit être calculée sur les soldes cumulés depuis le début d'exercice
-  async getTresorerie(selectedMonth: string = '2025-09', viewMode: 'month' | 'year' = 'month', selectedYear: string = '2025'): Promise<PennylaneTresorerie[]> {
+  async getTresorerie(selectedMonth: string = getCurrentMonth(), viewMode: 'month' | 'year' = 'month', selectedYear: string = new Date().getFullYear().toString()): Promise<PennylaneTresorerie[]> {
     try {
       console.log(`💰 TRÉSORERIE: Mode ${viewMode}, période ${viewMode === 'month' ? selectedMonth : selectedYear}`)
       
@@ -383,7 +391,7 @@ export const pennylaneApi = {
   // Traiter les données du trial balance pour calculer les métriques
   processTrialBalanceData(
     trialBalance: TrialBalanceResponse, 
-    selectedMonth: string = '2025-09',
+    selectedMonth: string = getCurrentMonth(),
     trialBalanceCumul?: TrialBalanceResponse
   ): PennylaneResultatComptable[] {
     // Analyser les comptes par classe
@@ -515,7 +523,7 @@ export const pennylaneApi = {
   // Traiter les données de trésorerie à partir du trial balance
   // IMPORTANT: La trésorerie doit TOUJOURS être calculée sur les soldes cumulés (début d'exercice à aujourd'hui)
   // et NON sur les mouvements d'un seul mois
-  processTreasuryFromTrialBalance(trialBalance: TrialBalanceResponse, selectedMonth: string = '2025-09'): PennylaneTresorerie[] {
+  processTreasuryFromTrialBalance(trialBalance: TrialBalanceResponse, selectedMonth: string = getCurrentMonth()): PennylaneTresorerie[] {
     console.log(`💰 Traitement de ${trialBalance.items.length} comptes pour la trésorerie...`)
     
     // Debug: Analyser TOUS les comptes de classe 5 pour comprendre
@@ -582,7 +590,7 @@ export const pennylaneApi = {
   },
 
   // Récupérer les données du trial balance pour le compte de résultat
-  async getTrialBalanceData(selectedMonth: string = '2025-09'): Promise<TrialBalanceResponse> {
+  async getTrialBalanceData(selectedMonth: string = getCurrentMonth()): Promise<TrialBalanceResponse> {
     try {
       console.log(`📊 Récupération des données trial balance pour ${selectedMonth}...`)
       
@@ -606,7 +614,7 @@ export const pennylaneApi = {
   },
 
   // Récupérer les données du mois précédent pour comparaison
-  async getPreviousMonthData(selectedMonth: string = '2025-09'): Promise<TrialBalanceResponse | null> {
+  async getPreviousMonthData(selectedMonth: string = getCurrentMonth()): Promise<TrialBalanceResponse | null> {
     try {
       // Calculer le mois précédent
       const [year, month] = selectedMonth.split('-')
@@ -902,7 +910,7 @@ export const pennylaneApi = {
   },
 
   // Récupérer les KPIs consolidés
-  async getKPIs(selectedMonth: string = '2025-09'): Promise<{
+  async getKPIs(selectedMonth: string = getCurrentMonth()): Promise<{
     ventes_706: number | null
     chiffre_affaires: number | null
     total_produits_exploitation: number | null
@@ -1439,7 +1447,7 @@ export const pennylaneApi = {
   },
 
   // NOUVELLE FONCTION TRÉSORERIE - UTILISE LES DONNÉES MENSUELLES
-  async getTresorerieActuelle(selectedMonth: string = '2025-09'): Promise<number> {
+  async getTresorerieActuelle(selectedMonth: string = getCurrentMonth()): Promise<number> {
     try {
       console.log(`💰 NOUVELLE FONCTION TRÉSORERIE pour ${selectedMonth}`)
       

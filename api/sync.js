@@ -279,8 +279,6 @@ async function calculateCumulativeTreasury(client, targetMonth) {
     
     // Récupérer l'année du mois cible
     const targetYear = targetMonth.split('-')[0]
-    const startOfYear = `${targetYear}-01-01`
-    const endOfMonth = `${targetMonth}-31`
     
     // Récupérer tous les mois depuis le début d'année jusqu'au mois cible
     const monthsQuery = `
@@ -292,20 +290,52 @@ async function calculateCumulativeTreasury(client, targetMonth) {
     
     const monthsResult = await client.query(monthsQuery, [targetYear, targetMonth])
     
+    if (monthsResult.rows.length === 0) {
+      console.log('⚠️ Aucune donnée trouvée pour le calcul de trésorerie')
+      return 0
+    }
+    
+    // Si l'API retourne les soldes finaux (pas les mouvements), utiliser le solde du mois cible
+    const targetMonthData = monthsResult.rows.find(row => row.month === targetMonth)
+    
+    if (targetMonthData) {
+      console.log(`📊 Utilisation du solde final du mois ${targetMonth}`)
+      const trialBalance = targetMonthData.trial_balance
+      const items = trialBalance.items || []
+      
+      let treasury = 0
+      items.forEach((item) => {
+        const accountNumber = item.number || ''
+        if (accountNumber.startsWith('512')) {
+          const debit = parseFloat(item.debits || '0')
+          const credit = parseFloat(item.credits || '0')
+          // Solde final : débit - crédit
+          treasury += debit - credit
+          console.log(`  - Compte ${accountNumber}: débit=${debit}, crédit=${credit}, solde=${debit - credit}`)
+        }
+      })
+      
+      console.log(`✅ Trésorerie finale calculée: ${treasury}€`)
+      return treasury
+    }
+    
+    // Sinon, calculer la trésorerie cumulée en additionnant tous les mouvements
     let cumulativeTreasury = 0
     
-    // Calculer la trésorerie cumulée mois par mois
+    console.log(`📊 Calcul cumulé pour ${monthsResult.rows.length} mois depuis le début d'exercice`)
+    
     for (const row of monthsResult.rows) {
       const trialBalance = row.trial_balance
       const items = trialBalance.items || []
       
-      // Calculer la trésorerie pour ce mois
+      // Calculer la trésorerie pour ce mois (mouvements nets)
       let monthlyTreasury = 0
       items.forEach((item) => {
         const accountNumber = item.number || ''
         if (accountNumber.startsWith('512')) {
           const debit = parseFloat(item.debits || '0')
           const credit = parseFloat(item.credits || '0')
+          // Mouvement net du mois : débit - crédit
           monthlyTreasury += debit - credit
         }
       })

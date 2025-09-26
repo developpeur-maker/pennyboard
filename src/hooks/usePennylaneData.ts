@@ -43,16 +43,25 @@ interface UsePennylaneDataReturn {
   chargesBreakdown: Array<{code: string, label: string, description: string, amount: number}>
   revenusBreakdown: Array<{code: string, label: string, description: string, amount: number}>
   tresorerieBreakdown: Array<{code: string, label: string, description: string, amount: number}>
+  lastSyncDate: string | null
   loading: boolean
   error: string | null
   refetch: () => void
 }
 
+// Fonction pour obtenir le mois actuel au format YYYY-MM
+const getCurrentMonth = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = (now.getMonth() + 1).toString().padStart(2, '0')
+  return `${year}-${month}`
+}
+
 export const usePennylaneData = (
-  selectedMonth: string = '2025-09', 
+  selectedMonth: string = getCurrentMonth(), 
   selectedFiscalYear?: string,
   viewMode: 'month' | 'year' = 'month',
-  selectedYear: string = '2025'
+  selectedYear: string = new Date().getFullYear().toString()
 ): UsePennylaneDataReturn => {
   const [kpis, setKpis] = useState<KPIData | null>(null)
   const [resultatComptable] = useState<PennylaneResultatComptable[]>([])
@@ -62,6 +71,7 @@ export const usePennylaneData = (
   const [chargesBreakdown, setChargesBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [revenusBreakdown, setRevenusBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [tresorerieBreakdown, setTresorerieBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
+  const [lastSyncDate, setLastSyncDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -113,6 +123,12 @@ export const usePennylaneData = (
         setChargesBreakdown(convertBreakdownToArray(breakdownResponse.data.charges_breakdown))
         setRevenusBreakdown(convertBreakdownToArray(breakdownResponse.data.revenus_breakdown))
         setTresorerieBreakdown(convertTresorerieBreakdownToArray(breakdownResponse.data.tresorerie_breakdown))
+      }
+
+      // Récupérer la date de dernière synchronisation
+      if (data.updated_at) {
+        setLastSyncDate(data.updated_at)
+        console.log('📅 Dernière synchronisation:', data.updated_at)
       }
 
       // Traiter les KPIs
@@ -273,6 +289,7 @@ export const usePennylaneData = (
     chargesBreakdown,
     revenusBreakdown,
     tresorerieBreakdown,
+    lastSyncDate,
     loading,
     error,
     refetch: fetchData

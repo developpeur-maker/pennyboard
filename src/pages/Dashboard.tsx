@@ -31,7 +31,7 @@ const Dashboard: React.FC = () => {
   const [isChargesModalOpen, setIsChargesModalOpen] = useState(false)
   const [isRevenusModalOpen, setIsRevenusModalOpen] = useState(false)
   const [isTresorerieModalOpen, setIsTresorerieModalOpen] = useState(false)
-  const { kpis, chargesBreakdown, revenusBreakdown, tresorerieBreakdown, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
+  const { kpis, chargesBreakdown, revenusBreakdown, tresorerieBreakdown, lastSyncDate, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
 
   // Fonction pour formater la période affichée
   const formatPeriod = () => {
@@ -181,6 +181,16 @@ const Dashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Indicateur de synchronisation */}
+      {lastSyncDate && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+          <div className="flex items-center gap-2 text-sm text-green-700">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>Dernière synchronisation : {new Date(lastSyncDate).toLocaleString('fr-FR')}</span>
+          </div>
+        </div>
+      )}
 
       {/* Message de santé financière */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-4 rounded-lg mb-6">
