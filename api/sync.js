@@ -199,8 +199,12 @@ async function getTrialBalanceFromPennylane(startDate, endDate) {
       throw new Error(`Erreur API Pennylane: ${response.status} - ${response.statusText}`)
     }
     
-    const data = await response.json()
-    console.log(`✅ Données Pennylane récupérées: ${data.items?.length || 0} comptes`)
+    const responseData = await response.json()
+    console.log(`✅ Réponse API reçue:`, responseData)
+    
+    // Extraire les vraies données depuis la structure de réponse
+    const data = responseData.raw_data || responseData
+    console.log(`✅ Données Pennylane extraites: ${data.items?.length || 0} comptes`)
     
     // Si aucune donnée, lancer une erreur
     if (!data.items || data.items.length === 0) {
