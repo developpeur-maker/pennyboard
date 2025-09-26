@@ -200,13 +200,19 @@ export const usePennylaneData = (
     const result: Array<{code: string, label: string, description: string, amount: number}> = []
     
     Object.entries(breakdown).forEach(([code, data]: [string, any]) => {
-      if (data && typeof data === 'object' && data.total > 0) {
-        result.push({
-          code,
-          label: `${code} - ${getClassDescription(code)}`,
-          description: getClassDescription(code),
-          amount: data.total
-        })
+      if (data && typeof data === 'object') {
+        // Gérer les deux structures possibles
+        const amount = data.amount || data.total || 0
+        const label = data.label || `${code} - ${getClassDescription(code)}`
+        
+        if (amount > 0) {
+          result.push({
+            code,
+            label: `${code} - ${label}`,
+            description: label,
+            amount: amount
+          })
+        }
       }
     })
     

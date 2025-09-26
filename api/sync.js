@@ -350,21 +350,19 @@ function calculateRevenusBreakdown(trialBalance) {
   items.forEach((item) => {
     const accountNumber = item.number || ''
     if (accountNumber.startsWith('7')) {
-      const classCode = accountNumber.substring(0, 3)
       const debit = parseFloat(item.debits || '0')
       const credit = parseFloat(item.credits || '0')
       const amount = credit - debit
       
-      if (!breakdown[classCode]) {
-        breakdown[classCode] = { total: 0, accounts: [] }
+      if (!breakdown[accountNumber]) {
+        breakdown[accountNumber] = {
+          number: accountNumber,
+          label: item.label || `Compte ${accountNumber}`,
+          amount: 0
+        }
       }
       
-      breakdown[classCode].total += amount
-      breakdown[classCode].accounts.push({
-        number: accountNumber,
-        label: item.label || '',
-        amount: amount
-      })
+      breakdown[accountNumber].amount += amount
     }
   })
   
