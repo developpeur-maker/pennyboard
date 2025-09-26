@@ -165,7 +165,7 @@ export const usePennylaneData = (
       const processedKpis: KPIData = {
         ventes_706: kpisData.ventes_706 || 0,
         chiffre_affaires: kpisData.chiffre_affaires || 0,
-        total_produits_exploitation: kpisData.chiffre_affaires || 0,
+        total_produits_exploitation: kpisData.revenus_totaux || 0,
         charges: kpisData.charges || 0,
         resultat_net: kpisData.resultat_net || 0,
         solde_tresorerie: kpisData.tresorerie || 0,
@@ -208,7 +208,7 @@ export const usePennylaneData = (
         if (amount > 0) {
           result.push({
             code,
-            label: `${code} - ${label}`,
+            label: label,
             description: label,
             amount: amount
           })
