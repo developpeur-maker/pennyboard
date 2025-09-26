@@ -5,7 +5,8 @@ import {
   RefreshCw,
   Calculator,
   PiggyBank,
-  Calendar
+  Calendar,
+  Users
 } from 'lucide-react'
 import KPICard from '../components/KPICard'
 import DetailModal from '../components/DetailModal'
@@ -29,10 +30,11 @@ const Dashboard: React.FC = () => {
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
   const [selectedYear, setSelectedYear] = useState('2025')
   const [isChargesModalOpen, setIsChargesModalOpen] = useState(false)
+  const [isChargesSalarialesModalOpen, setIsChargesSalarialesModalOpen] = useState(false)
   const [isRevenusModalOpen, setIsRevenusModalOpen] = useState(false)
   const [isTresorerieModalOpen, setIsTresorerieModalOpen] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
-  const { kpis, chargesBreakdown, revenusBreakdown, tresorerieBreakdown, lastSyncDate, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
+  const { kpis, chargesBreakdown, chargesSalarialesBreakdown, revenusBreakdown, tresorerieBreakdown, lastSyncDate, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
 
   // Fonction pour formater la période affichée
   const formatPeriod = () => {
@@ -326,6 +328,17 @@ const Dashboard: React.FC = () => {
             color="turquoise"
           />
           <KPICard
+            title="Masse Salariale"
+            period={formatPeriod()}
+            subtitle="Charges de personnel"
+            value={kpis && kpis.hasData && kpis.charges_salariales !== null ? formatCurrency(kpis.charges_salariales) : 'Aucune donnée'}
+            change={0}
+            changeType="neutral"
+            icon={<Users className="w-5 h-5 text-orange-600" />}
+            color="red"
+            onClick={() => setIsChargesSalarialesModalOpen(true)}
+          />
+          <KPICard
             title="Trésorerie"
             period={formatPeriod()}
             subtitle="Liquidités disponibles"
@@ -347,6 +360,16 @@ const Dashboard: React.FC = () => {
         subtitle={formatPeriod()}
         items={chargesBreakdown}
         totalAmount={kpis?.charges || 0}
+      />
+
+      {/* Modal de détail des charges salariales */}
+      <DetailModal
+        isOpen={isChargesSalarialesModalOpen}
+        onClose={() => setIsChargesSalarialesModalOpen(false)}
+        title="Détail de la Masse Salariale"
+        subtitle={formatPeriod()}
+        items={chargesSalarialesBreakdown}
+        totalAmount={kpis?.charges_salariales || 0}
       />
 
       {/* Modal de détail des revenus */}

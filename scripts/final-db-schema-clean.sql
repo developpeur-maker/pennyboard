@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS monthly_data (
   -- KPIs calculés (basés sur PennylaneResultatComptable)
   kpis JSONB NOT NULL,              -- Tous les KPIs calculés
   charges_breakdown JSONB,          -- Détail des charges par classe
+  charges_salariales_breakdown JSONB, -- Détail des charges salariales (comptes 64x)
   revenus_breakdown JSONB,           -- Détail des revenus par classe
   tresorerie_breakdown JSONB,        -- Détail de la trésorerie par compte
   

@@ -68,6 +68,7 @@ module.exports = async function handler(req, res) {
           // Calculer les KPIs à partir du trial balance
           const kpis = calculateKPIsFromTrialBalance(trialBalance, month)
           const chargesBreakdown = calculateChargesBreakdown(trialBalance)
+          const chargesSalarialesBreakdown = calculateChargesSalarialesBreakdown(trialBalance)
           const revenusBreakdown = calculateRevenusBreakdown(trialBalance)
           const tresorerieBreakdown = calculateTresorerieBreakdown(trialBalance)
           
@@ -78,16 +79,17 @@ module.exports = async function handler(req, res) {
           const insertResult = await client.query(`
             INSERT INTO monthly_data (
               month, year, month_number, trial_balance, kpis, 
-              charges_breakdown, revenus_breakdown, tresorerie_breakdown,
+              charges_breakdown, charges_salariales_breakdown, revenus_breakdown, tresorerie_breakdown,
               is_current_month, sync_version
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 1)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)
             ON CONFLICT (month) DO UPDATE SET
               trial_balance = $4,
               kpis = $5,
               charges_breakdown = $6,
-              revenus_breakdown = $7,
-              tresorerie_breakdown = $8,
-              is_current_month = $9,
+              charges_salariales_breakdown = $7,
+              revenus_breakdown = $8,
+              tresorerie_breakdown = $9,
+              is_current_month = $10,
               sync_version = monthly_data.sync_version + 1,
               updated_at = CURRENT_TIMESTAMP
           `, [
@@ -95,6 +97,7 @@ module.exports = async function handler(req, res) {
             JSON.stringify(trialBalance),
             JSON.stringify(kpis),
             JSON.stringify(chargesBreakdown),
+            JSON.stringify(chargesSalarialesBreakdown),
             JSON.stringify(revenusBreakdown),
             JSON.stringify(tresorerieBreakdown),
             isCurrentMonth
@@ -222,6 +225,7 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
   let ventes_706 = 0
   let revenus_totaux = 0
   let charges = 0
+  let charges_salariales = 0
   let tresorerie = 0
   
   items.forEach((item) => {
@@ -245,6 +249,12 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
       charges += solde // Inclure tous les soldes, même négatifs
     }
     
+    // Charges salariales (comptes 64x - Personnel)
+    if (accountNumber.startsWith('64')) {
+      const solde = debit - credit
+      charges_salariales += solde
+    }
+    
     // Trésorerie sera calculée séparément avec calculateCumulativeTreasury
     // Pas de calcul ici pour éviter la double comptabilisation
   })
@@ -253,6 +263,7 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
     ventes_706,
     revenus_totaux,
     charges,
+    charges_salariales,
     resultat_net: revenus_totaux - charges,
     tresorerie,
     currency: 'EUR',
@@ -324,6 +335,35 @@ function calculateChargesBreakdown(trialBalance) {
   items.forEach((item) => {
     const accountNumber = item.number || ''
     if (accountNumber.startsWith('6')) {
+      const debit = parseFloat(item.debits || '0')
+      const credit = parseFloat(item.credits || '0')
+      const solde = debit - credit
+      
+      // Utiliser le vrai libellé du compte depuis l'API Pennylane
+      const label = item.label || `Compte ${accountNumber}`
+      
+      if (!breakdown[accountNumber]) {
+        breakdown[accountNumber] = {
+          number: accountNumber,
+          label: label,
+          amount: 0
+        }
+      }
+      
+      breakdown[accountNumber].amount += solde
+    }
+  })
+  
+  return breakdown
+}
+
+function calculateChargesSalarialesBreakdown(trialBalance) {
+  const items = trialBalance.items || []
+  const breakdown = {}
+  
+  items.forEach((item) => {
+    const accountNumber = item.number || ''
+    if (accountNumber.startsWith('64')) {
       const debit = parseFloat(item.debits || '0')
       const credit = parseFloat(item.credits || '0')
       const solde = debit - credit
