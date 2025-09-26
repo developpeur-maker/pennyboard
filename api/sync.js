@@ -240,9 +240,12 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
       revenus_totaux += (credit - debit)
     }
     
-    // Charges (classe 6) - Exclure les amortissements (comptes 68)
-    if (accountNumber.startsWith('6') && !accountNumber.startsWith('68')) {
-      charges += debit
+    // Charges (classe 6) - Solde débiteur des comptes de charges
+    if (accountNumber.startsWith('6')) {
+      const solde = debit - credit
+      if (solde > 0) { // Seulement les soldes débiteurs (charges réelles)
+        charges += solde
+      }
     }
     
     // Trésorerie sera calculée séparément avec calculateCumulativeTreasury
