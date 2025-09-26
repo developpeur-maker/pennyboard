@@ -219,23 +219,19 @@ module.exports = async function handler(req, res) {
   }
 }
 
-// Fonction pour récupérer les données Pennylane via l'endpoint Vercel
+// Fonction pour récupérer les données Pennylane directement
 async function getTrialBalanceFromPennylane(startDate, endDate) {
   try {
-    console.log(`📊 Appel de l'API Pennylane via Vercel pour ${startDate} à ${endDate}`)
+    console.log(`📊 Appel direct de l'API Pennylane pour ${startDate} à ${endDate}`)
     
-    // Utiliser l'endpoint Vercel qui fonctionne
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'https://pennyboard.vercel.app'
-    
-    const url = `${baseUrl}/api/trial-balance?period_start=${startDate}&period_end=${endDate}&is_auxiliary=false&page=1&per_page=1000`
-    console.log(`🔗 URL appelée: ${url}`)
-    console.log(`🔑 API Key présente: ${process.env.API_KEY ? 'Oui' : 'Non'}`)
+    // Appel direct de l'API Pennylane
+    const url = `https://app.pennylane.com/api/external/v2/trial_balance?period_start=${startDate}&period_end=${endDate}&is_auxiliary=false&page=1&per_page=1000`
+    console.log(`🔗 URL Pennylane: ${url}`)
+    console.log(`🔑 API Key présente: ${process.env.VITE_PENNYLANE_API_KEY ? 'Oui' : 'Non'}`)
     
     const response = await fetch(url, {
       headers: {
-        'x-api-key': process.env.API_KEY,
+        'Authorization': `Bearer ${process.env.VITE_PENNYLANE_API_KEY}`,
         'Content-Type': 'application/json'
       }
     })
@@ -249,25 +245,23 @@ async function getTrialBalanceFromPennylane(startDate, endDate) {
     }
     
     const responseData = await response.json()
-    console.log(`✅ Réponse API reçue:`, JSON.stringify(responseData, null, 2))
+    console.log(`✅ Réponse API Pennylane reçue:`, JSON.stringify(responseData, null, 2))
     
-    // Extraire les vraies données depuis la structure de réponse
-    const data = responseData.raw_data || responseData
-    console.log(`✅ Données Pennylane extraites: ${data.items?.length || 0} comptes`)
+    // Les données Pennylane sont directement dans responseData
+    console.log(`✅ Données Pennylane: ${responseData.items?.length || 0} comptes`)
     console.log(`📊 Structure des données:`, {
-      hasRawData: !!responseData.raw_data,
-      hasItems: !!data.items,
-      itemsLength: data.items?.length || 0,
-      firstItem: data.items?.[0] || null
+      hasItems: !!responseData.items,
+      itemsLength: responseData.items?.length || 0,
+      firstItem: responseData.items?.[0] || null
     })
     
     // Si aucune donnée, lancer une erreur
-    if (!data.items || data.items.length === 0) {
+    if (!responseData.items || responseData.items.length === 0) {
       console.log('⚠️ Aucune donnée Pennylane disponible')
       throw new Error('Aucune donnée disponible dans Pennylane pour cette période')
     }
     
-    return data
+    return responseData
   } catch (error) {
     console.error('❌ Erreur lors de la récupération des données Pennylane:', error)
     console.error('❌ Stack trace:', error.stack)
