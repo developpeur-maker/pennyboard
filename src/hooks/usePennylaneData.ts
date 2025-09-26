@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { PennylaneResultatComptable, PennylaneTresorerie } from '../services/pennylaneApi'
 import { 
-  getBreakdownsFromDatabase,
   getAllDataFromDatabase
 } from '../services/databaseApi'
 
@@ -85,8 +84,19 @@ export const usePennylaneData = (
       console.log('📊 Tentative de récupération depuis la base de données...')
       const dbResponse = await getAllDataFromDatabase(selectedMonth)
       
+      console.log('🔍 Réponse de la base de données:', {
+        success: dbResponse.success,
+        hasData: !!dbResponse.data,
+        error: dbResponse.error
+      })
+      
       if (dbResponse.success && dbResponse.data) {
         console.log('✅ Données récupérées depuis la base de données')
+        console.log('📊 Données reçues:', {
+          month: dbResponse.data.month,
+          hasKpis: !!dbResponse.data.kpis,
+          kpis: dbResponse.data.kpis
+        })
         
         // Utiliser les données de la base (elles sont déjà synchronisées)
         await processDatabaseData(dbResponse.data)
@@ -95,6 +105,7 @@ export const usePennylaneData = (
       
       // Pas de fallback - afficher "Aucune donnée"
       console.log('⚠️ Aucune donnée disponible dans la base de données')
+      console.log('🔍 Raison:', dbResponse.error || 'Données non trouvées')
       setKpis({
         ventes_706: null,
         chiffre_affaires: null,
@@ -128,13 +139,17 @@ export const usePennylaneData = (
   // Traiter les données de la base de données
   const processDatabaseData = async (data: any) => {
     try {
-      // Récupérer les breakdowns depuis la base
-      const breakdownResponse = await getBreakdownsFromDatabase(selectedMonth)
+      console.log('🔄 Traitement des données de la base de données...')
       
-      if (breakdownResponse.success && breakdownResponse.data) {
-        setChargesBreakdown(convertBreakdownToArray(breakdownResponse.data.charges_breakdown))
-        setRevenusBreakdown(convertBreakdownToArray(breakdownResponse.data.revenus_breakdown))
-        setTresorerieBreakdown(convertTresorerieBreakdownToArray(breakdownResponse.data.tresorerie_breakdown))
+      // Utiliser les breakdowns directement depuis les données reçues
+      if (data.charges_breakdown) {
+        setChargesBreakdown(convertBreakdownToArray(data.charges_breakdown))
+      }
+      if (data.revenus_breakdown) {
+        setRevenusBreakdown(convertBreakdownToArray(data.revenus_breakdown))
+      }
+      if (data.tresorerie_breakdown) {
+        setTresorerieBreakdown(convertTresorerieBreakdownToArray(data.tresorerie_breakdown))
       }
 
       // Récupérer la date de dernière synchronisation
@@ -145,6 +160,8 @@ export const usePennylaneData = (
 
       // Traiter les KPIs
       const kpisData = data.kpis || {}
+      console.log('📊 KPIs reçus de la base:', kpisData)
+      
       const processedKpis: KPIData = {
         ventes_706: kpisData.ventes_706 || 0,
         chiffre_affaires: kpisData.chiffre_affaires || 0,
@@ -167,6 +184,7 @@ export const usePennylaneData = (
         tresorerie_growth: 0
       }
 
+      console.log('📊 KPIs traités:', processedKpis)
       setKpis(processedKpis)
       console.log('✅ Données de la base de données traitées avec succès')
       

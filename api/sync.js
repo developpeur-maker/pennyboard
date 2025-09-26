@@ -21,6 +21,12 @@ module.exports = async function handler(req, res) {
   try {
     console.log('🔄 Début de la synchronisation Pennylane...')
 
+    // Nettoyer les données de test existantes
+    console.log('🧹 Nettoyage des données de test...')
+    await client.query('DELETE FROM monthly_data WHERE kpis->>\'ventes_706\' = \'10000\'')
+    await client.query('DELETE FROM sync_logs WHERE message LIKE \'%test%\' OR message LIKE \'%fallback%\'')
+    console.log('✅ Données de test supprimées')
+
     // Connexion à la base de données
     const pool = new Pool({
       connectionString: process.env.POSTGRES_URL,
@@ -196,31 +202,17 @@ async function getTrialBalanceFromPennylane(startDate, endDate) {
     const data = await response.json()
     console.log(`✅ Données Pennylane récupérées: ${data.items?.length || 0} comptes`)
     
-    // Si aucune donnée, utiliser des données de test
+    // Si aucune donnée, lancer une erreur
     if (!data.items || data.items.length === 0) {
-      console.log('⚠️ Aucune donnée Pennylane, utilisation des données de test')
-      return {
-        items: [
-          { number: '706000', label: 'Prestations de services', debits: '0', credits: '10000' },
-          { number: '601000', label: 'Achats', debits: '5000', credits: '0' },
-          { number: '512000', label: 'Banque', debits: '10000', credits: '0' }
-        ]
-      }
+      console.log('⚠️ Aucune donnée Pennylane disponible')
+      throw new Error('Aucune donnée disponible dans Pennylane pour cette période')
     }
     
     return data
   } catch (error) {
     console.error('❌ Erreur lors de la récupération des données Pennylane:', error)
-    console.log('⚠️ Utilisation des données de test en fallback')
-    
-    // Fallback vers des données de test
-    return {
-      items: [
-        { number: '706000', label: 'Prestations de services', debits: '0', credits: '10000' },
-        { number: '601000', label: 'Achats', debits: '5000', credits: '0' },
-        { number: '512000', label: 'Banque', debits: '10000', credits: '0' }
-      ]
-    }
+    // Ne plus utiliser de données de test - propager l'erreur
+    throw error
   }
 }
 
