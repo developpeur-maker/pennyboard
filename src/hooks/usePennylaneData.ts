@@ -172,7 +172,7 @@ export const usePennylaneData = (
         growth: 0, // À calculer si nécessaire
         hasData: true,
         rentabilite: kpisData.resultat_net && kpisData.revenus_totaux ? {
-          ratio: (kpisData.resultat_net / kpisData.revenus_totaux) * 100,
+          ratio: Math.round(((kpisData.resultat_net / kpisData.revenus_totaux) * 100) * 100) / 100,
           message: 'Rentabilité calculée',
           montant: kpisData.resultat_net
         } : null,

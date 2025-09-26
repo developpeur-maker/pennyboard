@@ -323,7 +323,8 @@ function calculateChargesBreakdown(trialBalance) {
   
   items.forEach((item) => {
     const accountNumber = item.number || ''
-    if (accountNumber.startsWith('6')) {
+    // Exclure les amortissements (comptes 68) pour être cohérent avec le calcul principal
+    if (accountNumber.startsWith('6') && !accountNumber.startsWith('68')) {
       const debit = parseFloat(item.debits || '0')
       
       // Utiliser le vrai libellé du compte depuis l'API Pennylane
