@@ -36,6 +36,10 @@ const Dashboard: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false)
   const { kpis, chargesBreakdown, chargesSalarialesBreakdown, revenusBreakdown, tresorerieBreakdown, lastSyncDate, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
 
+  // Debug pour les charges salariales
+  console.log('🔍 Dashboard - chargesSalarialesBreakdown:', chargesSalarialesBreakdown)
+  console.log('🔍 Dashboard - kpis.charges_salariales:', kpis?.charges_salariales)
+
   // Fonction pour formater la période affichée
   const formatPeriod = () => {
     if (viewMode === 'year') {

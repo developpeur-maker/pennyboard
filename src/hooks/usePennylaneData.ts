@@ -151,7 +151,10 @@ export const usePennylaneData = (
         setChargesBreakdown(convertBreakdownToArray(data.charges_breakdown))
       }
       if (data.charges_salariales_breakdown) {
-        setChargesSalarialesBreakdown(convertBreakdownToArray(data.charges_salariales_breakdown))
+        console.log('🔍 Charges salariales breakdown reçu:', data.charges_salariales_breakdown)
+        const chargesSalarialesArray = convertBreakdownToArray(data.charges_salariales_breakdown)
+        console.log('🔍 Charges salariales array converti:', chargesSalarialesArray)
+        setChargesSalarialesBreakdown(chargesSalarialesArray)
       }
       if (data.revenus_breakdown) {
         setRevenusBreakdown(convertBreakdownToArray(data.revenus_breakdown))
@@ -216,15 +219,13 @@ export const usePennylaneData = (
         
         // Utiliser le label tel qu'il est stocké dans la base de données
         
-        // Pour les charges salariales, inclure tous les comptes 64 même avec un solde de 0
-        if (code.startsWith('64') || amount !== 0) {
-          result.push({
-            code,
-            label: label,
-            description: label,
-            amount: amount
-          })
-        }
+        // Inclure tous les montants (positifs, négatifs et zéro)
+        result.push({
+          code,
+          label: label,
+          description: label,
+          amount: amount
+        })
       }
     })
     
