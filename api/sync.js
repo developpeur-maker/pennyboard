@@ -326,9 +326,10 @@ function calculateChargesBreakdown(trialBalance) {
   
   items.forEach((item) => {
     const accountNumber = item.number || ''
-    // Exclure les amortissements (comptes 68) pour être cohérent avec le calcul principal
-    if (accountNumber.startsWith('6') && !accountNumber.startsWith('68')) {
+    if (accountNumber.startsWith('6')) {
       const debit = parseFloat(item.debits || '0')
+      const credit = parseFloat(item.credits || '0')
+      const solde = debit - credit
       
       // Utiliser le vrai libellé du compte depuis l'API Pennylane
       const label = item.label || `Compte ${accountNumber}`
@@ -341,7 +342,7 @@ function calculateChargesBreakdown(trialBalance) {
         }
       }
       
-      breakdown[accountNumber].amount += debit
+      breakdown[accountNumber].amount += solde
     }
   })
   
