@@ -368,14 +368,16 @@ function calculateChargesSalarialesBreakdown(trialBalance) {
       const credit = parseFloat(item.credits || '0')
       const solde = debit - credit
       
-      // Utiliser le vrai libellé du compte depuis l'API Pennylane
-      const label = item.label || `Compte ${accountNumber}`
-      
-      // Inclure tous les comptes 64, même avec un solde de 0
-      breakdown[accountNumber] = {
+      // Pour la masse salariale : seulement les soldes positifs
+      if (solde > 0) {
+        // Utiliser le vrai libellé du compte depuis l'API Pennylane
+        const label = item.label || `Compte ${accountNumber}`
+        
+        breakdown[accountNumber] = {
         number: accountNumber,
-        label: label,
-        amount: solde
+          label: label,
+          amount: solde
+        }
       }
     }
   })

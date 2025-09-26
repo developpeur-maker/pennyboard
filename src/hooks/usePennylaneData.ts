@@ -162,8 +162,11 @@ export const usePennylaneData = (
         // Solution temporaire : filtrer les comptes 64 depuis les charges
         console.log('⚠️ charges_salariales_breakdown non trouvé, filtrage depuis charges_breakdown')
         const allCharges = convertBreakdownToArray(data.charges_breakdown)
-        const chargesSalariales = allCharges.filter(item => item.code.startsWith('64'))
-        console.log('🔍 Charges salariales filtrées:', chargesSalariales)
+        // Pour la masse salariale : seulement les comptes 64 avec solde positif
+        const chargesSalariales = allCharges.filter(item => 
+          item.code.startsWith('64') && item.amount > 0
+        )
+        console.log('🔍 Charges salariales filtrées (positifs uniquement):', chargesSalariales)
         setChargesSalarialesBreakdown(chargesSalariales)
       }
       if (data.revenus_breakdown) {
