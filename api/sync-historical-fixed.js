@@ -114,6 +114,22 @@ module.exports = async function handler(req, res) {
         }
       }
 
+      // Recalculer la trésorerie cumulée pour tous les mois synchronisés
+      console.log('💰 Recalcul de la trésorerie cumulée pour les années historiques...')
+      for (const monthData of monthsToSync) {
+        const month = monthData.month
+        const cumulativeTreasury = await calculateCumulativeTreasury(client, month)
+        
+        // Mettre à jour la trésorerie dans les KPIs
+        await client.query(`
+          UPDATE monthly_data 
+          SET kpis = jsonb_set(kpis, '{tresorerie}', $1::text::jsonb)
+          WHERE month = $2
+        `, [cumulativeTreasury.toString(), month])
+        
+        console.log(`✅ Trésorerie cumulée mise à jour pour ${month}: ${cumulativeTreasury}`)
+      }
+
       // Enregistrer le succès dans les logs
       const duration = Date.now() - startTime
       await client.query(`
@@ -350,4 +366,60 @@ function calculateChargesSalarialesBreakdown(trialBalance) {
   })
   
   return breakdown
+}
+
+// Fonction pour calculer la trésorerie cumulée depuis le début d'exercice (COPIÉE DE sync.js)
+async function calculateCumulativeTreasury(client, targetMonth) {
+  try {
+    console.log(`💰 Calcul de la trésorerie cumulée pour ${targetMonth}`)
+    
+    // Récupérer l'année du mois cible
+    const targetYear = targetMonth.split('-')[0]
+    
+    // Récupérer tous les mois depuis le début d'année jusqu'au mois cible
+    const monthsQuery = `
+      SELECT month, trial_balance 
+      FROM monthly_data 
+      WHERE year = $1 AND month <= $2
+      ORDER BY month ASC
+    `
+    
+    const monthsResult = await client.query(monthsQuery, [targetYear, targetMonth])
+    
+    if (monthsResult.rows.length === 0) {
+      console.log('⚠️ Aucune donnée trouvée pour le calcul de trésorerie')
+      return 0
+    }
+    
+    // Calculer la trésorerie cumulée en additionnant tous les mouvements depuis le début d'exercice
+    console.log(`📊 Calcul cumulé pour ${monthsResult.rows.length} mois depuis le début d'exercice`)
+    
+    let cumulativeTreasury = 0
+    
+    for (const row of monthsResult.rows) {
+      const trialBalance = row.trial_balance
+      const items = trialBalance.items || []
+      
+      // Calculer la trésorerie pour ce mois (mouvements nets)
+      let monthlyTreasury = 0
+      items.forEach((item) => {
+        const accountNumber = item.number || ''
+        if (accountNumber.startsWith('512')) {
+          const debit = parseFloat(item.debits || '0')
+          const credit = parseFloat(item.credits || '0')
+          monthlyTreasury += debit - credit
+        }
+      })
+      
+      cumulativeTreasury += monthlyTreasury
+      console.log(`  ${row.month}: ${monthlyTreasury} (cumulé: ${cumulativeTreasury})`)
+    }
+    
+    console.log(`✅ Trésorerie cumulée finale pour ${targetMonth}: ${cumulativeTreasury}`)
+    return Math.round(cumulativeTreasury * 100) / 100
+    
+  } catch (error) {
+    console.error(`❌ Erreur lors du calcul de trésorerie pour ${targetMonth}:`, error)
+    return 0
+  }
 }
