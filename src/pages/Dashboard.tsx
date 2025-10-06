@@ -26,12 +26,11 @@ const Dashboard: React.FC = () => {
     return `${year}-${monthFormatted}`
   }
 
-  // Fonction pour générer la liste des mois disponibles (année en cours uniquement)
+  // Fonction pour générer la liste des mois disponibles (toute l'année en cours)
   const generateAvailableMonths = () => {
     const months = []
     const currentDate = new Date()
     const currentYear = currentDate.getFullYear()
-    const currentMonth = currentDate.getMonth() + 1 // 1-12
     
     // Noms des mois en français
     const monthNames = [
@@ -39,8 +38,9 @@ const Dashboard: React.FC = () => {
       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
     ]
     
-    // Générer uniquement les mois de l'année en cours (janvier jusqu'au mois actuel)
-    for (let month = 1; month <= currentMonth; month++) {
+    // Générer TOUS les mois de l'année en cours (janvier à décembre)
+    // Car en comptabilité, on peut avoir des écritures prévisionnelles
+    for (let month = 1; month <= 12; month++) {
       const monthFormatted = month.toString().padStart(2, '0')
       const monthKey = `${currentYear}-${monthFormatted}`
       
