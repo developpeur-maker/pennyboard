@@ -163,6 +163,41 @@ const Dashboard: React.FC = () => {
     }
   }
 
+  // Fonction de synchronisation historique (2021-2024)
+  const handleHistoricalSync = async () => {
+    try {
+      setIsSyncing(true)
+      console.log('🔄 Début de la synchronisation historique (2021-2024)...')
+      
+      const response = await fetch('/api/sync-historical', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'pennyboard_secret_key_2025'
+        }
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Synchronisation historique réussie:', result)
+        
+        // Actualiser les données après synchronisation
+        await refetch()
+        
+        alert(`✅ Synchronisation historique réussie ! ${result.monthsSynced} mois traités.`)
+      } else {
+        const error = await response.json()
+        console.error('❌ Erreur de synchronisation historique:', error)
+        alert(`❌ Erreur de synchronisation historique: ${error.error || 'Erreur inconnue'}\n\nDétails: ${error.details || 'Aucun détail'}\nType: ${error.type || 'Inconnu'}`)
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la synchronisation historique:', error)
+      alert('❌ Erreur lors de la synchronisation historique. Veuillez réessayer.')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
 
   if (loading) {
     return (
@@ -286,27 +321,48 @@ const Dashboard: React.FC = () => {
               </>
             )}
           </div>
-          <button
-            onClick={handleManualSync}
-            disabled={isSyncing}
-            className={`flex items-center gap-2 px-3 py-1 text-white text-xs rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              lastSyncDate 
-                ? 'bg-green-600 hover:bg-green-700' 
-                : 'bg-yellow-600 hover:bg-yellow-700'
-            }`}
-          >
-            {isSyncing ? (
-              <>
-                <RefreshCw className="w-3 h-3 animate-spin" />
-                Synchronisation...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-3 h-3" />
-                Synchroniser
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className={`flex items-center gap-2 px-3 py-1 text-white text-xs rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                lastSyncDate 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-yellow-600 hover:bg-yellow-700'
+              }`}
+            >
+              {isSyncing ? (
+                <>
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  Synchronisation...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3 h-3" />
+                  Synchroniser
+                </>
+              )}
+            </button>
+            
+            {/* Bouton temporaire pour la synchronisation historique */}
+            <button
+              onClick={handleHistoricalSync}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSyncing ? (
+                <>
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  Sync historique...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3 h-3" />
+                  Synchro historique
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
