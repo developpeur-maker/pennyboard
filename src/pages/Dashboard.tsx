@@ -26,11 +26,12 @@ const Dashboard: React.FC = () => {
     return `${year}-${monthFormatted}`
   }
 
-  // Fonction pour générer la liste des mois disponibles (toute l'année en cours)
+  // Fonction pour générer la liste des mois disponibles (2021 → année actuelle)
   const generateAvailableMonths = () => {
     const months = []
     const currentDate = new Date()
     const currentYear = currentDate.getFullYear()
+    const startYear = 2021 // L'entreprise a débuté en 2021
     
     // Noms des mois en français
     const monthNames = [
@@ -38,20 +39,20 @@ const Dashboard: React.FC = () => {
       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
     ]
     
-    // Générer TOUS les mois de l'année en cours (janvier à décembre)
-    // Car en comptabilité, on peut avoir des écritures prévisionnelles
-    for (let month = 1; month <= 12; month++) {
-      const monthFormatted = month.toString().padStart(2, '0')
-      const monthKey = `${currentYear}-${monthFormatted}`
-      
-      months.push({
-        value: monthKey,
-        label: `${monthNames[month - 1]} ${currentYear}`
-      })
+    // Générer TOUS les mois de 2021 jusqu'à l'année actuelle
+    for (let year = currentYear; year >= startYear; year--) {
+      for (let month = 12; month >= 1; month--) {
+        const monthFormatted = month.toString().padStart(2, '0')
+        const monthKey = `${year}-${monthFormatted}`
+        
+        months.push({
+          value: monthKey,
+          label: `${monthNames[month - 1]} ${year}`
+        })
+      }
     }
     
-    // Trier par ordre décroissant (le plus récent en premier)
-    return months.reverse()
+    return months
   }
 
   // Fonction pour générer la liste des années disponibles (2021 → année actuelle)
