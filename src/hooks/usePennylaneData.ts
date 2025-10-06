@@ -206,7 +206,7 @@ export const usePennylaneData = (
         const cumulativeBreakdowns = calculateCumulativeBreakdowns(yearData)
         
         // Traiter les données cumulées
-        await processCumulativeData(cumulativeKpis, cumulativeBreakdowns, lastSyncDate)
+        await processCumulativeData(cumulativeKpis, cumulativeBreakdowns, lastSyncDate || new Date().toISOString())
       } else {
         console.log('⚠️ Aucune donnée disponible pour l\'année', year)
         setKpis({
