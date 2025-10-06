@@ -38,23 +38,24 @@ module.exports = async function handler(req, res) {
       await client.query('DELETE FROM sync_logs WHERE message LIKE \'%test%\' OR message LIKE \'%fallback%\'')
       console.log('✅ Données de test supprimées')
 
-      // Récupérer les 12 derniers mois à synchroniser
+      // Récupérer TOUS les mois de l'année en cours (janvier à décembre)
       const monthsToSync = []
       const currentDate = new Date()
+      const currentYear = currentDate.getFullYear()
       
-      for (let i = 11; i >= 0; i--) {
-        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
-        const month = date.toISOString().slice(0, 7) // Format YYYY-MM
-        const year = date.getFullYear()
-        const monthNumber = date.getMonth() + 1
+      // Synchroniser tous les mois de l'année en cours (1-12)
+      for (let monthNumber = 1; monthNumber <= 12; monthNumber++) {
+        const monthFormatted = monthNumber.toString().padStart(2, '0')
+        const month = `${currentYear}-${monthFormatted}`
+        const year = currentYear
         
-        monthsToSync.push({ month, year, monthNumber, date })
+        monthsToSync.push({ month, year, monthNumber })
       }
 
       console.log(`📅 Synchronisation de ${monthsToSync.length} mois:`, monthsToSync.map(m => m.month))
 
       // Synchroniser chaque mois
-      for (const { month, year, monthNumber, date } of monthsToSync) {
+      for (const { month, year, monthNumber } of monthsToSync) {
         console.log(`🔄 Synchronisation du mois ${month}...`)
         
         try {
