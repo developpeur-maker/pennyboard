@@ -205,30 +205,6 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          {/* Toggle Vue mensuelle / annuelle */}
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('month')}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'month'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Mois
-            </button>
-            <button
-              onClick={() => setViewMode('year')}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'year'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Année
-            </button>
-          </div>
-
           {/* Sélecteur conditionnel */}
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-gray-600" />
