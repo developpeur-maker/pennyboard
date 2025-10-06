@@ -119,13 +119,12 @@ module.exports = async function handler(req, res) {
       // Enregistrer le succès dans les logs
       const duration = Date.now() - startTime
       await client.query(`
-        INSERT INTO sync_logs (sync_type, status, message, months_processed, duration_ms, api_calls_count)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO sync_logs (sync_type, status, message, duration_ms, api_calls_count)
+        VALUES ($1, $2, $3, $4, $5)
       `, [
         'historical',
         'success',
         `Synchronisation historique réussie de ${recordsProcessed} mois`,
-        recordsProcessed,
         duration,
         apiCallsCount
       ])
