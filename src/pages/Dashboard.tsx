@@ -25,6 +25,52 @@ const Dashboard: React.FC = () => {
     
     return `${year}-${monthFormatted}`
   }
+
+  // Fonction pour générer la liste des mois disponibles (année en cours uniquement)
+  const generateAvailableMonths = () => {
+    const months = []
+    const currentDate = new Date()
+    const currentYear = currentDate.getFullYear()
+    const currentMonth = currentDate.getMonth() + 1 // 1-12
+    
+    // Noms des mois en français
+    const monthNames = [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ]
+    
+    // Générer uniquement les mois de l'année en cours (janvier jusqu'au mois actuel)
+    for (let month = 1; month <= currentMonth; month++) {
+      const monthFormatted = month.toString().padStart(2, '0')
+      const monthKey = `${currentYear}-${monthFormatted}`
+      
+      months.push({
+        value: monthKey,
+        label: `${monthNames[month - 1]} ${currentYear}`
+      })
+    }
+    
+    // Trier par ordre décroissant (le plus récent en premier)
+    return months.reverse()
+  }
+
+  // Fonction pour générer la liste des années disponibles (2021 → année actuelle)
+  const generateAvailableYears = () => {
+    const years = []
+    const currentDate = new Date()
+    const currentYear = currentDate.getFullYear()
+    const startYear = 2021 // L'entreprise a débuté en 2021
+    
+    // Générer les années de 2021 jusqu'à l'année actuelle
+    for (let year = currentYear; year >= startYear; year--) {
+      years.push({
+        value: year.toString(),
+        label: `Année ${year}`
+      })
+    }
+    
+    return years
+  }
   
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
@@ -186,21 +232,43 @@ const Dashboard: React.FC = () => {
           {/* Sélecteur conditionnel */}
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-gray-600" />
+            
+            {/* Segmented control pour choisir le mode */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'month'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Mois
+              </button>
+              <button
+                onClick={() => setViewMode('year')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'year'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Année
+              </button>
+            </div>
+
+            {/* Sélecteur de mois ou d'année */}
             {viewMode === 'month' ? (
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
               >
-                <option value="2025-09">Septembre 2025</option>
-                <option value="2025-08">Août 2025</option>
-                <option value="2025-07">Juillet 2025</option>
-                <option value="2025-06">Juin 2025</option>
-                <option value="2025-05">Mai 2025</option>
-                <option value="2025-04">Avril 2025</option>
-                <option value="2025-03">Mars 2025</option>
-                <option value="2025-02">Février 2025</option>
-                <option value="2025-01">Janvier 2025</option>
+                {generateAvailableMonths().map((month) => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
+                ))}
               </select>
             ) : (
               <select
@@ -208,9 +276,11 @@ const Dashboard: React.FC = () => {
                 onChange={(e) => setSelectedYear(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
               >
-                <option value="2025">Année 2025</option>
-                <option value="2024">Année 2024</option>
-                <option value="2023">Année 2023</option>
+                {generateAvailableYears().map((year) => (
+                  <option key={year.value} value={year.value}>
+                    {year.label}
+                  </option>
+                ))}
               </select>
             )}
           </div>

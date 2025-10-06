@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { PennylaneResultatComptable, PennylaneTresorerie } from '../services/pennylaneApi'
 import { 
-  getAllDataFromDatabase
+  getAllDataFromDatabase,
+  getAllYearDataFromDatabase
 } from '../services/databaseApi'
 
 interface KPIData {
@@ -81,11 +82,36 @@ export const usePennylaneData = (
       setLoading(true)
       setError(null)
 
-      console.log('🔄 Chargement des données...')
+      console.log('🔄 Chargement des données...', { viewMode, selectedMonth, selectedYear })
 
+      if (viewMode === 'year') {
+        // Mode "Année" : récupérer toutes les données de l'année et les cumuler
+        console.log('📊 Mode Année : récupération des données cumulées pour', selectedYear)
+        await fetchYearData(selectedYear)
+      } else {
+        // Mode "Mois" : récupérer les données du mois sélectionné
+        console.log('📊 Mode Mois : récupération des données pour', selectedMonth)
+        await fetchMonthData(selectedMonth)
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des données:', error)
+      setError(error instanceof Error ? error.message : 'Erreur inconnue')
+      setKpis(null)
+      setChargesBreakdown([])
+      setChargesSalarialesBreakdown([])
+      setRevenusBreakdown([])
+      setTresorerieBreakdown([])
+      setLastSyncDate(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchMonthData = async (month: string) => {
+    try {
       // Essayer d'abord la base de données
       console.log('📊 Tentative de récupération depuis la base de données...')
-      const dbResponse = await getAllDataFromDatabase(selectedMonth)
+      const dbResponse = await getAllDataFromDatabase(month)
       
       console.log('🔍 Réponse de la base de données:', {
         success: dbResponse.success,
@@ -134,10 +160,56 @@ export const usePennylaneData = (
       setLastSyncDate(null)
 
     } catch (error) {
-      console.error('❌ Erreur lors du chargement des données:', error)
+      console.error('❌ Erreur lors du chargement des données du mois:', error)
       setError(error instanceof Error ? error.message : 'Erreur inconnue')
-    } finally {
-      setLoading(false)
+    }
+  }
+
+  const fetchYearData = async (year: string) => {
+    try {
+      console.log('📊 Récupération des données annuelles pour', year)
+      
+      // Récupérer tous les mois de l'année depuis la base de données
+      const yearData = await getAllYearDataFromDatabase(year)
+      
+      if (yearData.success && yearData.data && yearData.data.length > 0) {
+        console.log('✅ Données annuelles récupérées:', yearData.data.length, 'mois')
+        
+        // Cumuler les KPIs de tous les mois
+        const cumulativeKpis = calculateCumulativeKPIs(yearData.data)
+        const cumulativeBreakdowns = calculateCumulativeBreakdowns(yearData.data)
+        
+        // Traiter les données cumulées
+        await processCumulativeData(cumulativeKpis, cumulativeBreakdowns, yearData.data[0].updated_at)
+      } else {
+        console.log('⚠️ Aucune donnée disponible pour l\'année', year)
+        setKpis({
+          ventes_706: null,
+          chiffre_affaires: null,
+          total_produits_exploitation: null,
+          charges: null,
+          charges_salariales: null,
+          resultat_net: null,
+          solde_tresorerie: null,
+          growth: null,
+          hasData: false,
+          rentabilite: null,
+          ventes_growth: null,
+          ca_growth: null,
+          total_produits_growth: null,
+          charges_growth: null,
+          resultat_growth: null,
+          tresorerie_growth: null
+        })
+        setChargesBreakdown([])
+        setChargesSalarialesBreakdown([])
+        setRevenusBreakdown([])
+        setTresorerieBreakdown([])
+        setLastSyncDate(null)
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des données annuelles:', error)
+      setError(error instanceof Error ? error.message : 'Erreur inconnue')
     }
   }
 
@@ -289,6 +361,122 @@ export const usePennylaneData = (
     }
     
     return descriptions[code] || 'Classe comptable'
+  }
+
+  // Calculer les KPIs cumulés pour une année
+  const calculateCumulativeKPIs = (yearData: any[]): KPIData => {
+    let cumulativeVentes706 = 0
+    let cumulativeChiffreAffaires = 0
+    let cumulativeTotalProduits = 0
+    let cumulativeCharges = 0
+    let cumulativeChargesSalariales = 0
+    let cumulativeResultatNet = 0
+    let cumulativeTresorerie = 0
+
+    yearData.forEach(monthData => {
+      if (monthData.kpis) {
+        cumulativeVentes706 += monthData.kpis.ventes_706 || 0
+        cumulativeChiffreAffaires += monthData.kpis.chiffre_affaires || 0
+        cumulativeTotalProduits += monthData.kpis.revenus_totaux || 0
+        cumulativeCharges += monthData.kpis.charges || 0
+        cumulativeChargesSalariales += monthData.kpis.charges_salariales || 0
+        cumulativeResultatNet += monthData.kpis.resultat_net || 0
+        cumulativeTresorerie += monthData.kpis.tresorerie || 0
+      }
+    })
+
+    // Calculer la rentabilité sur les totaux cumulés
+    const rentabilite = cumulativeTotalProduits > 0 ? {
+      ratio: Math.round(((cumulativeResultatNet / cumulativeTotalProduits) * 100) * 100) / 100,
+      message: 'Rentabilité annuelle',
+      montant: cumulativeResultatNet
+    } : null
+
+    return {
+      ventes_706: cumulativeVentes706,
+      chiffre_affaires: cumulativeChiffreAffaires,
+      total_produits_exploitation: cumulativeTotalProduits,
+      charges: cumulativeCharges,
+      charges_salariales: cumulativeChargesSalariales,
+      resultat_net: cumulativeResultatNet,
+      solde_tresorerie: cumulativeTresorerie,
+      growth: null, // Pas de croissance pour les données annuelles
+      hasData: true,
+      rentabilite,
+      ventes_growth: null,
+      ca_growth: null,
+      total_produits_growth: null,
+      charges_growth: null,
+      resultat_growth: null,
+      tresorerie_growth: null
+    }
+  }
+
+  // Calculer les breakdowns cumulés pour une année
+  const calculateCumulativeBreakdowns = (yearData: any[]) => {
+    const cumulativeCharges: { [key: string]: { amount: number, label: string } } = {}
+    const cumulativeChargesSalariales: { [key: string]: { amount: number, label: string } } = {}
+    const cumulativeRevenus: { [key: string]: { amount: number, label: string } } = {}
+    const cumulativeTresorerie: { [key: string]: { balance: number, label: string } } = {}
+
+    yearData.forEach(monthData => {
+      // Cumuler les charges
+      if (monthData.charges_breakdown) {
+        Object.entries(monthData.charges_breakdown).forEach(([code, data]: [string, any]) => {
+          if (!cumulativeCharges[code]) {
+            cumulativeCharges[code] = { amount: 0, label: data.label || `Compte ${code}` }
+          }
+          cumulativeCharges[code].amount += data.amount || 0
+        })
+      }
+
+      // Cumuler les charges salariales
+      if (monthData.charges_salariales_breakdown) {
+        Object.entries(monthData.charges_salariales_breakdown).forEach(([code, data]: [string, any]) => {
+          if (!cumulativeChargesSalariales[code]) {
+            cumulativeChargesSalariales[code] = { amount: 0, label: data.label || `Compte ${code}` }
+          }
+          cumulativeChargesSalariales[code].amount += data.amount || 0
+        })
+      }
+
+      // Cumuler les revenus
+      if (monthData.revenus_breakdown) {
+        Object.entries(monthData.revenus_breakdown).forEach(([code, data]: [string, any]) => {
+          if (!cumulativeRevenus[code]) {
+            cumulativeRevenus[code] = { amount: 0, label: data.label || `Compte ${code}` }
+          }
+          cumulativeRevenus[code].amount += data.amount || 0
+        })
+      }
+
+      // Cumuler la trésorerie
+      if (monthData.tresorerie_breakdown) {
+        Object.entries(monthData.tresorerie_breakdown).forEach(([code, data]: [string, any]) => {
+          if (!cumulativeTresorerie[code]) {
+            cumulativeTresorerie[code] = { balance: 0, label: data.label || `Compte ${code}` }
+          }
+          cumulativeTresorerie[code].balance += data.balance || 0
+        })
+      }
+    })
+
+    return {
+      charges: cumulativeCharges,
+      chargesSalariales: cumulativeChargesSalariales,
+      revenus: cumulativeRevenus,
+      tresorerie: cumulativeTresorerie
+    }
+  }
+
+  // Traiter les données cumulées
+  const processCumulativeData = async (kpis: KPIData, breakdowns: any, lastSync: string) => {
+    setKpis(kpis)
+    setChargesBreakdown(convertBreakdownToArray(breakdowns.charges))
+    setChargesSalarialesBreakdown(convertBreakdownToArray(breakdowns.chargesSalariales))
+    setRevenusBreakdown(convertBreakdownToArray(breakdowns.revenus))
+    setTresorerieBreakdown(convertTresorerieBreakdownToArray(breakdowns.tresorerie))
+    setLastSyncDate(lastSync)
   }
 
   useEffect(() => {

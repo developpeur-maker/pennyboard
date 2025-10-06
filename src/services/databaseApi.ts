@@ -126,6 +126,12 @@ export async function getCurrentMonthData(): Promise<DatabaseApiResponse<Monthly
   return getAllDataFromDatabase(currentMonth)
 }
 
+// Récupérer toutes les données d'une année
+export async function getAllYearDataFromDatabase(year: string): Promise<DatabaseApiResponse<MonthlyData[]>> {
+  console.log(`📊 Récupération de toutes les données de l'année ${year} depuis la base de données`)
+  return apiCall<MonthlyData[]>('/data', { year, type: 'year' })
+}
+
 // Vérifier si les données sont à jour
 export function isDataStale(updatedAt: string, maxAgeHours: number = 24): boolean {
   const dataAge = Date.now() - new Date(updatedAt).getTime()

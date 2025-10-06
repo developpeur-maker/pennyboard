@@ -14,13 +14,66 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { month, type } = req.query
+    const { month, year, type } = req.query
 
-    if (!month || typeof month !== 'string') {
-      return res.status(400).json({ error: 'Le paramètre "month" est requis.' })
+    // Vérifier si c'est une requête d'année ou de mois
+    if (year && type === 'year') {
+      // Requête d'année
+      if (!year || typeof year !== 'string') {
+        return res.status(400).json({ error: 'Le paramètre "year" est requis pour les requêtes d\'année.' })
+      }
+      
+      console.log(`📊 Récupération des données annuelles pour ${year}`)
+      
+      // Connexion à la base de données
+      const pool = new Pool({
+        connectionString: process.env.POSTGRES_URL,
+        ssl: {
+          rejectUnauthorized: false
+        }
+      })
+
+      const client = await pool.connect()
+      try {
+        // Récupérer toutes les données de l'année
+        const result = await client.query(`
+          SELECT 
+            month, year, month_number,
+            trial_balance, kpis, charges_breakdown, charges_salariales_breakdown,
+            revenus_breakdown, tresorerie_breakdown,
+            is_current_month, updated_at
+          FROM monthly_data 
+          WHERE year = $1
+          ORDER BY month_number ASC
+        `, [year])
+
+        if (result.rows.length === 0) {
+          return res.status(404).json({ 
+            error: `Aucune donnée trouvée pour l'année ${year}`,
+            suggestion: 'Vérifiez que la synchronisation a été effectuée'
+          })
+        }
+
+        console.log(`✅ ${result.rows.length} mois trouvés pour l'année ${year}`)
+        
+        return res.status(200).json({
+          success: true,
+          data: result.rows,
+          year: year,
+          months_count: result.rows.length
+        })
+
+      } finally {
+        client.release()
+      }
+    } else {
+      // Requête de mois (logique existante)
+      if (!month || typeof month !== 'string') {
+        return res.status(400).json({ error: 'Le paramètre "month" est requis.' })
+      }
+
+      console.log(`📊 Récupération des données pour ${month} (type: ${type || 'all'})`)
     }
-
-    console.log(`📊 Récupération des données pour ${month} (type: ${type || 'all'})`)
 
     // Connexion à la base de données
     const pool = new Pool({
