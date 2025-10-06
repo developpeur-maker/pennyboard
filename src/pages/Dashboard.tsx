@@ -170,7 +170,7 @@ const Dashboard: React.FC = () => {
       setIsSyncing(true)
       console.log('🔄 Début de la synchronisation historique (2021-2024)...')
       
-      const response = await fetch('/api/sync-historical', {
+      const response = await fetch('/api/sync-historical-v2', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -185,7 +185,7 @@ const Dashboard: React.FC = () => {
         // Actualiser les données après synchronisation
         await refetch()
         
-        alert(`✅ Synchronisation historique réussie ! ${result.monthsSynced} mois traités.`)
+        alert(`✅ Synchronisation historique réussie ! ${result.recordsProcessed} mois traités.`)
       } else {
         const error = await response.json()
         console.error('❌ Erreur de synchronisation historique:', error)

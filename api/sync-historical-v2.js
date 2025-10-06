@@ -1,4 +1,4 @@
-// API de synchronisation historique (2021-2024)
+// API de synchronisation historique basée sur le code qui fonctionne pour 2025
 const { Pool } = require('pg')
 
 module.exports = async function handler(req, res) {
@@ -19,7 +19,7 @@ module.exports = async function handler(req, res) {
   let recordsProcessed = 0
 
   try {
-    console.log('🔄 Début de la synchronisation historique Pennylane (2021-2024)...')
+    console.log('🔄 Début de la synchronisation historique Pennylane...')
 
     // Connexion à la base de données
     const pool = new Pool({
@@ -32,52 +32,57 @@ module.exports = async function handler(req, res) {
     const client = await pool.connect()
     
     try {
-      // Récupérer TOUS les mois des années 2021-2024
+      // Récupérer TOUS les mois des années historiques (2021-2024)
       const monthsToSync = []
       const historicalYears = [2021, 2022, 2023, 2024]
       
       console.log(`📅 Synchronisation des années historiques: ${historicalYears.join(', ')}`)
       
-      // Synchroniser tous les mois des années historiques (1-12 pour chaque année)
+      // Synchroniser TOUS les mois des années historiques
       for (const year of historicalYears) {
         for (let monthNumber = 1; monthNumber <= 12; monthNumber++) {
           const monthFormatted = monthNumber.toString().padStart(2, '0')
           const month = `${year}-${monthFormatted}`
           
           monthsToSync.push({ month, year, monthNumber })
-          console.log(`📊 Ajout de ${month} à la synchronisation historique`)
+          console.log(`📊 Ajout de ${month} à la synchronisation`)
         }
       }
 
-      console.log(`📅 Synchronisation de ${monthsToSync.length} mois historiques:`, monthsToSync.map(m => m.month))
+      console.log(`📅 Synchronisation de ${monthsToSync.length} mois historiques`)
 
       // Synchroniser chaque mois
       for (const { month, year, monthNumber } of monthsToSync) {
+        console.log(`🔄 Synchronisation du mois ${month}...`)
+        
         try {
-          console.log(`🔄 Synchronisation de ${month}...`)
-          
-          // Dates pour la période
-          const startDate = `${year}-${monthNumber.toString().padStart(2, '0')}-01`
+          // Calculer les dates de début et fin du mois
+          const startDate = new Date(year, monthNumber - 1, 1).toISOString().split('T')[0]
           const endDate = new Date(year, monthNumber, 0).toISOString().split('T')[0]
           
-          // Récupérer les données Pennylane
+          console.log(`📅 Période: ${startDate} → ${endDate}`)
+          
+          // Récupérer les vraies données Pennylane (même méthode que 2025)
           const trialBalance = await getTrialBalanceFromPennylane(startDate, endDate)
           apiCallsCount++
           
-          // Calculer les KPIs
-          const kpis = calculateKPIsFromTrialBalance(trialBalance, month)
+          console.log(`📊 Trial balance récupéré: ${trialBalance.items ? trialBalance.items.length : 0} éléments`)
           
-          // Calculer les breakdowns
+          // Calculer les KPIs à partir du trial balance
+          const kpis = calculateKPIsFromTrialBalance(trialBalance, month)
           const chargesBreakdown = calculateChargesBreakdown(trialBalance)
           const chargesSalarialesBreakdown = calculateChargesSalarialesBreakdown(trialBalance)
           const revenusBreakdown = calculateRevenusBreakdown(trialBalance)
           const tresorerieBreakdown = calculateTresorerieBreakdown(trialBalance)
           
+          console.log(`📊 KPIs calculés pour ${month}:`, kpis)
+          console.log(`📋 Breakdowns: Charges=${Object.keys(chargesBreakdown).length}, Revenus=${Object.keys(revenusBreakdown).length}`)
+          
           // Déterminer si c'est le mois actuel (probablement false pour historique)
           const currentDate = new Date()
           const isCurrentMonth = month === currentDate.toISOString().slice(0, 7)
           
-          // Stocker dans la base de données (ÉCRASER les données existantes)
+          // Stocker dans la base de données (ÉCRASER les données historiques)
           const insertResult = await client.query(`
             INSERT INTO monthly_data (
               month, year, month_number, trial_balance, kpis, 
@@ -108,11 +113,12 @@ module.exports = async function handler(req, res) {
           recordsProcessed++
           console.log(`✅ ${month} synchronisé avec succès`)
           
-          // Pause pour éviter le rate limit
+          // Petite pause pour éviter les limites de taux
           await new Promise(resolve => setTimeout(resolve, 1000))
           
         } catch (monthError) {
-          console.error(`❌ Erreur pour le mois ${month}:`, monthError)
+          console.error(`❌ Erreur pour ${month}:`, monthError.message)
+          // Continuer avec le mois suivant
         }
       }
 
@@ -129,20 +135,22 @@ module.exports = async function handler(req, res) {
         apiCallsCount
       ])
 
-      console.log(`✅ Synchronisation historique terminée: ${recordsProcessed} mois, ${apiCallsCount} appels API, ${duration}ms`)
-      res.status(200).json({ 
-        message: 'Synchronisation historique réussie',
-        monthsSynced: recordsProcessed,
-        apiCalls: apiCallsCount,
-        duration: duration
-      })
+      console.log(`🎉 Synchronisation historique terminée: ${recordsProcessed} mois traités`)
       
+      res.json({
+        success: true,
+        message: `Synchronisation historique réussie de ${recordsProcessed} mois`,
+        recordsProcessed,
+        apiCallsCount,
+        duration: `${Math.round(duration / 1000)}s`
+      })
+
     } finally {
       client.release()
     }
+
   } catch (error) {
     console.error('❌ Erreur lors de la synchronisation historique:', error)
-    console.error('❌ Stack trace:', error.stack)
     
     // Enregistrer l'erreur dans les logs
     try {
@@ -170,7 +178,7 @@ module.exports = async function handler(req, res) {
   }
 }
 
-// Fonction pour récupérer les données Pennylane directement (copiée de api/sync.js)
+// Fonction pour récupérer les données Pennylane directement (MÊME QUE 2025)
 async function getTrialBalanceFromPennylane(startDate, endDate) {
   try {
     const url = `https://app.pennylane.com/api/external/v2/trial_balance?period_start=${startDate}&period_end=${endDate}&is_auxiliary=false&page=1&per_page=1000`
@@ -190,7 +198,9 @@ async function getTrialBalanceFromPennylane(startDate, endDate) {
     const responseData = await response.json()
     
     if (!responseData.items || responseData.items.length === 0) {
-      throw new Error('Aucune donnée disponible dans Pennylane pour cette période')
+      console.log(`⚠️ Aucune donnée disponible dans Pennylane pour ${startDate} → ${endDate}`)
+      // Retourner un objet vide mais valide
+      return { items: [] }
     }
     
     return responseData
@@ -200,7 +210,7 @@ async function getTrialBalanceFromPennylane(startDate, endDate) {
   }
 }
 
-// Fonctions de calcul des KPIs (copiées de api/sync.js)
+// Fonctions de calcul des KPIs (COPIÉES DE api/sync.js)
 function calculateKPIsFromTrialBalance(trialBalance, month) {
   const items = trialBalance.items || []
   
@@ -248,27 +258,27 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
   
   return {
     period: month,
-    ventes_706: Math.round(ventes_706 * 100) / 100,
-    chiffre_affaires: Math.round(ventes_706 * 100) / 100,
-    revenus_totaux: Math.round(revenus_totaux * 100) / 100,
     charges: Math.round(charges * 100) / 100,
-    charges_salariales: Math.round(charges_salariales * 100) / 100,
+    ventes_706: Math.round(ventes_706 * 100) / 100,
     resultat_net: Math.round(resultat_net * 100) / 100,
-    solde_tresorerie: Math.round(tresorerie * 100) / 100
+    revenus_totaux: Math.round(revenus_totaux * 100) / 100,
+    chiffre_affaires: Math.round(ventes_706 * 100) / 100,
+    solde_tresorerie: Math.round(tresorerie * 100) / 100,
+    charges_salariales: Math.round(charges_salariales * 100) / 100
   }
 }
 
 function calculateChargesBreakdown(trialBalance) {
-  const breakdown = {}
   const items = trialBalance.items || []
+  const breakdown = {}
   
   items.forEach((item) => {
     const accountNumber = item.number || ''
+    const debit = parseFloat(item.debit) || 0
+    const credit = parseFloat(item.credit) || 0
+    
     if (accountNumber.startsWith('6')) {
-      const debit = parseFloat(item.debit) || 0
-      const credit = parseFloat(item.credit) || 0
       const solde = debit - credit
-      
       if (solde !== 0) {
         breakdown[accountNumber] = {
           label: item.label || `Compte ${accountNumber}`,
@@ -282,16 +292,16 @@ function calculateChargesBreakdown(trialBalance) {
 }
 
 function calculateRevenusBreakdown(trialBalance) {
-  const breakdown = {}
   const items = trialBalance.items || []
+  const breakdown = {}
   
   items.forEach((item) => {
     const accountNumber = item.number || ''
+    const debit = parseFloat(item.debit) || 0
+    const credit = parseFloat(item.credit) || 0
+    
     if (accountNumber.startsWith('7')) {
-      const debit = parseFloat(item.debit) || 0
-      const credit = parseFloat(item.credit) || 0
       const solde = credit - debit
-      
       if (solde !== 0) {
         breakdown[accountNumber] = {
           label: item.label || `Compte ${accountNumber}`,
@@ -305,16 +315,16 @@ function calculateRevenusBreakdown(trialBalance) {
 }
 
 function calculateTresorerieBreakdown(trialBalance) {
-  const breakdown = {}
   const items = trialBalance.items || []
+  const breakdown = {}
   
   items.forEach((item) => {
     const accountNumber = item.number || ''
+    const debit = parseFloat(item.debit) || 0
+    const credit = parseFloat(item.credit) || 0
+    
     if (accountNumber.startsWith('512')) {
-      const debit = parseFloat(item.debit) || 0
-      const credit = parseFloat(item.credit) || 0
       const solde = debit - credit
-      
       if (solde !== 0) {
         breakdown[accountNumber] = {
           label: item.label || `Compte ${accountNumber}`,
@@ -328,17 +338,17 @@ function calculateTresorerieBreakdown(trialBalance) {
 }
 
 function calculateChargesSalarialesBreakdown(trialBalance) {
-  const breakdown = {}
   const items = trialBalance.items || []
+  const breakdown = {}
   
   items.forEach((item) => {
     const accountNumber = item.number || ''
+    const debit = parseFloat(item.debit) || 0
+    const credit = parseFloat(item.credit) || 0
+    
     if (accountNumber.startsWith('64')) {
-      const debit = parseFloat(item.debit) || 0
-      const credit = parseFloat(item.credit) || 0
       const solde = debit - credit
-      
-      if (solde > 0) {
+      if (solde > 0) { // Seulement les soldes positifs
         breakdown[accountNumber] = {
           label: item.label || `Compte ${accountNumber}`,
           amount: Math.round(solde * 100) / 100
