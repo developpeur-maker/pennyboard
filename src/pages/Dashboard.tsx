@@ -26,34 +26,6 @@ const Dashboard: React.FC = () => {
     return `${year}-${monthFormatted}`
   }
 
-  // Fonction pour générer la liste des mois disponibles (2021 → année actuelle)
-  const generateAvailableMonths = () => {
-    const months = []
-    const currentDate = new Date()
-    const currentYear = currentDate.getFullYear()
-    const startYear = 2021 // L'entreprise a débuté en 2021
-    
-    // Noms des mois en français
-    const monthNames = [
-      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-    ]
-    
-    // Générer TOUS les mois de 2021 jusqu'à l'année actuelle
-    for (let year = currentYear; year >= startYear; year--) {
-      for (let month = 12; month >= 1; month--) {
-        const monthFormatted = month.toString().padStart(2, '0')
-        const monthKey = `${year}-${monthFormatted}`
-        
-        months.push({
-          value: monthKey,
-          label: `${monthNames[month - 1]} ${year}`
-        })
-      }
-    }
-    
-    return months
-  }
 
   // Fonction pour générer la liste des années disponibles (2021 → année actuelle)
   const generateAvailableYears = () => {
@@ -66,11 +38,35 @@ const Dashboard: React.FC = () => {
     for (let year = currentYear; year >= startYear; year--) {
       years.push({
         value: year.toString(),
-        label: `Année ${year}`
+        label: `Exercice ${year}`
       })
     }
     
     return years
+  }
+
+  // Fonction pour générer les mois d'une année spécifique
+  const generateMonthsForYear = (year: string) => {
+    const months = []
+    
+    // Noms des mois en français
+    const monthNames = [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ]
+    
+    // Générer tous les mois de l'année (janvier à décembre)
+    for (let month = 1; month <= 12; month++) {
+      const monthFormatted = month.toString().padStart(2, '0')
+      const monthKey = `${year}-${monthFormatted}`
+      
+      months.push({
+        value: monthKey,
+        label: `${monthNames[month - 1]} ${year}`
+      })
+    }
+    
+    return months
   }
   
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
@@ -81,7 +77,11 @@ const Dashboard: React.FC = () => {
   const [isRevenusModalOpen, setIsRevenusModalOpen] = useState(false)
   const [isTresorerieModalOpen, setIsTresorerieModalOpen] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
-  const { kpis, chargesBreakdown, chargesSalarialesBreakdown, revenusBreakdown, tresorerieBreakdown, lastSyncDate, loading, error, refetch } = usePennylaneData(selectedMonth, undefined, viewMode, selectedYear)
+  // Déterminer si on affiche l'année complète ou un mois spécifique
+  const isFullYear = viewMode === 'year' || selectedMonth.endsWith('-00')
+  const actualSelectedMonth = isFullYear ? undefined : selectedMonth
+  
+  const { kpis, chargesBreakdown, chargesSalarialesBreakdown, revenusBreakdown, tresorerieBreakdown, lastSyncDate, loading, error, refetch } = usePennylaneData(actualSelectedMonth, undefined, isFullYear ? 'year' : 'month', selectedYear)
 
   // Debug pour les charges salariales
   console.log('🔍 Dashboard - chargesSalarialesBreakdown:', chargesSalarialesBreakdown)
@@ -269,23 +269,18 @@ const Dashboard: React.FC = () => {
               </button>
             </div>
 
-            {/* Sélecteur de mois ou d'année */}
-            {viewMode === 'month' ? (
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
-              >
-                {generateAvailableMonths().map((month) => (
-                  <option key={month.value} value={month.value}>
-                    {month.label}
-                  </option>
-                ))}
-              </select>
-            ) : (
+            {/* Sélecteur à deux niveaux : Année puis Mois */}
+            <div className="flex items-center gap-2">
+              {/* Sélecteur d'année */}
               <select
                 value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
+                onChange={(e) => {
+                  setSelectedYear(e.target.value)
+                  // Réinitialiser le mois sélectionné quand on change d'année
+                  if (viewMode === 'month') {
+                    setSelectedMonth(`${e.target.value}-01`)
+                  }
+                }}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
               >
                 {generateAvailableYears().map((year) => (
@@ -294,7 +289,27 @@ const Dashboard: React.FC = () => {
                   </option>
                 ))}
               </select>
-            )}
+
+              {/* Sélecteur de mois ou année complète */}
+              {viewMode === 'month' ? (
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
+                >
+                  <option value={`${selectedYear}-00`}>Exercice complet</option>
+                  {generateMonthsForYear(selectedYear).map((month) => (
+                    <option key={month.value} value={month.value}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="px-4 py-2 bg-gray-100 rounded-lg text-gray-600 font-medium">
+                  Exercice complet
+                </div>
+              )}
+            </div>
           </div>
           <button
             onClick={refetch}
