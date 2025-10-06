@@ -170,7 +170,7 @@ const Dashboard: React.FC = () => {
       setIsSyncing(true)
       console.log('🔄 Début de la synchronisation historique (2021-2024)...')
       
-      const response = await fetch('/api/sync-historical-v2', {
+      const response = await fetch('/api/sync-historical-fixed', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
