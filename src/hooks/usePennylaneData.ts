@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { PennylaneResultatComptable, PennylaneTresorerie } from '../services/pennylaneApi'
 import { 
-  getAllDataFromDatabase,
-  getAllYearDataFromDatabase
+  getAllDataFromDatabase
 } from '../services/databaseApi'
 
 interface KPIData {
@@ -169,18 +168,45 @@ export const usePennylaneData = (
     try {
       console.log('📊 Récupération des données annuelles pour', year)
       
-      // Récupérer tous les mois de l'année depuis la base de données
-      const yearData = await getAllYearDataFromDatabase(year)
+      // Générer tous les mois de l'année (janvier à décembre)
+      const yearMonths = []
+      for (let month = 1; month <= 12; month++) {
+        const monthFormatted = month.toString().padStart(2, '0')
+        yearMonths.push(`${year}-${monthFormatted}`)
+      }
       
-      if (yearData.success && yearData.data && yearData.data.length > 0) {
-        console.log('✅ Données annuelles récupérées:', yearData.data.length, 'mois')
+      console.log('📅 Mois à récupérer:', yearMonths)
+      
+      // Récupérer les données de chaque mois individuellement
+      const yearData = []
+      let lastSyncDate = null
+      
+      for (const month of yearMonths) {
+        try {
+          const monthData = await getAllDataFromDatabase(month)
+          if (monthData.success && monthData.data) {
+            yearData.push(monthData.data)
+            if (!lastSyncDate || monthData.data.updated_at > lastSyncDate) {
+              lastSyncDate = monthData.data.updated_at
+            }
+            console.log(`✅ Données récupérées pour ${month}`)
+          } else {
+            console.log(`⚠️ Aucune donnée pour ${month}`)
+          }
+        } catch (monthError) {
+          console.log(`❌ Erreur pour ${month}:`, monthError)
+        }
+      }
+      
+      if (yearData.length > 0) {
+        console.log('✅ Données annuelles récupérées:', yearData.length, 'mois sur 12')
         
         // Cumuler les KPIs de tous les mois
-        const cumulativeKpis = calculateCumulativeKPIs(yearData.data)
-        const cumulativeBreakdowns = calculateCumulativeBreakdowns(yearData.data)
+        const cumulativeKpis = calculateCumulativeKPIs(yearData)
+        const cumulativeBreakdowns = calculateCumulativeBreakdowns(yearData)
         
         // Traiter les données cumulées
-        await processCumulativeData(cumulativeKpis, cumulativeBreakdowns, yearData.data[0].updated_at)
+        await processCumulativeData(cumulativeKpis, cumulativeBreakdowns, lastSyncDate)
       } else {
         console.log('⚠️ Aucune donnée disponible pour l\'année', year)
         setKpis({
