@@ -13,7 +13,8 @@
     "test-db-connection": "node scripts/test-db-connection.js",
     "check-db-data": "node scripts/check-db-data.js",
     "check-api-data": "node scripts/check-api-data.js",
-    "import-historical": "node scripts/import-historical-data.js"
+    "import-historical": "node scripts/import-historical-data.js",
+    "sync-historical": "node scripts/trigger-historical-sync.js"
   },
   "dependencies": {
     "@types/pg": "^8.15.5",
