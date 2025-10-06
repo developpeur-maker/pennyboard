@@ -406,8 +406,7 @@ export const usePennylaneData = (
     let cumulativeTotalProduits = 0
     let cumulativeCharges = 0
     let cumulativeChargesSalariales = 0
-    let cumulativeResultatNet = 0
-    let cumulativeTresorerie = 0
+    let lastMonthTresorerie = 0
 
     yearData.forEach(monthData => {
       if (monthData.kpis) {
@@ -416,10 +415,14 @@ export const usePennylaneData = (
         cumulativeTotalProduits += monthData.kpis.revenus_totaux || 0
         cumulativeCharges += monthData.kpis.charges || 0
         cumulativeChargesSalariales += monthData.kpis.charges_salariales || 0
-        cumulativeResultatNet += monthData.kpis.resultat_net || 0
-        cumulativeTresorerie += monthData.kpis.tresorerie || 0
+        
+        // Trésorerie = solde du dernier mois de l'année
+        lastMonthTresorerie = monthData.kpis.tresorerie || 0
       }
     })
+
+    // Calculer le résultat net : Total des revenus - Total des charges
+    const cumulativeResultatNet = cumulativeTotalProduits - cumulativeCharges
 
     // Calculer la rentabilité sur les totaux cumulés
     const rentabilite = cumulativeTotalProduits > 0 ? {
@@ -435,7 +438,7 @@ export const usePennylaneData = (
       charges: cumulativeCharges,
       charges_salariales: cumulativeChargesSalariales,
       resultat_net: cumulativeResultatNet,
-      solde_tresorerie: cumulativeTresorerie,
+      solde_tresorerie: lastMonthTresorerie, // Trésorerie du dernier mois
       growth: null, // Pas de croissance pour les données annuelles
       hasData: true,
       rentabilite,
