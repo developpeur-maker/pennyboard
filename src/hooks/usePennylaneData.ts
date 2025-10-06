@@ -177,26 +177,36 @@ export const usePennylaneData = (
       
       console.log('📅 Mois à récupérer:', yearMonths)
       
-      // Récupérer les données de chaque mois individuellement
-      const yearData = []
-      let lastSyncDate = null
-      
-      for (const month of yearMonths) {
+      // Récupérer les données de tous les mois en parallèle (beaucoup plus rapide !)
+      console.log('🚀 Lancement des requêtes parallèles...')
+      const monthPromises = yearMonths.map(async (month) => {
         try {
           const monthData = await getAllDataFromDatabase(month)
           if (monthData.success && monthData.data) {
-            yearData.push(monthData.data)
-            if (!lastSyncDate || monthData.data.updated_at > lastSyncDate) {
-              lastSyncDate = monthData.data.updated_at
-            }
             console.log(`✅ Données récupérées pour ${month}`)
+            return monthData.data
           } else {
             console.log(`⚠️ Aucune donnée pour ${month}`)
+            return null
           }
         } catch (monthError) {
           console.log(`❌ Erreur pour ${month}:`, monthError)
+          return null
         }
-      }
+      })
+      
+      // Attendre toutes les requêtes en parallèle
+      const monthResults = await Promise.all(monthPromises)
+      
+      // Filtrer les résultats valides et trouver la dernière date de sync
+      const yearData = monthResults.filter(data => data !== null)
+      let lastSyncDate = null
+      
+      yearData.forEach(data => {
+        if (!lastSyncDate || data.updated_at > lastSyncDate) {
+          lastSyncDate = data.updated_at
+        }
+      })
       
       if (yearData.length > 0) {
         console.log('✅ Données annuelles récupérées:', yearData.length, 'mois sur 12')
