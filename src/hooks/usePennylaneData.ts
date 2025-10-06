@@ -200,7 +200,7 @@ export const usePennylaneData = (
       
       // Filtrer les résultats valides et trouver la dernière date de sync
       const yearData = monthResults.filter(data => data !== null)
-      let lastSyncDate = null
+      let lastSyncDate: string | null = null
       
       yearData.forEach(data => {
         if (!lastSyncDate || data.updated_at > lastSyncDate) {
