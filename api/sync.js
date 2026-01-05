@@ -38,18 +38,23 @@ module.exports = async function handler(req, res) {
       await client.query('DELETE FROM sync_logs WHERE message LIKE \'%test%\' OR message LIKE \'%fallback%\'')
       console.log('✅ Données de test supprimées')
 
-      // Récupérer TOUS les mois de l'année en cours (janvier à décembre) + décembre de l'année précédente
+      // Récupérer TOUS les mois de l'année précédente (janvier à décembre) + année en cours (janvier à décembre)
       const monthsToSync = []
       const currentDate = new Date()
       const currentYear = currentDate.getFullYear()
       const previousYear = currentYear - 1
       
-      console.log(`📅 Synchronisation de l'année en cours: ${currentYear} + décembre ${previousYear}`)
+      console.log(`📅 Synchronisation de l'année précédente complète: ${previousYear} + année en cours: ${currentYear}`)
       
-      // Ajouter décembre de l'année précédente
-      const previousYearDecember = `${previousYear}-12`
-      monthsToSync.push({ month: previousYearDecember, year: previousYear, monthNumber: 12 })
-      console.log(`📊 Ajout de ${previousYearDecember} (décembre de l'année précédente) à la synchronisation`)
+      // Synchroniser TOUS les mois de l'année précédente (1-12)
+      for (let monthNumber = 1; monthNumber <= 12; monthNumber++) {
+        const monthFormatted = monthNumber.toString().padStart(2, '0')
+        const month = `${previousYear}-${monthFormatted}`
+        const year = previousYear
+        
+        monthsToSync.push({ month, year, monthNumber })
+        console.log(`📊 Ajout de ${month} (année précédente) à la synchronisation`)
+      }
       
       // Synchroniser TOUS les mois de l'année en cours (1-12)
       for (let monthNumber = 1; monthNumber <= 12; monthNumber++) {
@@ -58,7 +63,7 @@ module.exports = async function handler(req, res) {
         const year = currentYear
         
         monthsToSync.push({ month, year, monthNumber })
-        console.log(`📊 Ajout de ${month} à la synchronisation`)
+        console.log(`📊 Ajout de ${month} (année en cours) à la synchronisation`)
       }
 
       console.log(`📅 Synchronisation de ${monthsToSync.length} mois:`, monthsToSync.map(m => m.month))
@@ -85,11 +90,11 @@ module.exports = async function handler(req, res) {
           // Déterminer si c'est le mois actuel
           const isCurrentMonth = month === currentDate.toISOString().slice(0, 7)
           
-          // Déterminer si ce mois doit être mis à jour (année en cours ou décembre de l'année précédente)
-          const shouldUpdate = (year === currentYear) || (year === previousYear && monthNumber === 12)
+          // Déterminer si ce mois doit être mis à jour (année en cours ou année précédente complète)
+          const shouldUpdate = (year === currentYear) || (year === previousYear)
           
           // Stocker dans la base de données
-          // Pour l'année en cours et décembre de l'année précédente : mettre à jour si existe, sinon insérer
+          // Pour l'année en cours et l'année précédente complète : mettre à jour si existe, sinon insérer
           // Pour les autres années : ne pas toucher
           const insertResult = await client.query(`
             INSERT INTO monthly_data (
@@ -143,7 +148,7 @@ module.exports = async function handler(req, res) {
             JSON.stringify(revenusBreakdown),
             JSON.stringify(tresorerieBreakdown),
             isCurrentMonth,
-            shouldUpdate  // $11: condition pour mettre à jour (année en cours ou décembre année précédente)
+            shouldUpdate  // $11: condition pour mettre à jour (année en cours ou année précédente complète)
           ])
           
           recordsProcessed++
