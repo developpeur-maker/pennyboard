@@ -38,12 +38,18 @@ module.exports = async function handler(req, res) {
       await client.query('DELETE FROM sync_logs WHERE message LIKE \'%test%\' OR message LIKE \'%fallback%\'')
       console.log('✅ Données de test supprimées')
 
-      // Récupérer TOUS les mois de l'année en cours (janvier à décembre)
+      // Récupérer TOUS les mois de l'année en cours (janvier à décembre) + décembre de l'année précédente
       const monthsToSync = []
       const currentDate = new Date()
       const currentYear = currentDate.getFullYear()
+      const previousYear = currentYear - 1
       
-      console.log(`📅 Synchronisation de l'année en cours: ${currentYear}`)
+      console.log(`📅 Synchronisation de l'année en cours: ${currentYear} + décembre ${previousYear}`)
+      
+      // Ajouter décembre de l'année précédente
+      const previousYearDecember = `${previousYear}-12`
+      monthsToSync.push({ month: previousYearDecember, year: previousYear, monthNumber: 12 })
+      console.log(`📊 Ajout de ${previousYearDecember} (décembre de l'année précédente) à la synchronisation`)
       
       // Synchroniser TOUS les mois de l'année en cours (1-12)
       for (let monthNumber = 1; monthNumber <= 12; monthNumber++) {
@@ -80,8 +86,7 @@ module.exports = async function handler(req, res) {
           const isCurrentMonth = month === currentDate.toISOString().slice(0, 7)
           
           // Stocker dans la base de données
-          // Pour l'année en cours : mettre à jour si existe, sinon insérer
-          // Pour les années précédentes : ne pas toucher
+          // Pour l'année en cours + décembre de l'année précédente : toujours écraser les données précédentes et recalculer les KPIs
           const insertResult = await client.query(`
             INSERT INTO monthly_data (
               month, year, month_number, trial_balance, kpis, 
@@ -89,42 +94,17 @@ module.exports = async function handler(req, res) {
               is_current_month, sync_version
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)
             ON CONFLICT (month) DO UPDATE SET
-              trial_balance = CASE 
-                WHEN EXCLUDED.year = $11 THEN EXCLUDED.trial_balance 
-                ELSE monthly_data.trial_balance 
-              END,
-              kpis = CASE 
-                WHEN EXCLUDED.year = $11 THEN EXCLUDED.kpis 
-                ELSE monthly_data.kpis 
-              END,
-              charges_breakdown = CASE 
-                WHEN EXCLUDED.year = $11 THEN EXCLUDED.charges_breakdown 
-                ELSE monthly_data.charges_breakdown 
-              END,
-              charges_salariales_breakdown = CASE 
-                WHEN EXCLUDED.year = $11 THEN EXCLUDED.charges_salariales_breakdown 
-                ELSE monthly_data.charges_salariales_breakdown 
-              END,
-              revenus_breakdown = CASE 
-                WHEN EXCLUDED.year = $11 THEN EXCLUDED.revenus_breakdown 
-                ELSE monthly_data.revenus_breakdown 
-              END,
-              tresorerie_breakdown = CASE 
-                WHEN EXCLUDED.year = $11 THEN EXCLUDED.tresorerie_breakdown 
-                ELSE monthly_data.tresorerie_breakdown 
-              END,
-              is_current_month = CASE 
-                WHEN EXCLUDED.year = $11 THEN EXCLUDED.is_current_month 
-                ELSE monthly_data.is_current_month 
-              END,
-              sync_version = CASE 
-                WHEN EXCLUDED.year = $11 THEN monthly_data.sync_version + 1 
-                ELSE monthly_data.sync_version 
-              END,
-              updated_at = CASE 
-                WHEN EXCLUDED.year = $11 THEN CURRENT_TIMESTAMP 
-                ELSE monthly_data.updated_at 
-              END
+              trial_balance = EXCLUDED.trial_balance,
+              kpis = EXCLUDED.kpis,
+              charges_breakdown = EXCLUDED.charges_breakdown,
+              charges_salariales_breakdown = EXCLUDED.charges_salariales_breakdown,
+              revenus_breakdown = EXCLUDED.revenus_breakdown,
+              tresorerie_breakdown = EXCLUDED.tresorerie_breakdown,
+              is_current_month = EXCLUDED.is_current_month,
+              year = EXCLUDED.year,
+              month_number = EXCLUDED.month_number,
+              sync_version = monthly_data.sync_version + 1,
+              updated_at = CURRENT_TIMESTAMP
           `, [
             month, year, monthNumber,
             JSON.stringify(trialBalance),
@@ -133,8 +113,7 @@ module.exports = async function handler(req, res) {
             JSON.stringify(chargesSalarialesBreakdown),
             JSON.stringify(revenusBreakdown),
             JSON.stringify(tresorerieBreakdown),
-            isCurrentMonth,
-            currentYear  // $11: année en cours pour la condition
+            isCurrentMonth
           ])
           
           recordsProcessed++
