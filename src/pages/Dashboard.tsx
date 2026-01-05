@@ -69,9 +69,15 @@ const Dashboard: React.FC = () => {
     return months
   }
   
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
+  // Initialiser avec le mois en cours
+  const currentMonth = getCurrentMonth()
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
-  const [selectedYear, setSelectedYear] = useState('2025')
+  // Extraire l'année du mois en cours pour initialiser selectedYear
+  const [selectedYear, setSelectedYear] = useState(() => {
+    const [year] = currentMonth.split('-')
+    return year
+  })
   const [isChargesModalOpen, setIsChargesModalOpen] = useState(false)
   const [isChargesSalarialesModalOpen, setIsChargesSalarialesModalOpen] = useState(false)
   const [isRevenusModalOpen, setIsRevenusModalOpen] = useState(false)
