@@ -85,8 +85,12 @@ module.exports = async function handler(req, res) {
           // Déterminer si c'est le mois actuel
           const isCurrentMonth = month === currentDate.toISOString().slice(0, 7)
           
+          // Déterminer si ce mois doit être mis à jour (année en cours ou décembre de l'année précédente)
+          const shouldUpdate = (year === currentYear) || (year === previousYear && monthNumber === 12)
+          
           // Stocker dans la base de données
-          // Pour l'année en cours + décembre de l'année précédente : toujours écraser les données précédentes et recalculer les KPIs
+          // Pour l'année en cours et décembre de l'année précédente : mettre à jour si existe, sinon insérer
+          // Pour les autres années : ne pas toucher
           const insertResult = await client.query(`
             INSERT INTO monthly_data (
               month, year, month_number, trial_balance, kpis, 
@@ -94,17 +98,42 @@ module.exports = async function handler(req, res) {
               is_current_month, sync_version
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)
             ON CONFLICT (month) DO UPDATE SET
-              trial_balance = EXCLUDED.trial_balance,
-              kpis = EXCLUDED.kpis,
-              charges_breakdown = EXCLUDED.charges_breakdown,
-              charges_salariales_breakdown = EXCLUDED.charges_salariales_breakdown,
-              revenus_breakdown = EXCLUDED.revenus_breakdown,
-              tresorerie_breakdown = EXCLUDED.tresorerie_breakdown,
-              is_current_month = EXCLUDED.is_current_month,
-              year = EXCLUDED.year,
-              month_number = EXCLUDED.month_number,
-              sync_version = monthly_data.sync_version + 1,
-              updated_at = CURRENT_TIMESTAMP
+              trial_balance = CASE 
+                WHEN $11 THEN EXCLUDED.trial_balance 
+                ELSE monthly_data.trial_balance 
+              END,
+              kpis = CASE 
+                WHEN $11 THEN EXCLUDED.kpis 
+                ELSE monthly_data.kpis 
+              END,
+              charges_breakdown = CASE 
+                WHEN $11 THEN EXCLUDED.charges_breakdown 
+                ELSE monthly_data.charges_breakdown 
+              END,
+              charges_salariales_breakdown = CASE 
+                WHEN $11 THEN EXCLUDED.charges_salariales_breakdown 
+                ELSE monthly_data.charges_salariales_breakdown 
+              END,
+              revenus_breakdown = CASE 
+                WHEN $11 THEN EXCLUDED.revenus_breakdown 
+                ELSE monthly_data.revenus_breakdown 
+              END,
+              tresorerie_breakdown = CASE 
+                WHEN $11 THEN EXCLUDED.tresorerie_breakdown 
+                ELSE monthly_data.tresorerie_breakdown 
+              END,
+              is_current_month = CASE 
+                WHEN $11 THEN EXCLUDED.is_current_month 
+                ELSE monthly_data.is_current_month 
+              END,
+              sync_version = CASE 
+                WHEN $11 THEN monthly_data.sync_version + 1 
+                ELSE monthly_data.sync_version 
+              END,
+              updated_at = CASE 
+                WHEN $11 THEN CURRENT_TIMESTAMP 
+                ELSE monthly_data.updated_at 
+              END
           `, [
             month, year, monthNumber,
             JSON.stringify(trialBalance),
@@ -113,7 +142,8 @@ module.exports = async function handler(req, res) {
             JSON.stringify(chargesSalarialesBreakdown),
             JSON.stringify(revenusBreakdown),
             JSON.stringify(tresorerieBreakdown),
-            isCurrentMonth
+            isCurrentMonth,
+            shouldUpdate  // $11: condition pour mettre à jour (année en cours ou décembre année précédente)
           ])
           
           recordsProcessed++
