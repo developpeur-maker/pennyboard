@@ -46,9 +46,10 @@ export function usePayfitSalaries(date: string): UsePayfitSalariesResult {
   const [error, setError] = useState<string | null>(null)
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null)
   const [totals, setTotals] = useState<{
-    totalSalaries: number
-    totalContributions: number
-    totalCost: number
+    totalSalaryPaid: number     // 421 + 425 (salaire versé)
+    totalPrimes: number          // 6413000 uniquement
+    totalContributions: number   // Tous les comptes de cotisations
+    totalGrossCost: number       // Masse salariale (tous les comptes de charges)
     employeesCount: number
   } | null>(null)
 
