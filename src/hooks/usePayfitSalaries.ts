@@ -18,8 +18,10 @@ interface PayfitAccountingOperation {
 interface EmployeeSalaryData {
   employeeName: string
   contractId: string | null
-  totalSalary: number
-  totalContributions: number
+  salaryPaid: number           // 421 + 425 (salaire réellement versé)
+  totalPrimes: number           // 6413000 uniquement
+  totalContributions: number    // Tous les comptes de cotisations
+  totalGrossCost: number        // Masse salariale (tous les comptes de charges)
   operations: PayfitAccountingOperation[]
 }
 
@@ -29,9 +31,10 @@ interface UsePayfitSalariesResult {
   error: string | null
   lastSyncDate: string | null
   totals: {
-    totalSalaries: number
-    totalContributions: number
-    totalCost: number
+    totalSalaryPaid: number     // 421 + 425 (salaire versé)
+    totalPrimes: number          // 6413000 uniquement
+    totalContributions: number   // Tous les comptes de cotisations
+    totalGrossCost: number       // Masse salariale (tous les comptes de charges)
     employeesCount: number
   } | null
   refetch: () => void

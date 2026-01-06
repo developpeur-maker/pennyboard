@@ -52,17 +52,81 @@ function processPayfitData(accountingData) {
     })
   }
 
+  // Liste complète des comptes comptables liés aux salaires et cotisations
+  const salaryAccounts = [
+    '4210000', // Personnel - remunerations dues (salaire net)
+    '4250000', // Personnel - Avances et acomptes
+    '4270000', // Personnel - Oppositions
+    '6411000', // Dimo Diagnostic salaire
+    '6413000', // Primes et gratifications
+    '6414000', // Indemnites et avantages divers
+    '6417000', // Avantages en nature
+    '6417100', // Avantages en nature
+  ]
+
+  const contributionAccounts = [
+    '4310000', // Urssaf - charges
+    '4372000', // Caisse de retraite AGIRC-ARRCO - charges salariales
+    '4375000', // Mutuelle - charges salariales
+    '437200',  // Caisse de retraite AGIRC-ARRCO - charges patronales
+    '4374100', // Prevoyance - charges patronales
+    '437500',  // Mutuelle - charges patronales
+    '437800',  // Titres-restaurant - charges patronales
+    '4386000', // Organismes sociaux - charges a payer
+    '4421000', // Prelevement a la source
+    '6451000', // Cotisations à l'Urssaf
+    '6458200', // Cotisations AGIRC-ARRCO
+    '6458400', // Cotisations prevoyance
+    '6458500', // Cotisations mutuelle
+    '6476000', // Autres charges sociales - Titres restaurants
+    '6316000', // Fonds pour le paritarisme
+    '6333100', // Contribution unique des employeurs à la formation professionnelle - Taxe d'apprentissage
+    '6333200', // Contribution unique des employeurs à la formation professionnelle - Formation professionnelle continue
+    '6580100', // Regularisation net a payer - moins perçu
+  ]
+
   // Parcourir toutes les opérations
   allOperations.forEach((operation) => {
     const accountId = String(operation.accountId || '')
     const accountName = String(operation.accountName || '').toUpperCase()
     
-    const isSalaryRelated = accountId.startsWith('641') || 
-                           accountId.startsWith('645') || 
-                           accountId.startsWith('647') ||
+    // Vérifier si le compte est dans nos listes ou correspond à un pattern générique
+    const isSalaryAccount = salaryAccounts.includes(accountId) ||
+                           accountId.startsWith('421') ||
+                           accountId.startsWith('425') ||
+                           accountId.startsWith('427') ||
+                           accountId.startsWith('641') ||
                            accountName.includes('SALAIRE') ||
-                           accountName.includes('COTISATION') ||
-                           accountName.includes('CHARGE SOCIALE')
+                           accountName.includes('PRIME') ||
+                           accountName.includes('GRATIFICATION') ||
+                           accountName.includes('INDEMNITE') ||
+                           accountName.includes('AVANTAGE') ||
+                           (accountName.includes('REMUNERATION') && !accountName.includes('BRUT'))
+
+    const isContributionAccount = contributionAccounts.includes(accountId) ||
+                                 accountId.startsWith('431') ||
+                                 accountId.startsWith('437') ||
+                                 accountId.startsWith('438') ||
+                                 accountId.startsWith('442') ||
+                                 accountId.startsWith('645') ||
+                                 accountId.startsWith('647') ||
+                                 accountId.startsWith('631') ||
+                                 accountId.startsWith('633') ||
+                                 accountId.startsWith('658') ||
+                                 accountName.includes('COTISATION') ||
+                                 accountName.includes('CHARGE SOCIALE') ||
+                                 accountName.includes('URSSAF') ||
+                                 accountName.includes('RETRAITE') ||
+                                 accountName.includes('MUTUELLE') ||
+                                 accountName.includes('PREVOYANCE') ||
+                                 accountName.includes('PRELEVEMENT') ||
+                                 accountName.includes('FORMATION') ||
+                                 accountName.includes('PARITARISME') ||
+                                 accountName.includes('REGULARISATION') ||
+                                 accountName.includes('TITRE') ||
+                                 accountName.includes('RESTAURANT')
+
+    const isSalaryRelated = isSalaryAccount || isContributionAccount
 
     if (isSalaryRelated && operation.employeeFullName) {
       const employeeName = operation.employeeFullName
@@ -73,8 +137,10 @@ function processPayfitData(accountingData) {
         employeesMap.set(employeeKey, {
           employeeName,
           contractId,
-          totalSalary: 0,
-          totalContributions: 0,
+          salaryPaid: 0,           // 421 + 425 (salaire réellement versé)
+          totalPrimes: 0,          // 6413000 uniquement
+          totalContributions: 0,   // Tous les comptes de cotisations
+          totalGrossCost: 0,       // Masse salariale (tous les comptes de charges)
           operations: []
         })
       }
@@ -85,14 +151,24 @@ function processPayfitData(accountingData) {
       // Calculer les montants
       const amount = Math.abs(operation.debit || operation.credit || 0)
       
-      // Les salaires sont généralement en débit (charges) - compte 641
-      if (accountId.startsWith('641') || accountName.includes('SALAIRE')) {
-        employee.totalSalary += amount
+      // Salaire du mois = 421 + 425 (comptes de tiers - montant réellement versé)
+      if (accountId === '4210000' || accountId === '4250000') {
+        employee.salaryPaid += amount
       }
-      // Les cotisations sont généralement en débit (charges sociales) - comptes 645, 647
-      else if (accountId.startsWith('645') || accountId.startsWith('647') || 
-               accountName.includes('COTISATION') || accountName.includes('CHARGE SOCIALE')) {
+      
+      // Primes = 6413000 uniquement
+      if (accountId === '6413000') {
+        employee.totalPrimes += amount
+      }
+      
+      // Cotisations = tous les comptes de cotisations
+      if (isContributionAccount) {
         employee.totalContributions += amount
+      }
+      
+      // Total brut global (masse salariale) = tous les comptes de charges (641 + cotisations)
+      if (isSalaryAccount || isContributionAccount) {
+        employee.totalGrossCost += amount
       }
     }
   })
@@ -102,17 +178,19 @@ function processPayfitData(accountingData) {
     a.employeeName.localeCompare(b.employeeName)
   )
 
-  // Calculer les totaux
-  const totalSalaries = employeesList.reduce((sum, emp) => sum + emp.totalSalary, 0)
+  // Calculer les totaux globaux
+  const totalSalaryPaid = employeesList.reduce((sum, emp) => sum + emp.salaryPaid, 0)
+  const totalPrimes = employeesList.reduce((sum, emp) => sum + emp.totalPrimes, 0)
   const totalContributions = employeesList.reduce((sum, emp) => sum + emp.totalContributions, 0)
-  const totalCost = totalSalaries + totalContributions
+  const totalGrossCost = employeesList.reduce((sum, emp) => sum + emp.totalGrossCost, 0)
 
   return {
     employees: employeesList,
     totals: {
-      totalSalaries,
+      totalSalaryPaid,
+      totalPrimes,
       totalContributions,
-      totalCost,
+      totalGrossCost,
       employeesCount: employeesList.length
     }
   }
@@ -289,9 +367,9 @@ export default async function handler(req, res) {
           month, year, monthNumber,
           JSON.stringify(accountingData),
           JSON.stringify(processedData.employees),
-          processedData.totals.totalSalaries,
+          processedData.totals.totalSalaryPaid,  // Utilisé pour total_salaries (salaire versé)
           processedData.totals.totalContributions,
-          processedData.totals.totalCost,
+          processedData.totals.totalGrossCost,    // Utilisé pour total_cost (masse salariale)
           processedData.totals.employeesCount,
           isCurrentMonth,
           currentYear,

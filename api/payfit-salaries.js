@@ -61,17 +61,22 @@ export default async function handler(req, res) {
     }
 
     const data = result.rows[0]
+    const employees = data.employees_data || []
+
+    // Calculer le total des primes depuis les données des employés
+    const totalPrimes = employees.reduce((sum, emp) => sum + (emp.totalPrimes || 0), 0)
 
     res.status(200).json({
       success: true,
       month: data.month,
       year: data.year,
       monthNumber: data.month_number,
-      employees: data.employees_data,
+      employees: employees,
       totals: {
-        totalSalaries: parseFloat(data.total_salaries) || 0,
+        totalSalaryPaid: parseFloat(data.total_salaries) || 0,  // total_salaries contient le salaire versé (421+425)
+        totalPrimes: totalPrimes,
         totalContributions: parseFloat(data.total_contributions) || 0,
-        totalCost: parseFloat(data.total_cost) || 0,
+        totalGrossCost: parseFloat(data.total_cost) || 0,  // total_cost contient la masse salariale
         employeesCount: data.employees_count || 0
       },
       lastSyncDate: data.updated_at ? new Date(data.updated_at).toISOString() : null,

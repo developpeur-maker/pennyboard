@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { DollarSign, Users, Calendar, RefreshCw, TrendingUp } from 'lucide-react'
+import { DollarSign, Users, Calendar, RefreshCw, TrendingUp, Gift } from 'lucide-react'
 import { usePayfitSalaries } from '../hooks/usePayfitSalaries'
 
 const Salaries: React.FC = () => {
@@ -107,10 +107,11 @@ const Salaries: React.FC = () => {
     }).format(amount)
   }
 
-  // Utiliser les totaux depuis la BDD ou calculer depuis les employés
-  const totalSalaries = totals?.totalSalaries ?? employees.reduce((sum, emp) => sum + emp.totalSalary, 0)
-  const totalContributions = totals?.totalContributions ?? employees.reduce((sum, emp) => sum + emp.totalContributions, 0)
-  const totalCost = totals?.totalCost ?? (totalSalaries + totalContributions)
+  // Utiliser les totaux depuis la BDD
+  const totalSalaryPaid = totals?.totalSalaryPaid ?? 0
+  const totalPrimes = totals?.totalPrimes ?? 0
+  const totalContributions = totals?.totalContributions ?? 0
+  const totalGrossCost = totals?.totalGrossCost ?? 0
 
   // Formater la période
   const formatPeriod = () => {
@@ -243,13 +244,13 @@ const Salaries: React.FC = () => {
       </div>
 
       {/* Statistiques globales */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Salaires</p>
+              <p className="text-sm font-medium text-gray-600">Salaire du mois</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatCurrency(totalSalaries)}
+                {formatCurrency(totalSalaryPaid)}
               </p>
             </div>
             <DollarSign className="w-8 h-8 text-green-600" />
@@ -259,7 +260,19 @@ const Salaries: React.FC = () => {
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Cotisations</p>
+              <p className="text-sm font-medium text-gray-600">Primes totales</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {formatCurrency(totalPrimes)}
+              </p>
+            </div>
+            <Gift className="w-8 h-8 text-blue-600" />
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Cotisations totales</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {formatCurrency(totalContributions)}
               </p>
@@ -271,12 +284,12 @@ const Salaries: React.FC = () => {
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Coût Total</p>
+              <p className="text-sm font-medium text-gray-600">Total brut global</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatCurrency(totalCost)}
+                {formatCurrency(totalGrossCost)}
               </p>
             </div>
-            <Users className="w-8 h-8 text-blue-600" />
+            <Users className="w-8 h-8 text-purple-600" />
           </div>
         </div>
       </div>
@@ -306,13 +319,16 @@ const Salaries: React.FC = () => {
                     Collaborateur
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Salaires
+                    Salaire du mois
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Primes
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Cotisations
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
+                    Total brut
                   </th>
                 </tr>
               </thead>
@@ -330,13 +346,16 @@ const Salaries: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                      {formatCurrency(employee.totalSalary)}
+                      {formatCurrency(employee.salaryPaid || 0)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                      {formatCurrency(employee.totalContributions)}
+                      {formatCurrency(employee.totalPrimes || 0)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                      {formatCurrency(employee.totalContributions || 0)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
-                      {formatCurrency(employee.totalSalary + employee.totalContributions)}
+                      {formatCurrency(employee.totalGrossCost || 0)}
                     </td>
                   </tr>
                 ))}
@@ -347,13 +366,16 @@ const Salaries: React.FC = () => {
                     Total
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
-                    {formatCurrency(totalSalaries)}
+                    {formatCurrency(totalSalaryPaid)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
+                    {formatCurrency(totalPrimes)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
                     {formatCurrency(totalContributions)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
-                    {formatCurrency(totalCost)}
+                    {formatCurrency(totalGrossCost)}
                   </td>
                 </tr>
               </tfoot>
