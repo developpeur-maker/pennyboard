@@ -75,6 +75,23 @@ function processPayfitData(accountingData) {
     '6458500', // Cotisations mutuelle
   ]
 
+  // Liste des comptes à inclure dans le total brut global (masse salariale)
+  const grossCostAccounts = [
+    '6411000', // Dimo Diagnostic salaire
+    '6413000', // Primes et gratifications
+    '6414000', // Indemnites et avantages divers
+    '6417000', // Avantages en nature
+    '6417100', // Avantages en nature
+    '6316000', // Fonds pour le paritarisme
+    '6333100', // Contribution unique des employeurs à la formation professionnelle - Taxe d'apprentissage
+    '6333200', // Contribution unique des employeurs à la formation professionnelle - Formation professionnelle continue
+    '6451000', // Cotisations à l'Urssaf
+    '6458200', // Cotisations AGIRC-ARRCO
+    '6458400', // Cotisations prevoyance
+    '6458500', // Cotisations mutuelle
+    '6580100', // Regularisation net a payer - moins perçu
+  ]
+
   // Parcourir toutes les opérations
   allOperations.forEach((operation) => {
     const accountId = String(operation.accountId || '')
@@ -88,6 +105,9 @@ function processPayfitData(accountingData) {
 
     // Vérifier si c'est un compte de cotisation (uniquement les comptes listés)
     const isContributionAccount = contributionAccounts.includes(accountId)
+
+    // Vérifier si c'est un compte à inclure dans le total brut global
+    const isGrossCostAccount = grossCostAccounts.includes(accountId)
 
     // Filtrer les opérations liées aux salaires/cotisations (tiers OU charges OU cotisations)
     const isSalaryRelated = isTierAccount || isChargeAccount || isContributionAccount
@@ -130,9 +150,9 @@ function processPayfitData(accountingData) {
         employee.totalContributions += amount
       }
       
-      // Total brut global (masse salariale) = tous les comptes de charges 641 uniquement
-      // (exclut les comptes de tiers 421, 425, 427 et les cotisations qui sont calculées séparément)
-      if (isChargeAccount) {
+      // Total brut global (masse salariale) = uniquement les comptes listés dans grossCostAccounts
+      // (exclut les comptes de tiers 421, 425, 427)
+      if (isGrossCostAccount) {
         employee.totalGrossCost += amount
       }
     }
