@@ -1,6 +1,90 @@
-import React, { useState } from 'react'
-import { DollarSign, Users, Calendar, RefreshCw, TrendingUp, Gift } from 'lucide-react'
+import React, { useState, useMemo } from 'react'
+import { DollarSign, Users, Calendar, RefreshCw, TrendingUp, Gift, X, ArrowUp, ArrowDown } from 'lucide-react'
 import { usePayfitSalaries } from '../hooks/usePayfitSalaries'
+
+// Listes des employés par équipe
+const DIAGNOSTIQUEURS = [
+  'BENJAMIN BERNARD', 'CAROLE TOULORGE', 'JEAN-LAURENT GUELTON', 'Sarah Hecketsweiler', 'Alexandre Ellul-Renuy', 
+  'Servane GENTILHOMME', 'Jules Freulard', 'Jacques de Castelnau', 'Grégoire DE RICARD', 'Brice Gretha', 
+  'Sylvain COHERGNE', 'Fabien BETEILLE', 'Ilan TEICHNER', 'Christophe Metzger', 'Elie Dahan', 'Simon ZERBIB', 
+  'Yanis Lacroix', 'Jonathan Pichon', 'Robin Zeni', 'José GARCIA CUERDA', 'Cyril Cedileau', 'Julien Colinet', 
+  'Arnaud Larregain', 'Alexandre SIMONOT', 'Theo Termessant', 'Pierre-Louis VILLA', 'Antoine Fauvet', 
+  'Laurent Marty', 'Yannick MBOMA', 'Nassim Bidouche', 'Mickael ERB', 'KEVIN COURTEAUX', 'Nicolas MAGERE', 
+  'Yanisse Chekireb', 'Louca ANTONIOLLI', 'Pascal ALLAMELOU', 'Léo PAYAN', 'Mohamed Berete', 'Simon Benezra Simon', 
+  'Rémi NAUDET', 'Sylvain Gomes', 'Nicolas Fabre', 'Armend Letaj', 'Sabry Ouadada', 'Brice GRETHA', 
+  'Guillaume FATOUX', 'Amel TOUATI PINSOLLE', 'Christophe MARCHAL', 'Anis Fekih', 'Martial Macari', 
+  'Faycal Zerizer', 'Morgan Lorrain', 'Nathan Jurado', 'Corentin BANIA', 'Samir BONHUR', 'Eric Loviny', 
+  'Clément BUISINE', 'Steeve JEAN-PHILIPPE', 'Guillaume Lavigne', 'Stéphane MABIALA', 'Laurent Belchi', 
+  'Nicolas FABRE', 'Lucas MEZERETTE', 'Khalil BOUKLOUCHE', 'Grégory LAMBING', 'Radwane FARADJI', 
+  'John RAKOTONDRABAO', 'Olivier MIRAT', 'Fabien PRÉVOT', 'Onur SONMEZ', 'Jérôme BENHAMOU', 'Pierre SIONG', 
+  'Océane DIOT', 'Mickael FIGUIERES', 'Romain CINIER', 'Arnaud BOUSSIDAN', 'Lydiane CAND', 'Enzo SAYIN', 
+  'Mathieu TABOULOT', 'Léo MOLITES', 'Yves GRANVILLE', 'BAPTISTE BAUET', 'Mounir MAROUANE', 'François LASRET', 
+  'Osman KIZILKAYA', 'Abdeltife GARTI', 'Maxime LE BRIS', 'Christopher PITA', 'David EPINEAUX', 
+  'Olivier Corsin', 'Jaouad NELSON', 'Lionel THOMASSET', 'Florian VIVES', 'Maxime LEROY', 'Maxime PELLIER', 
+  'Idriss TCHINI', 'Danny FIDANZA', 'Lucille GRIFFAY', 'Sofiane ZEKRI', 'Sofiane KHELFAOUI', 'Romain GUEHO', 
+  'Jérôme SAUVAGE', 'Yohann LAILLIER-JARDÉ', 'Pascal CABELEIRA', 'Aziz AOURAGH', 'Téo DOUBLIER', 
+  'Sébastien SOUYRIS', 'Fabrice STECIUK', 'Jérémie JOURNAUX', 'Ariles MERAD', 'Simon PACAUD'
+].map(name => name.toUpperCase().trim())
+
+const BUREAUX = [
+  'TEDDY MUNOZ DE LA NAVA', 'LOUIS LORIN', 'Romain Baldassarre', 'Ambre Deligny', 'François Kulczak', 
+  'WIAME Papin', 'Floriane Mermoud', 'Saad Lahlou', 'valérie LAUNE', 'Caroline Sola', 'Amine Guellati', 
+  'Mounir Harchaoui', 'Lilou Raja', 'Tom Le Louédec', 'Marceau DI COSTANZO', 'Charles Lorin', 
+  'Cédric Weishaar', 'Kevin Sousa', 'Yéléna Cordin', 'Romane Vallaud', 'Corentin Sarkissian', 
+  'Enola Enjelvin', 'Nicolas Martinez White', 'Manon Fabra', 'Robin Merlo', 'Théophile Lequeux', 
+  'Karine ATTOLOU', 'Bastien Bosviel', 'Egor PEREDERIY', 'Fabien Chodaton', 'Winona Iuhasz', 
+  'David Zerbib', 'Aimeric Mir', 'Julie LE TRAOU', 'Maurice DIOUF', 'Sacha DOBERVA', 
+  'Térence TAAFFET OGANDAGA', 'Younes Khalfi', 'Tom Vea', 'Tifany Oussal', 'Matthieu CREPIN', 
+  'Clément JAUBERT', 'Damien RENNEVILLE', 'Gabriel Nuel', 'Marion Wilhelm', 'Arina Georgiyeva', 
+  'Michel Pesant', 'O\'Bryan MIEZAN', 'Naomi Coulaud', 'Laurie AUDDINO', 'Abdelkhaliq DIDAH', 
+  'Adrien BISSET', 'Azedine LEBBAD', 'Miriam Marty', 'Nathan CATANIA', 'Thibaut Bissuel', 
+  'Sharon elbaz', 'Olga Julien-Pannie', 'Romane MESLIN', 'Marine Bramand', 'PAUL Grieneisen', 
+  'Ian SIGUIER', 'Claire BOISMENU', 'Circée Cabayot', 'Laurine Tourasse', 'Ethella Bettahar-Ripert', 
+  'Laura ADAM', 'Célia Turgot', 'Kily JACKSON', 'Marine SZCZEPANIAK', 'Raphael daumas', 'Jaad SEKKAL', 
+  'Matheo JIMENEZ', 'Clement Lennuyeux', 'Marilyne Ly', 'Paul Bigot', 'Romeo Fayaud', 
+  'Talia-noor Thahouly', 'Louis TEICHNER', 'Nawal BELOUALI', 'Svetlana Sokolova', 'Octhave JOSSERAND', 
+  'Robin Pina', 'Lucie Mirabile', 'Annabel CREVAUX - VIDAL', 'Jade Piochelle', 'Matheo Jimenez', 
+  'Nathan BOURBON', 'Naomi COULAUD', 'Luc BUENO', 'Gigi BERNAD', 'Lou NAVARRO', 'Raphael DEFLANDRE', 
+  'Nicolas SCHNEIDER', 'Thibault FAYOL', 'Caitline LAMBOLEY', 'Inès IKAR', 'Romane WETTERWALD', 
+  'Walid Selmani', 'Samia EL OMARI', 'Carla SIBILLIN', 'Tom ARNAUD BERGER', 'Claudia MATTERA', 
+  'Célia BONFIGLIO', 'François LOPEZ', 'Ikram MESLOUHI', 'Laurine MONTEL', 'Aurélie GAILLARD', 
+  'Isabelle Tchesnokov', 'Jade FOUCHER', 'Chloé Gazagne', 'Christopher MICHEL', 'Julien GEBALA', 
+  'Kim Abbruzzese', 'Jonathan LAMPER', 'Larry BOULANGER', 'Jade PLANAS', 'Sarah LAVALY', 
+  'Kamilia BENASR', 'Cloé GAVE', 'Cherazade RAMDANI', 'Sana KASSEM', 'Noe RIBEIRO', 'Estelle Kozlow', 
+  'David LILLO', 'Sully FABULAS', 'Julie DUGUE', 'Hiba MISSAOUI', 'Coline ETOURNEAUD', 
+  'Pauline LE GUILLOU', 'Théo PLAZAS', 'Arnaud CHAMPEIL', 'Hélène GEORGET', 'Marina BROSOLO', 
+  'Cédric CÉCÉ', 'Alexia COSTA', 'Amélie MOREAU', 'Sheilcy NEOCEL', 'Luna COUTEAU', 'Fabien BERTRAND', 
+  'Lucas DANTIN', 'Zéphir DUBERT', 'Victor ANTECH', 'Maxime TURION', 'Aurélien GRAZIANO', 
+  'Stéphane MARKOVIC', 'Jordane REBOUL', 'Anaïs BENI', 'Lucas BAJEOT', 'Kevin VANNIER'
+].map(name => name.toUpperCase().trim())
+
+// Fonction pour normaliser un nom (enlever accents, espaces multiples, etc.)
+const normalizeName = (name: string): string => {
+  return name
+    .toUpperCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Enlever les accents
+    .replace(/\s+/g, ' ') // Remplacer les espaces multiples par un seul
+}
+
+// Fonction pour déterminer l'équipe d'un employé
+const getEmployeeTeam = (employeeName: string): 'Bureau' | 'Diagnostiqueur' | null => {
+  const normalizedName = normalizeName(employeeName)
+  
+  if (DIAGNOSTIQUEURS.some(name => normalizeName(name) === normalizedName)) {
+    return 'Diagnostiqueur'
+  }
+  
+  if (BUREAUX.some(name => normalizeName(name) === normalizedName)) {
+    return 'Bureau'
+  }
+  
+  return null
+}
+
+type SortColumn = 'name' | 'salaryPaid' | 'totalPrimes' | 'totalContributions' | 'totalGrossCost' | 'team'
+type SortOrder = 'asc' | 'desc'
 
 const Salaries: React.FC = () => {
   // Obtenir le mois en cours par défaut
@@ -52,12 +136,81 @@ const Salaries: React.FC = () => {
 
   const currentMonth = getCurrentMonth()
   const [selectedMonth, setSelectedMonth] = useState(currentMonth)
+  const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
   const [selectedYear, setSelectedYear] = useState(() => {
     const [year] = currentMonth.split('-')
     return year
   })
+  const [selectedEmployee, setSelectedEmployee] = useState<{ name: string; operations: any[] } | null>(null)
+  const [sortColumn, setSortColumn] = useState<SortColumn>('name')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
 
-  const { employees, loading, error, lastSyncDate, totals, refetch } = usePayfitSalaries(selectedMonth)
+  // Déterminer si on affiche l'année complète ou un mois spécifique
+  const isFullYear = viewMode === 'year'
+  const actualSelectedMonth = isFullYear ? undefined : selectedMonth
+
+  const { employees, loading, error, lastSyncDate, totals, refetch } = usePayfitSalaries(actualSelectedMonth, isFullYear ? selectedYear : undefined)
+
+  // Fonction de tri
+  const sortedEmployees = useMemo(() => {
+    if (!employees || employees.length === 0) return []
+
+    const sorted = [...employees].sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (sortColumn) {
+        case 'name':
+          aValue = a.employeeName || ''
+          bValue = b.employeeName || ''
+          break
+        case 'salaryPaid':
+          aValue = a.salaryPaid || 0
+          bValue = b.salaryPaid || 0
+          break
+        case 'totalPrimes':
+          aValue = a.totalPrimes || 0
+          bValue = b.totalPrimes || 0
+          break
+        case 'totalContributions':
+          aValue = a.totalContributions || 0
+          bValue = b.totalContributions || 0
+          break
+        case 'totalGrossCost':
+          aValue = a.totalGrossCost || 0
+          bValue = b.totalGrossCost || 0
+          break
+        case 'team':
+          aValue = getEmployeeTeam(a.employeeName) || ''
+          bValue = getEmployeeTeam(b.employeeName) || ''
+          break
+        default:
+          return 0
+      }
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortOrder === 'asc' 
+          ? aValue.localeCompare(bValue, 'fr', { sensitivity: 'base' })
+          : bValue.localeCompare(aValue, 'fr', { sensitivity: 'base' })
+      } else {
+        return sortOrder === 'asc' ? aValue - bValue : bValue - aValue
+      }
+    })
+
+    return sorted
+  }, [employees, sortColumn, sortOrder])
+
+  // Fonction pour gérer le clic sur un en-tête de colonne
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      // Inverser l'ordre si on clique sur la même colonne
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      // Nouvelle colonne, commencer par asc
+      setSortColumn(column)
+      setSortOrder('asc')
+    }
+  }
   
   // État pour la synchronisation
   const [isSyncing, setIsSyncing] = useState(false)
@@ -113,15 +266,19 @@ const Salaries: React.FC = () => {
   const totalContributions = totals?.totalContributions ?? 0
   const totalGrossCost = totals?.totalGrossCost ?? 0
 
-  // Formater la période
+  // Formater la période affichée
   const formatPeriod = () => {
-    const [year, month] = selectedMonth.split('-')
-    const monthNames = [
-      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
-    ]
-    const monthName = monthNames[parseInt(month) - 1]
-    return `${monthName} ${year}`
+    if (viewMode === 'year') {
+      return `exercice ${selectedYear}`
+    } else {
+      const [year, month] = selectedMonth.split('-')
+      const monthNames = [
+        'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+      ]
+      const monthName = monthNames[parseInt(month) - 1]
+      return `${monthName} ${year}`
+    }
   }
 
   if (loading) {
@@ -169,12 +326,38 @@ const Salaries: React.FC = () => {
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-gray-600" />
             
+            {/* Segmented control pour choisir le mode */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'month'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Mois
+              </button>
+              <button
+                onClick={() => setViewMode('year')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'year'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Année
+              </button>
+            </div>
+
             {/* Sélecteur d'année */}
             <select
               value={selectedYear}
               onChange={(e) => {
                 setSelectedYear(e.target.value)
-                setSelectedMonth(`${e.target.value}-01`)
+                if (viewMode === 'month') {
+                  setSelectedMonth(`${e.target.value}-01`)
+                }
               }}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
             >
@@ -185,18 +368,20 @@ const Salaries: React.FC = () => {
               ))}
             </select>
 
-            {/* Sélecteur de mois */}
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
-            >
-              {generateMonthsForYear(selectedYear).map((month) => (
-                <option key={month.value} value={month.value}>
-                  {month.label}
-                </option>
-              ))}
-            </select>
+            {/* Sélecteur de mois (uniquement en mode mois) */}
+            {viewMode === 'month' && (
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
+              >
+                {generateMonthsForYear(selectedYear).map((month) => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
       </div>
@@ -315,26 +500,83 @@ const Salaries: React.FC = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Collaborateur
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Collaborateur
+                      {sortColumn === 'name' && (
+                        sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Salaire du mois
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('team')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Équipe
+                      {sortColumn === 'team' && (
+                        sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Primes
+                  <th 
+                    className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('salaryPaid')}
+                  >
+                    <div className="flex items-center justify-end gap-2">
+                      Salaire du mois
+                      {sortColumn === 'salaryPaid' && (
+                        sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cotisations
+                  <th 
+                    className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('totalPrimes')}
+                  >
+                    <div className="flex items-center justify-end gap-2">
+                      Primes
+                      {sortColumn === 'totalPrimes' && (
+                        sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total brut
+                  <th 
+                    className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('totalContributions')}
+                  >
+                    <div className="flex items-center justify-end gap-2">
+                      Cotisations
+                      {sortColumn === 'totalContributions' && (
+                        sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('totalGrossCost')}
+                  >
+                    <div className="flex items-center justify-end gap-2">
+                      Total brut
+                      {sortColumn === 'totalGrossCost' && (
+                        sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      )}
+                    </div>
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {employees.map((employee, index) => (
-                  <tr key={`${employee.employeeName}-${index}`} className="hover:bg-gray-50">
+                {sortedEmployees.map((employee, index) => {
+                  const team = getEmployeeTeam(employee.employeeName)
+                  return (
+                  <tr 
+                    key={`${employee.employeeName}-${index}`} 
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => setSelectedEmployee({ name: employee.employeeName, operations: employee.operations || [] })}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {employee.employeeName}
@@ -343,6 +585,17 @@ const Salaries: React.FC = () => {
                         <div className="text-xs text-gray-500">
                           Contrat: {employee.contractId.substring(0, 8)}...
                         </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {team && (
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          team === 'Bureau' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {team}
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
@@ -358,12 +611,16 @@ const Salaries: React.FC = () => {
                       {formatCurrency(employee.totalGrossCost || 0)}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
               <tfoot className="bg-gray-50">
                 <tr>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                     Total
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                    {/* Colonne équipe vide dans le footer */}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
                     {formatCurrency(totalSalaryPaid)}
@@ -383,6 +640,94 @@ const Salaries: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de détail des comptes d'un employé */}
+      {selectedEmployee && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+            onClick={() => setSelectedEmployee(null)}
+          />
+          
+          {/* Modal */}
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[80vh] overflow-hidden">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Détail des comptes</h2>
+                  <p className="text-sm text-gray-600">{selectedEmployee.name} - {formatPeriod()}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedEmployee(null)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              
+              {/* Content */}
+              <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+                {selectedEmployee.operations.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    Aucune opération disponible pour cet employé
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedEmployee.operations.map((operation: any, index: number) => {
+                      const amount = Math.abs(operation.debit || operation.credit || 0)
+                      const accountName = operation.accountName || 'Compte inconnu'
+                      const accountId = operation.accountId || ''
+                      
+                      // Nommer le compte 6580000 comme "Pourboires et autres"
+                      const displayName = accountId === '6580000' ? 'Pourboires et autres' : accountName
+                      
+                      return (
+                        <div 
+                          key={index}
+                          className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">
+                              {displayName}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Compte {accountId}
+                            </div>
+                            {operation.operationDate && (
+                              <div className="text-xs text-gray-400 mt-1">
+                                {new Date(operation.operationDate).toLocaleDateString('fr-FR')}
+                              </div>
+                            )}
+                          </div>
+                          <div className="font-semibold text-lg text-gray-900">
+                            {formatCurrency(amount)}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-gray-700">Total des opérations</span>
+                  <span className="font-bold text-xl text-gray-900">
+                    {formatCurrency(
+                      selectedEmployee.operations.reduce((sum: number, op: any) => 
+                        sum + Math.abs(op.debit || op.credit || 0), 0
+                      )
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

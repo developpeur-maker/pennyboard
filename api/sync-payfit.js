@@ -77,7 +77,9 @@ function processPayfitData(accountingData) {
 
   // Liste des comptes à inclure dans le total brut global (masse salariale)
   const grossCostAccounts = [
+    '6252000', // Notes de frais
     '6411000', // Dimo Diagnostic salaire
+    '6412000', // Congés payés
     '6413000', // Primes et gratifications
     '6414000', // Indemnites et avantages divers
     '6417000', // Avantages en nature
@@ -109,8 +111,11 @@ function processPayfitData(accountingData) {
     // Vérifier si c'est un compte à inclure dans le total brut global
     const isGrossCostAccount = grossCostAccounts.includes(accountId)
 
-    // Filtrer les opérations liées aux salaires/cotisations (tiers OU charges OU cotisations)
-    const isSalaryRelated = isTierAccount || isChargeAccount || isContributionAccount
+    // Vérifier si c'est le compte 6580000 (pourboires et autres) - uniquement pour le détail
+    const isDetailOnlyAccount = accountId === '6580000'
+
+    // Filtrer les opérations liées aux salaires/cotisations (tiers OU charges OU cotisations OU comptes du brut global OU compte détail uniquement)
+    const isSalaryRelated = isTierAccount || isChargeAccount || isContributionAccount || isGrossCostAccount || isDetailOnlyAccount
 
     if (isSalaryRelated && operation.employeeFullName) {
       const employeeName = operation.employeeFullName

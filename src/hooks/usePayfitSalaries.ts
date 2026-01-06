@@ -40,7 +40,7 @@ interface UsePayfitSalariesResult {
   refetch: () => void
 }
 
-export function usePayfitSalaries(date: string): UsePayfitSalariesResult {
+export function usePayfitSalaries(date: string | undefined, year?: string): UsePayfitSalariesResult {
   const [employees, setEmployees] = useState<EmployeeSalaryData[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,7 +54,7 @@ export function usePayfitSalaries(date: string): UsePayfitSalariesResult {
   } | null>(null)
 
   const fetchData = async () => {
-    if (!date) {
+    if (!date && !year) {
       setEmployees([])
       return
     }
@@ -63,12 +63,19 @@ export function usePayfitSalaries(date: string): UsePayfitSalariesResult {
     setError(null)
 
     try {
-      // Récupérer les données depuis la base de données (au lieu de l'API Payfit directement)
-      const response = await fetch(`/api/payfit-salaries?month=${date}`)
+      // Construire l'URL avec les paramètres appropriés
+      let url = '/api/payfit-salaries?'
+      if (date) {
+        url += `month=${date}`
+      } else if (year) {
+        url += `year=${year}`
+      }
+      
+      const response = await fetch(url)
       
       if (!response.ok) {
         if (response.status === 404) {
-          // Aucune donnée trouvée pour ce mois
+          // Aucune donnée trouvée
           setEmployees([])
           setError(null) // Pas d'erreur, juste pas de données
           return
@@ -100,7 +107,7 @@ export function usePayfitSalaries(date: string): UsePayfitSalariesResult {
 
   useEffect(() => {
     fetchData()
-  }, [date])
+  }, [date, year])
 
   return {
     employees,
