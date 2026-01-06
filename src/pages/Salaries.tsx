@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { DollarSign, Users, Calendar, RefreshCw, TrendingUp, Gift, X, ArrowUp, ArrowDown } from 'lucide-react'
+import { DollarSign, Users, Calendar, RefreshCw, TrendingUp, Gift, X, ArrowUp, ArrowDown, Search } from 'lucide-react'
 import { usePayfitSalaries } from '../hooks/usePayfitSalaries'
 
 // Listes des employés par équipe
@@ -136,7 +136,6 @@ const Salaries: React.FC = () => {
 
   const currentMonth = getCurrentMonth()
   const [selectedMonth, setSelectedMonth] = useState(currentMonth)
-  const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
   const [selectedYear, setSelectedYear] = useState(() => {
     const [year] = currentMonth.split('-')
     return year
@@ -144,18 +143,45 @@ const Salaries: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<{ name: string; operations: any[] } | null>(null)
   const [sortColumn, setSortColumn] = useState<SortColumn>('name')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [teamFilters, setTeamFilters] = useState({
+    diagnostiqueur: true,
+    bureau: true
+  })
 
   // Déterminer si on affiche l'année complète ou un mois spécifique
-  const isFullYear = viewMode === 'year'
+  // Si selectedMonth se termine par "-00", c'est "Exercice complet"
+  const isFullYear = selectedMonth.endsWith('-00')
   const actualSelectedMonth = isFullYear ? undefined : selectedMonth
 
   const { employees, loading, error, lastSyncDate, totals, refetch } = usePayfitSalaries(actualSelectedMonth, isFullYear ? selectedYear : undefined)
 
-  // Fonction de tri
-  const sortedEmployees = useMemo(() => {
+  // Fonction de filtrage et tri
+  const filteredAndSortedEmployees = useMemo(() => {
     if (!employees || employees.length === 0) return []
 
-    const sorted = [...employees].sort((a, b) => {
+    // Filtrer par équipe
+    let filtered = employees.filter(employee => {
+      const team = getEmployeeTeam(employee.employeeName)
+      if (team === 'Diagnostiqueur') {
+        return teamFilters.diagnostiqueur
+      } else if (team === 'Bureau') {
+        return teamFilters.bureau
+      }
+      // Si l'employé n'a pas d'équipe définie, on l'inclut si au moins un filtre est actif
+      return teamFilters.diagnostiqueur || teamFilters.bureau
+    })
+
+    // Filtrer par recherche textuelle
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(employee => 
+        employee.employeeName.toLowerCase().includes(query)
+      )
+    }
+
+    // Trier les résultats filtrés
+    const sorted = [...filtered].sort((a, b) => {
       let aValue: any
       let bValue: any
 
@@ -198,7 +224,31 @@ const Salaries: React.FC = () => {
     })
 
     return sorted
-  }, [employees, sortColumn, sortOrder])
+  }, [employees, sortColumn, sortOrder, searchQuery, teamFilters])
+
+  // Calculer les totaux filtrés pour les cards
+  const filteredTotals = useMemo(() => {
+    if (!filteredAndSortedEmployees || filteredAndSortedEmployees.length === 0) {
+      return {
+        totalSalaryPaid: 0,
+        totalPrimes: 0,
+        totalContributions: 0,
+        totalGrossCost: 0
+      }
+    }
+
+    return filteredAndSortedEmployees.reduce((acc, employee) => ({
+      totalSalaryPaid: acc.totalSalaryPaid + (employee.salaryPaid || 0),
+      totalPrimes: acc.totalPrimes + (employee.totalPrimes || 0),
+      totalContributions: acc.totalContributions + (employee.totalContributions || 0),
+      totalGrossCost: acc.totalGrossCost + (employee.totalGrossCost || 0)
+    }), {
+      totalSalaryPaid: 0,
+      totalPrimes: 0,
+      totalContributions: 0,
+      totalGrossCost: 0
+    })
+  }, [filteredAndSortedEmployees])
 
   // Fonction pour gérer le clic sur un en-tête de colonne
   const handleSort = (column: SortColumn) => {
@@ -260,15 +310,15 @@ const Salaries: React.FC = () => {
     }).format(amount)
   }
 
-  // Utiliser les totaux depuis la BDD
-  const totalSalaryPaid = totals?.totalSalaryPaid ?? 0
-  const totalPrimes = totals?.totalPrimes ?? 0
-  const totalContributions = totals?.totalContributions ?? 0
-  const totalGrossCost = totals?.totalGrossCost ?? 0
+  // Utiliser les totaux filtrés pour les cards
+  const totalSalaryPaid = filteredTotals.totalSalaryPaid
+  const totalPrimes = filteredTotals.totalPrimes
+  const totalContributions = filteredTotals.totalContributions
+  const totalGrossCost = filteredTotals.totalGrossCost
 
   // Formater la période affichée
   const formatPeriod = () => {
-    if (viewMode === 'year') {
+    if (isFullYear) {
       return `exercice ${selectedYear}`
     } else {
       const [year, month] = selectedMonth.split('-')
@@ -326,62 +376,39 @@ const Salaries: React.FC = () => {
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-gray-600" />
             
-            {/* Segmented control pour choisir le mode */}
-            <div className="flex bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('month')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'month'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                Mois
-              </button>
-              <button
-                onClick={() => setViewMode('year')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'year'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                Année
-              </button>
-            </div>
-
-            {/* Sélecteur d'année */}
-            <select
-              value={selectedYear}
-              onChange={(e) => {
-                setSelectedYear(e.target.value)
-                if (viewMode === 'month') {
+            {/* Sélecteur à deux niveaux : Année puis Mois */}
+            <div className="flex items-center gap-2">
+              {/* Sélecteur d'année */}
+              <select
+                value={selectedYear}
+                onChange={(e) => {
+                  setSelectedYear(e.target.value)
+                  // Réinitialiser le mois sélectionné quand on change d'année
                   setSelectedMonth(`${e.target.value}-01`)
-                }
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
-            >
-              {generateAvailableYears().map((year) => (
-                <option key={year.value} value={year.value}>
-                  {year.label}
-                </option>
-              ))}
-            </select>
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
+              >
+                {generateAvailableYears().map((year) => (
+                  <option key={year.value} value={year.value}>
+                    {year.label}
+                  </option>
+                ))}
+              </select>
 
-            {/* Sélecteur de mois (uniquement en mode mois) */}
-            {viewMode === 'month' && (
+              {/* Sélecteur de mois ou année complète */}
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
               >
+                <option value={`${selectedYear}-00`}>Exercice complet</option>
                 {generateMonthsForYear(selectedYear).map((month) => (
                   <option key={month.value} value={month.value}>
                     {month.label}
                   </option>
                 ))}
               </select>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -482,18 +509,62 @@ const Salaries: React.FC = () => {
       {/* Liste des collaborateurs */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Détail par collaborateur - {formatPeriod()}
-          </h2>
-          <p className="text-sm text-gray-600 mt-1">
-            {employees.length} collaborateur{employees.length > 1 ? 's' : ''} trouvé{employees.length > 1 ? 's' : ''}
-          </p>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Détail par collaborateur - {formatPeriod()}
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {filteredAndSortedEmployees.length} collaborateur{filteredAndSortedEmployees.length > 1 ? 's' : ''} trouvé{filteredAndSortedEmployees.length > 1 ? 's' : ''}
+            </p>
+          </div>
+          
+          {/* Filtres par équipe */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-sm font-medium text-gray-700">Filtrer par équipe :</span>
+            <button
+              onClick={() => setTeamFilters(prev => ({ ...prev, diagnostiqueur: !prev.diagnostiqueur }))}
+              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                teamFilters.diagnostiqueur
+                  ? 'bg-yellow-100 text-yellow-800 ring-2 ring-yellow-500'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              Diagnostiqueur
+            </button>
+            <button
+              onClick={() => setTeamFilters(prev => ({ ...prev, bureau: !prev.bureau }))}
+              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                teamFilters.bureau
+                  ? 'bg-blue-100 text-blue-800 ring-2 ring-blue-500'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              Bureau
+            </button>
+          </div>
+
+          {/* Champ de recherche */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Rechercher un collaborateur..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+            />
+          </div>
         </div>
 
         {employees.length === 0 ? (
           <div className="p-12 text-center">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">Aucune donnée de salaire trouvée pour cette période</p>
+          </div>
+        ) : filteredAndSortedEmployees.length === 0 ? (
+          <div className="p-12 text-center">
+            <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">Aucun collaborateur trouvé pour "{searchQuery}"</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -569,7 +640,7 @@ const Salaries: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedEmployees.map((employee, index) => {
+                {filteredAndSortedEmployees.map((employee, index) => {
                   const team = getEmployeeTeam(employee.employeeName)
                   return (
                   <tr 
