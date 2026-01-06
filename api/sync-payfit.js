@@ -83,15 +83,8 @@ function processPayfitData(accountingData) {
     // Vérifier si c'est un compte de tiers (421, 425, 427) - pour le salaire versé
     const isTierAccount = accountId === '4210000' || accountId === '4250000' || accountId === '4270000'
     
-    // Vérifier si c'est un compte de charges 641 (pour le total brut global)
-    const isChargeAccount = accountId.startsWith('641') ||
-                           salaryAccounts.includes(accountId) ||
-                           accountName.includes('SALAIRE') ||
-                           accountName.includes('PRIME') ||
-                           accountName.includes('GRATIFICATION') ||
-                           accountName.includes('INDEMNITE') ||
-                           accountName.includes('AVANTAGE') ||
-                           (accountName.includes('REMUNERATION') && !accountName.includes('BRUT'))
+    // Vérifier si c'est un compte de charges 641 (tous les comptes commençant par 641)
+    const isChargeAccount = accountId.startsWith('641')
 
     // Vérifier si c'est un compte de cotisation (uniquement les comptes listés)
     const isContributionAccount = contributionAccounts.includes(accountId)
@@ -137,9 +130,9 @@ function processPayfitData(accountingData) {
         employee.totalContributions += amount
       }
       
-      // Total brut global (masse salariale) = tous les comptes de charges 641 + cotisations
-      // (exclut les comptes de tiers 421, 425, 427)
-      if (isChargeAccount || isContributionAccount) {
+      // Total brut global (masse salariale) = tous les comptes de charges 641 uniquement
+      // (exclut les comptes de tiers 421, 425, 427 et les cotisations qui sont calculées séparément)
+      if (isChargeAccount) {
         employee.totalGrossCost += amount
       }
     }
