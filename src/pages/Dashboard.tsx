@@ -320,7 +320,7 @@ const Dashboard: React.FC = () => {
               ) : (
                 <>
                   <RefreshCw className="w-3 h-3" />
-                  Synchroniser
+                  Synchroniser l'API Pennylane
                 </>
               )}
             </button>

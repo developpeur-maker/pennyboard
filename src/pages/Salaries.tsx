@@ -234,7 +234,7 @@ const Salaries: React.FC = () => {
               ) : (
                 <>
                   <RefreshCw className="w-3 h-3" />
-                  Synchroniser
+                  Synchroniser l'API Payfit
                 </>
               )}
             </button>
