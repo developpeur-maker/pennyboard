@@ -163,71 +163,82 @@ const Salaries: React.FC = () => {
             Détail des salaires et cotisations par collaborateur
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleManualSync}
-            disabled={isSyncing}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Synchronisation...' : 'Synchroniser Payfit'}
-          </button>
-          <button
-            onClick={refetch}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Actualiser
-          </button>
+        <div className="flex items-center gap-4">
+          {/* Sélecteurs de période */}
+          <div className="flex items-center gap-3">
+            <Calendar className="w-5 h-5 text-gray-600" />
+            
+            {/* Sélecteur d'année */}
+            <select
+              value={selectedYear}
+              onChange={(e) => {
+                setSelectedYear(e.target.value)
+                setSelectedMonth(`${e.target.value}-01`)
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
+            >
+              {generateAvailableYears().map((year) => (
+                <option key={year.value} value={year.value}>
+                  {year.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Sélecteur de mois */}
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
+            >
+              {generateMonthsForYear(selectedYear).map((month) => (
+                <option key={month.value} value={month.value}>
+                  {month.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Indicateur de synchronisation */}
-      {lastSyncDate && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+      <div className={`border rounded-lg p-3 ${lastSyncDate ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span className="text-green-700">
-              Dernière synchronisation : {new Date(lastSyncDate).toLocaleString('fr-FR')}
-            </span>
+            {lastSyncDate ? (
+              <>
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-green-700">Dernière synchronisation : {new Date(lastSyncDate).toLocaleString('fr-FR')}</span>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                <span className="text-yellow-700">Aucune synchronisation récente</span>
+              </>
+            )}
           </div>
-        </div>
-      )}
-
-      {/* Sélecteurs de période */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center gap-3">
-          <Calendar className="w-5 h-5 text-gray-600" />
-          
-          {/* Sélecteur d'année */}
-          <select
-            value={selectedYear}
-            onChange={(e) => {
-              setSelectedYear(e.target.value)
-              setSelectedMonth(`${e.target.value}-01`)
-            }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
-          >
-            {generateAvailableYears().map((year) => (
-              <option key={year.value} value={year.value}>
-                {year.label}
-              </option>
-            ))}
-          </select>
-
-          {/* Sélecteur de mois */}
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 font-medium"
-          >
-            {generateMonthsForYear(selectedYear).map((month) => (
-              <option key={month.value} value={month.value}>
-                {month.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className={`flex items-center gap-2 px-3 py-1 text-white text-xs rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                lastSyncDate 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-yellow-600 hover:bg-yellow-700'
+              }`}
+            >
+              {isSyncing ? (
+                <>
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  Synchronisation...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3 h-3" />
+                  Synchroniser
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
