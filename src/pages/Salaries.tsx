@@ -57,25 +57,45 @@ const Salaries: React.FC = () => {
     return year
   })
 
-  // Récupérer le companyId depuis l'API
-  const [companyId, setCompanyId] = useState<string | null>(null)
+  const { employees, loading, error, lastSyncDate, totals, refetch } = usePayfitSalaries(selectedMonth)
   
-  useEffect(() => {
-    fetch('/api/payfit-company-id')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.companyId) {
-          setCompanyId(data.companyId)
+  // État pour la synchronisation
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  // Fonction de synchronisation manuelle
+  const handleManualSync = async () => {
+    try {
+      setIsSyncing(true)
+      console.log('🔄 Début de la synchronisation Payfit...')
+      
+      const response = await fetch('/api/sync-payfit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'pennyboard_secret_key_2025'
         }
       })
-      .catch(err => {
-        console.error('Erreur lors de la récupération du Company ID:', err)
-        // Fallback sur le companyId connu
-        setCompanyId('5e1de57f310efaf2eb652228')
-      })
-  }, [])
-
-  const { employees, loading, error, refetch } = usePayfitSalaries(companyId || '', selectedMonth)
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Synchronisation réussie:', result)
+        
+        // Actualiser les données après synchronisation
+        await refetch()
+        
+        alert('✅ Synchronisation réussie ! Les données ont été mises à jour.')
+      } else {
+        const error = await response.json()
+        console.error('❌ Erreur de synchronisation:', error)
+        alert(`❌ Erreur de synchronisation: ${error.error || 'Erreur inconnue'}\n\nDétails: ${error.details || 'Aucun détail'}`)
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la synchronisation:', error)
+      alert('❌ Erreur lors de la synchronisation. Veuillez réessayer.')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   // Formater les montants
   const formatCurrency = (amount: number) => {
@@ -87,10 +107,10 @@ const Salaries: React.FC = () => {
     }).format(amount)
   }
 
-  // Calculer les totaux
-  const totalSalaries = employees.reduce((sum, emp) => sum + emp.totalSalary, 0)
-  const totalContributions = employees.reduce((sum, emp) => sum + emp.totalContributions, 0)
-  const totalCost = totalSalaries + totalContributions
+  // Utiliser les totaux depuis la BDD ou calculer depuis les employés
+  const totalSalaries = totals?.totalSalaries ?? employees.reduce((sum, emp) => sum + emp.totalSalary, 0)
+  const totalContributions = totals?.totalContributions ?? employees.reduce((sum, emp) => sum + emp.totalContributions, 0)
+  const totalCost = totals?.totalCost ?? (totalSalaries + totalContributions)
 
   // Formater la période
   const formatPeriod = () => {
@@ -143,15 +163,37 @@ const Salaries: React.FC = () => {
             Détail des salaires et cotisations par collaborateur
           </p>
         </div>
-        <button
-          onClick={refetch}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleManualSync}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Synchronisation...' : 'Synchroniser Payfit'}
+          </button>
+          <button
+            onClick={refetch}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Actualiser
+          </button>
+        </div>
       </div>
+
+      {/* Indicateur de synchronisation */}
+      {lastSyncDate && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+          <div className="flex items-center gap-2 text-sm">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-green-700">
+              Dernière synchronisation : {new Date(lastSyncDate).toLocaleString('fr-FR')}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Sélecteurs de période */}
       <div className="bg-white border border-gray-200 rounded-lg p-4">
