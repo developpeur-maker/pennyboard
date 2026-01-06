@@ -64,25 +64,15 @@ function processPayfitData(accountingData) {
     '6417100', // Avantages en nature
   ]
 
+  // Liste des comptes de cotisations à utiliser (uniquement ceux-ci)
   const contributionAccounts = [
-    '4310000', // Urssaf - charges
-    '4372000', // Caisse de retraite AGIRC-ARRCO - charges salariales
-    '4375000', // Mutuelle - charges salariales
-    '437200',  // Caisse de retraite AGIRC-ARRCO - charges patronales
-    '4374100', // Prevoyance - charges patronales
-    '437500',  // Mutuelle - charges patronales
-    '437800',  // Titres-restaurant - charges patronales
-    '4386000', // Organismes sociaux - charges a payer
-    '4421000', // Prelevement a la source
+    '6316000', // Fonds pour le paritarisme
+    '6333100', // Contribution unique des employeurs à la formation professionnelle - Taxe d'apprentissage
+    '6333200', // Contribution unique des employeurs à la formation professionnelle - Formation professionnelle continue
     '6451000', // Cotisations à l'Urssaf
     '6458200', // Cotisations AGIRC-ARRCO
     '6458400', // Cotisations prevoyance
     '6458500', // Cotisations mutuelle
-    '6476000', // Autres charges sociales - Titres restaurants
-    '6316000', // Fonds pour le paritarisme
-    '6333100', // Contribution unique des employeurs à la formation professionnelle - Taxe d'apprentissage
-    '6333200', // Contribution unique des employeurs à la formation professionnelle - Formation professionnelle continue
-    '6580100', // Regularisation net a payer - moins perçu
   ]
 
   // Parcourir toutes les opérations
@@ -90,12 +80,12 @@ function processPayfitData(accountingData) {
     const accountId = String(operation.accountId || '')
     const accountName = String(operation.accountName || '').toUpperCase()
     
-    // Vérifier si le compte est dans nos listes ou correspond à un pattern générique
-    const isSalaryAccount = salaryAccounts.includes(accountId) ||
-                           accountId.startsWith('421') ||
-                           accountId.startsWith('425') ||
-                           accountId.startsWith('427') ||
-                           accountId.startsWith('641') ||
+    // Vérifier si c'est un compte de tiers (421, 425, 427) - pour le salaire versé
+    const isTierAccount = accountId === '4210000' || accountId === '4250000' || accountId === '4270000'
+    
+    // Vérifier si c'est un compte de charges 641 (pour le total brut global)
+    const isChargeAccount = accountId.startsWith('641') ||
+                           salaryAccounts.includes(accountId) ||
                            accountName.includes('SALAIRE') ||
                            accountName.includes('PRIME') ||
                            accountName.includes('GRATIFICATION') ||
@@ -103,30 +93,11 @@ function processPayfitData(accountingData) {
                            accountName.includes('AVANTAGE') ||
                            (accountName.includes('REMUNERATION') && !accountName.includes('BRUT'))
 
-    const isContributionAccount = contributionAccounts.includes(accountId) ||
-                                 accountId.startsWith('431') ||
-                                 accountId.startsWith('437') ||
-                                 accountId.startsWith('438') ||
-                                 accountId.startsWith('442') ||
-                                 accountId.startsWith('645') ||
-                                 accountId.startsWith('647') ||
-                                 accountId.startsWith('631') ||
-                                 accountId.startsWith('633') ||
-                                 accountId.startsWith('658') ||
-                                 accountName.includes('COTISATION') ||
-                                 accountName.includes('CHARGE SOCIALE') ||
-                                 accountName.includes('URSSAF') ||
-                                 accountName.includes('RETRAITE') ||
-                                 accountName.includes('MUTUELLE') ||
-                                 accountName.includes('PREVOYANCE') ||
-                                 accountName.includes('PRELEVEMENT') ||
-                                 accountName.includes('FORMATION') ||
-                                 accountName.includes('PARITARISME') ||
-                                 accountName.includes('REGULARISATION') ||
-                                 accountName.includes('TITRE') ||
-                                 accountName.includes('RESTAURANT')
+    // Vérifier si c'est un compte de cotisation (uniquement les comptes listés)
+    const isContributionAccount = contributionAccounts.includes(accountId)
 
-    const isSalaryRelated = isSalaryAccount || isContributionAccount
+    // Filtrer les opérations liées aux salaires/cotisations (tiers OU charges OU cotisations)
+    const isSalaryRelated = isTierAccount || isChargeAccount || isContributionAccount
 
     if (isSalaryRelated && operation.employeeFullName) {
       const employeeName = operation.employeeFullName
@@ -139,8 +110,8 @@ function processPayfitData(accountingData) {
           contractId,
           salaryPaid: 0,           // 421 + 425 (salaire réellement versé)
           totalPrimes: 0,          // 6413000 uniquement
-          totalContributions: 0,   // Tous les comptes de cotisations
-          totalGrossCost: 0,       // Masse salariale (tous les comptes de charges)
+          totalContributions: 0,   // Uniquement les comptes listés
+          totalGrossCost: 0,       // Masse salariale (tous les comptes de charges 641 + cotisations)
           operations: []
         })
       }
@@ -161,13 +132,14 @@ function processPayfitData(accountingData) {
         employee.totalPrimes += amount
       }
       
-      // Cotisations = tous les comptes de cotisations
+      // Cotisations = uniquement les comptes listés
       if (isContributionAccount) {
         employee.totalContributions += amount
       }
       
-      // Total brut global (masse salariale) = tous les comptes de charges (641 + cotisations)
-      if (isSalaryAccount || isContributionAccount) {
+      // Total brut global (masse salariale) = tous les comptes de charges 641 + cotisations
+      // (exclut les comptes de tiers 421, 425, 427)
+      if (isChargeAccount || isContributionAccount) {
         employee.totalGrossCost += amount
       }
     }
