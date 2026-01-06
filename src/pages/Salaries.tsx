@@ -154,7 +154,7 @@ const Salaries: React.FC = () => {
   const isFullYear = selectedMonth.endsWith('-00')
   const actualSelectedMonth = isFullYear ? undefined : selectedMonth
 
-  const { employees, loading, error, lastSyncDate, totals, refetch } = usePayfitSalaries(actualSelectedMonth, isFullYear ? selectedYear : undefined)
+  const { employees, loading, error, lastSyncDate, refetch } = usePayfitSalaries(actualSelectedMonth, isFullYear ? selectedYear : undefined)
 
   // Fonction de filtrage et tri
   const filteredAndSortedEmployees = useMemo(() => {
