@@ -15,10 +15,6 @@ interface PayfitAccountingOperation {
   }>
 }
 
-interface PayfitAccountingData {
-  [accountCode: string]: PayfitAccountingOperation[]
-}
-
 interface EmployeeSalaryData {
   employeeName: string
   contractId: string | null

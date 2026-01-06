@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { DollarSign, Users, Calendar, RefreshCw, TrendingUp } from 'lucide-react'
 import { usePayfitSalaries } from '../hooks/usePayfitSalaries'
 
