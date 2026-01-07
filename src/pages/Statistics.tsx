@@ -571,69 +571,70 @@ const Statistics: React.FC = () => {
                 <div className={slideDirection ? "w-1/2 flex-shrink-0" : "w-full"}>
                   <ResponsiveContainer width="100%" height={500}>
                     <BarChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis 
-                  dataKey="monthLabel" 
-                  angle={viewMode === 'year' ? 0 : -45}
-                  textAnchor={viewMode === 'year' ? "middle" : "end"}
-                  height={viewMode === 'year' ? 40 : 80}
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => {
-                    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M€`
-                    if (value >= 1000) return `${(value / 1000).toFixed(0)}k€`
-                    return `${value}€`
-                  }}
-                />
-                <defs>
-                  <pattern id="hatchPattern" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
-                    <path d="M 0,8 l 8,-8 M -2,2 l 4,-4 M 6,10 l 4,-4" stroke={seriesColors.charges_salariales} strokeWidth="1.5" />
-                  </pattern>
-                </defs>
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    padding: '8px'
-                  }}
-                />
-                <Legend />
-                {visibleSeries.revenus_totaux && (
-                  <Bar 
-                    dataKey="revenus_totaux" 
-                    fill={seriesColors.revenus_totaux}
-                    name="Revenus totaux"
-                  />
-                )}
-                {visibleSeries.charges && (
-                  <Bar 
-                    dataKey="charges" 
-                    fill={seriesColors.charges}
-                    name="Achats et charges"
-                    stackId="charges"
-                  />
-                )}
-                {visibleSeries.charges_salariales && (
-                  <Bar 
-                    dataKey="charges_salariales" 
-                    fill="url(#hatchPattern)"
-                    name="Masse salariale (incluse dans les charges)"
-                    stackId="charges"
-                  />
-                )}
-                {visibleSeries.tresorerie && (
-                  <Bar 
-                    dataKey="tresorerie" 
-                    fill={seriesColors.tresorerie}
-                    name="Trésorerie"
-                  />
-                )}
-                  </BarChart>
-                </ResponsiveContainer>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="monthLabel" 
+                        angle={viewMode === 'year' ? 0 : -45}
+                        textAnchor={viewMode === 'year' ? "middle" : "end"}
+                        height={viewMode === 'year' ? 40 : 80}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => {
+                          if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M€`
+                          if (value >= 1000) return `${(value / 1000).toFixed(0)}k€`
+                          return `${value}€`
+                        }}
+                      />
+                      <defs>
+                        <pattern id="hatchPattern" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+                          <path d="M 0,8 l 8,-8 M -2,2 l 4,-4 M 6,10 l 4,-4" stroke={seriesColors.charges_salariales} strokeWidth="1.5" />
+                        </pattern>
+                      </defs>
+                      <Tooltip
+                        formatter={(value: number) => formatCurrency(value)}
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          padding: '8px'
+                        }}
+                      />
+                      <Legend />
+                      {visibleSeries.revenus_totaux && (
+                        <Bar 
+                          dataKey="revenus_totaux" 
+                          fill={seriesColors.revenus_totaux}
+                          name="Revenus totaux"
+                        />
+                      )}
+                      {visibleSeries.charges && (
+                        <Bar 
+                          dataKey="charges" 
+                          fill={seriesColors.charges}
+                          name="Achats et charges"
+                          stackId="charges"
+                        />
+                      )}
+                      {visibleSeries.charges_salariales && (
+                        <Bar 
+                          dataKey="charges_salariales" 
+                          fill="url(#hatchPattern)"
+                          name="Masse salariale (incluse dans les charges)"
+                          stackId="charges"
+                        />
+                      )}
+                      {visibleSeries.tresorerie && (
+                        <Bar 
+                          dataKey="tresorerie" 
+                          fill={seriesColors.tresorerie}
+                          name="Trésorerie"
+                        />
+                      )}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           )}
