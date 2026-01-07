@@ -308,12 +308,40 @@ module.exports = async function handler(req, res) {
           const yearInt = parseInt(year, 10)
           const monthNumberInt = parseInt(monthNumber, 10)
           
+          // Convertir les objets en JSON de manière sécurisée
+          const trialBalanceJson = JSON.stringify(trialBalance)
+          const kpisJson = JSON.stringify(kpis)
+          const chargesBreakdownJson = JSON.stringify(chargesBreakdown)
+          const chargesSalarialesBreakdownJson = JSON.stringify(chargesSalarialesBreakdown)
+          const revenusBreakdownJson = JSON.stringify(revenusBreakdown)
+          const tresorerieBreakdownJson = JSON.stringify(tresorerieBreakdown)
+          
+          // Vérifier que les JSON sont valides avant insertion
+          try {
+            JSON.parse(trialBalanceJson)
+            JSON.parse(kpisJson)
+            JSON.parse(chargesBreakdownJson)
+            JSON.parse(chargesSalarialesBreakdownJson)
+            JSON.parse(revenusBreakdownJson)
+            JSON.parse(tresorerieBreakdownJson)
+          } catch (jsonError) {
+            console.error(`❌ Erreur de validation JSON pour ${month}:`, jsonError)
+            throw new Error(`JSON invalide pour ${month}: ${jsonError.message}`)
+          }
+          
+          // Utiliser la même structure que sync.js (sans casts explicites dans VALUES)
+          // Vérifier les types des paramètres avant la requête
+          if (typeof month !== 'string' || typeof yearInt !== 'number' || typeof monthNumberInt !== 'number') {
+            throw new Error(`Types invalides pour ${month}: month=${typeof month}, year=${typeof yearInt}, monthNumber=${typeof monthNumberInt}`)
+          }
+          
+          // Utiliser une requête préparée avec des types explicites
           await client.query(`
             INSERT INTO monthly_data (
               month, year, month_number, trial_balance, kpis, 
               charges_breakdown, charges_salariales_breakdown, revenus_breakdown, tresorerie_breakdown,
               is_current_month, sync_version
-            ) VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10, 1)
+            ) VALUES ($1::text, $2::integer, $3::integer, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::boolean, 1)
             ON CONFLICT (month) DO UPDATE SET
               trial_balance = EXCLUDED.trial_balance,
               kpis = EXCLUDED.kpis,
@@ -327,12 +355,12 @@ module.exports = async function handler(req, res) {
             month,
             yearInt,
             monthNumberInt,
-            JSON.stringify(trialBalance),
-            JSON.stringify(kpis),
-            JSON.stringify(chargesBreakdown),
-            JSON.stringify(chargesSalarialesBreakdown),
-            JSON.stringify(revenusBreakdown),
-            JSON.stringify(tresorerieBreakdown),
+            trialBalanceJson,
+            kpisJson,
+            chargesBreakdownJson,
+            chargesSalarialesBreakdownJson,
+            revenusBreakdownJson,
+            tresorerieBreakdownJson,
             isCurrentMonth
           ])
 
