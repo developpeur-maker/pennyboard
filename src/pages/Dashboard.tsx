@@ -380,7 +380,7 @@ const Dashboard: React.FC = () => {
               ) : (
                 <>
                   <RefreshCw className="w-3 h-3" />
-                  Sync complète (Admin)
+                  Sync complète (Admin - ne pas cliquer)
                 </>
               )}
             </button>

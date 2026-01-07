@@ -269,12 +269,21 @@ const Statistics: React.FC = () => {
         filteredPoint.revenus_totaux = point.revenus_totaux
       }
       
-      // Pour les charges : afficher les charges telles quelles
-      // La masse salariale sera empilée par-dessus (même si elle dépasse les charges)
+      // Pour les charges : si la masse salariale est visible, on affiche les charges sans masse salariale
+      // comme base, puis on empile la masse salariale par-dessus pour que la barre totale = charges
       if (visibleSeries.charges && point.charges !== null) {
-        filteredPoint.charges = point.charges
+        if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
+          // Si la masse salariale est visible, on soustrait pour avoir la base (charges sans masse salariale)
+          const chargesSalariales = point.charges_salariales
+          filteredPoint.charges = point.charges - chargesSalariales
+        } else {
+          // Si la masse salariale n'est pas visible, on affiche les charges complètes
+          filteredPoint.charges = point.charges
+        }
       }
       
+      // La masse salariale est empilée par-dessus les charges (sans masse salariale)
+      // pour que la barre totale = charges, avec une partie hachurée = masse salariale
       if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
         filteredPoint.charges_salariales = point.charges_salariales
       }
