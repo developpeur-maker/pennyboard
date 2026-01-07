@@ -304,12 +304,16 @@ module.exports = async function handler(req, res) {
           const shouldUpdate = true
           
           // Stocker dans la base de données (toujours mettre à jour)
+          // Convertir year et monthNumber en entiers pour éviter les problèmes de type
+          const yearInt = parseInt(year, 10)
+          const monthNumberInt = parseInt(monthNumber, 10)
+          
           await client.query(`
             INSERT INTO monthly_data (
               month, year, month_number, trial_balance, kpis, 
               charges_breakdown, charges_salariales_breakdown, revenus_breakdown, tresorerie_breakdown,
               is_current_month, sync_version
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)
+            ) VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10, 1)
             ON CONFLICT (month) DO UPDATE SET
               trial_balance = EXCLUDED.trial_balance,
               kpis = EXCLUDED.kpis,
@@ -321,8 +325,8 @@ module.exports = async function handler(req, res) {
               updated_at = CURRENT_TIMESTAMP
           `, [
             month,
-            year,
-            monthNumber,
+            yearInt,
+            monthNumberInt,
             JSON.stringify(trialBalance),
             JSON.stringify(kpis),
             JSON.stringify(chargesBreakdown),
