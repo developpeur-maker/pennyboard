@@ -278,9 +278,18 @@ const Statistics: React.FC = () => {
       if (visibleSeries.revenus_totaux && point.revenus_totaux !== null) {
         filteredPoint.revenus_totaux = point.revenus_totaux
       }
+      
+      // Pour les charges : si la masse salariale est visible, on soustrait la masse salariale des charges
+      // pour éviter la double comptabilisation dans l'empilement
       if (visibleSeries.charges && point.charges !== null) {
-        filteredPoint.charges = point.charges
+        if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
+          // Afficher les charges moins la masse salariale (qui sera empilée par-dessus)
+          filteredPoint.charges = point.charges - point.charges_salariales
+        } else {
+          filteredPoint.charges = point.charges
+        }
       }
+      
       if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
         filteredPoint.charges_salariales = point.charges_salariales
       }
@@ -444,6 +453,11 @@ const Statistics: React.FC = () => {
                     return `${value}€`
                   }}
                 />
+                <defs>
+                  <pattern id="hatchPattern" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+                    <path d="M 0,8 l 8,-8 M -2,2 l 4,-4 M 6,10 l 4,-4" stroke={seriesColors.charges_salariales} strokeWidth="1.5" />
+                  </pattern>
+                </defs>
                 <Tooltip
                   formatter={(value: number) => formatCurrency(value)}
                   contentStyle={{
@@ -466,13 +480,15 @@ const Statistics: React.FC = () => {
                     dataKey="charges" 
                     fill={seriesColors.charges}
                     name="Achats et charges"
+                    stackId="charges"
                   />
                 )}
                 {visibleSeries.charges_salariales && (
                   <Bar 
                     dataKey="charges_salariales" 
-                    fill={seriesColors.charges_salariales}
-                    name="Masse salariale"
+                    fill="url(#hatchPattern)"
+                    name="Masse salariale (incluse dans les charges)"
+                    stackId="charges"
                   />
                 )}
                 {visibleSeries.tresorerie && (
