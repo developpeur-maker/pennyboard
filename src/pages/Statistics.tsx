@@ -530,7 +530,6 @@ const Statistics: React.FC = () => {
                   </ResponsiveContainer>
                 </div>
               </div>
-            </div>
           )}
         </div>
       </div>
