@@ -261,8 +261,16 @@ const Statistics: React.FC = () => {
   }
 
   // Préparer les données pour le graphique (filtrer les séries non visibles)
-  const getChartData = () => {
-    const displayedData = getDisplayedData()
+  const getChartData = (customOffset?: number) => {
+    const displayedData = customOffset !== undefined 
+      ? (viewMode === 'year' 
+          ? chartData 
+          : (() => {
+              const startIndex = Math.max(0, chartData.length - 6 - customOffset)
+              const endIndex = startIndex + 6
+              return chartData.slice(startIndex, endIndex)
+            })())
+      : getDisplayedData()
     return displayedData.map(point => {
       const filteredPoint: any = {
         monthLabel: point.monthLabel
