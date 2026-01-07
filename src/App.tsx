@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import Dashboard from './pages/Dashboard'
 import Salaries from './pages/Salaries'
+import Statistics from './pages/Statistics'
 import Login from './pages/Login'
 import { LogOut } from 'lucide-react'
 import './index.css'
 
-type Page = 'dashboard' | 'salaries'
+type Page = 'dashboard' | 'salaries' | 'statistics'
 
 function App() {
   const { isAuthenticated, loading, logout } = useAuth()
@@ -55,6 +56,16 @@ function App() {
               >
                 Salaires et cotisations
               </button>
+              <button
+                onClick={() => setCurrentPage('statistics')}
+                className={`px-6 py-4 text-sm font-medium transition-colors ${
+                  currentPage === 'statistics'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Statistiques
+              </button>
             </div>
             <button
               onClick={logout}
@@ -70,6 +81,7 @@ function App() {
       {/* Contenu de la page */}
       {currentPage === 'dashboard' && <Dashboard />}
       {currentPage === 'salaries' && <Salaries />}
+      {currentPage === 'statistics' && <Statistics />}
     </div>
   )
 }

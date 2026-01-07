@@ -357,6 +357,17 @@ const Dashboard: React.FC = () => {
             onClick={() => setIsRevenusModalOpen(true)}
           />
           <KPICard
+            title="Trésorerie"
+            period={formatPeriod()}
+            subtitle="Liquidités disponibles"
+            value={kpis && kpis.hasData && kpis.solde_tresorerie !== null ? formatCurrency(kpis.solde_tresorerie) : 'Aucune donnée'}
+            change={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? Math.abs(kpis.tresorerie_growth) : 0}
+            changeType={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? (kpis.tresorerie_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
+            icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
+            color="cyan"
+            onClick={() => setIsTresorerieModalOpen(true)}
+          />
+          <KPICard
             title="Achats & Charges"
             period={formatPeriod()}
             subtitle="Coûts d'exploitation"
@@ -368,15 +379,15 @@ const Dashboard: React.FC = () => {
             onClick={() => setIsChargesModalOpen(true)}
           />
           <KPICard
-            title="Charges sans amortissements"
+            title="Masse Salariale"
             period={formatPeriod()}
-            subtitle="Coûts hors dotations"
-            value={kpis && kpis.hasData && kpis.charges_sans_amortissements !== null ? formatCurrency(kpis.charges_sans_amortissements) : 'Aucune donnée'}
+            subtitle="Charges de personnel"
+            value={kpis && kpis.hasData && kpis.charges_salariales !== null ? formatCurrency(kpis.charges_salariales) : 'Aucune donnée'}
             change={0}
             changeType="neutral"
-            icon={<TrendingDown className="w-5 h-5 text-indigo-600" />}
-            color="blue"
-            onClick={() => setIsChargesSansAmortissementsModalOpen(true)}
+            icon={<Users className="w-5 h-5 text-orange-600" />}
+            color="red"
+            onClick={() => setIsChargesSalarialesModalOpen(true)}
           />
           <KPICard
             title="Rentabilité"
@@ -410,26 +421,15 @@ const Dashboard: React.FC = () => {
             color="turquoise"
           />
           <KPICard
-            title="Trésorerie"
+            title="Charges sans amortissements"
             period={formatPeriod()}
-            subtitle="Liquidités disponibles"
-            value={kpis && kpis.hasData && kpis.solde_tresorerie !== null ? formatCurrency(kpis.solde_tresorerie) : 'Aucune donnée'}
-            change={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? Math.abs(kpis.tresorerie_growth) : 0}
-            changeType={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? (kpis.tresorerie_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
-            icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
-            color="cyan"
-            onClick={() => setIsTresorerieModalOpen(true)}
-          />
-          <KPICard
-            title="Masse Salariale"
-            period={formatPeriod()}
-            subtitle="Charges de personnel"
-            value={kpis && kpis.hasData && kpis.charges_salariales !== null ? formatCurrency(kpis.charges_salariales) : 'Aucune donnée'}
+            subtitle="Coûts hors dotations"
+            value={kpis && kpis.hasData && kpis.charges_sans_amortissements !== null ? formatCurrency(kpis.charges_sans_amortissements) : 'Aucune donnée'}
             change={0}
             changeType="neutral"
-            icon={<Users className="w-5 h-5 text-orange-600" />}
-            color="red"
-            onClick={() => setIsChargesSalarialesModalOpen(true)}
+            icon={<TrendingDown className="w-5 h-5 text-red-600" />}
+            color="blue"
+            onClick={() => setIsChargesSansAmortissementsModalOpen(true)}
           />
         </div>
       </div>
