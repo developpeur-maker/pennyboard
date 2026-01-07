@@ -33,6 +33,12 @@ module.exports = async function handler(req, res) {
     const client = await pool.connect()
     
     try {
+      // Nettoyer les données de test existantes
+      console.log('🧹 Nettoyage des données de test...')
+      await client.query('DELETE FROM monthly_data WHERE kpis->>\'ventes_706\' = \'10000\'')
+      await client.query('DELETE FROM sync_logs WHERE message LIKE \'%test%\' OR message LIKE \'%fallback%\'')
+      console.log('✅ Données de test supprimées')
+
       // Récupérer TOUS les mois depuis 2021 jusqu'au mois actuel
       const monthsToSync = []
       const currentDate = new Date()
@@ -55,227 +61,7 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      console.log(`📅 Synchronisation de ${monthsToSync.length} mois au total`)
-
-      // Importer les fonctions nécessaires depuis sync.js
-      // Note: On doit copier les fonctions car on ne peut pas les importer directement
-      const getTrialBalanceFromPennylane = async (startDate, endDate) => {
-        const fetch = require('node-fetch')
-        const PENNYLANE_API_BASE = 'https://app.pennylane.com/api/external/v1'
-        const apiKey = process.env.PENNYLANE_API_KEY
-
-        if (!apiKey) {
-          throw new Error('PENNYLANE_API_KEY non configurée')
-        }
-
-        const url = `${PENNYLANE_API_BASE}/accounting/trial-balance?start_date=${startDate}&end_date=${endDate}`
-        
-        console.log(`📡 Appel API Pennylane: ${url}`)
-        apiCallsCount++
-
-        const response = await fetch(url, {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          }
-        })
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error(`❌ Erreur API Pennylane (${response.status}):`, errorText)
-          throw new Error(`API Pennylane error: ${response.status} - ${errorText}`)
-        }
-
-        return await response.json()
-      }
-
-      // Copier les fonctions de calcul depuis sync.js
-      function calculateKPIsFromTrialBalance(trialBalance, month) {
-        const items = trialBalance.items || []
-        
-        let ventes_706 = 0
-        let revenus_totaux = 0
-        let charges = 0
-        let charges_sans_amortissements = 0
-        let charges_salariales = 0
-        let tresorerie = 0
-        
-        items.forEach((item) => {
-          const accountNumber = item.number || ''
-          const debit = parseFloat(item.debits || '0')
-          const credit = parseFloat(item.credits || '0')
-          
-          if (accountNumber.startsWith('706')) {
-            ventes_706 += (credit - debit)
-          }
-          
-          if (accountNumber.startsWith('7')) {
-            revenus_totaux += (credit - debit)
-          }
-          
-          if (accountNumber.startsWith('6')) {
-            const solde = debit - credit
-            charges += solde
-            
-            if (!accountNumber.startsWith('68')) {
-              charges_sans_amortissements += solde
-            }
-          }
-          
-          if (accountNumber.startsWith('64')) {
-            const solde = debit - credit
-            if (solde > 0) {
-              charges_salariales += solde
-            }
-          }
-        })
-        
-        return {
-          ventes_706,
-          revenus_totaux,
-          charges,
-          charges_sans_amortissements,
-          charges_salariales,
-          resultat_net: revenus_totaux - charges,
-          tresorerie,
-          currency: 'EUR',
-          period: month
-        }
-      }
-
-      function calculateChargesBreakdown(trialBalance) {
-        const items = trialBalance.items || []
-        const breakdown = {}
-        
-        items.forEach((item) => {
-          const accountNumber = item.number || ''
-          if (accountNumber.startsWith('6')) {
-            const debit = parseFloat(item.debits || '0')
-            const credit = parseFloat(item.credits || '0')
-            const solde = debit - credit
-            
-            const label = item.label || `Compte ${accountNumber}`
-            
-            if (!breakdown[accountNumber]) {
-              breakdown[accountNumber] = {
-                number: accountNumber,
-                label: label,
-                amount: 0
-              }
-            }
-            
-            breakdown[accountNumber].amount += solde
-          }
-        })
-        
-        return breakdown
-      }
-
-      function calculateChargesSansAmortissementsBreakdown(trialBalance) {
-        const items = trialBalance.items || []
-        const breakdown = {}
-        
-        items.forEach((item) => {
-          const accountNumber = item.number || ''
-          if (accountNumber.startsWith('6') && !accountNumber.startsWith('68')) {
-            const debit = parseFloat(item.debits || '0')
-            const credit = parseFloat(item.credits || '0')
-            const solde = debit - credit
-            
-            const label = item.label || `Compte ${accountNumber}`
-            
-            if (!breakdown[accountNumber]) {
-              breakdown[accountNumber] = {
-                number: accountNumber,
-                label: label,
-                amount: 0
-              }
-            }
-            
-            breakdown[accountNumber].amount += solde
-          }
-        })
-        
-        return breakdown
-      }
-
-      function calculateChargesSalarialesBreakdown(trialBalance) {
-        const items = trialBalance.items || []
-        const breakdown = {}
-        
-        items.forEach((item) => {
-          const accountNumber = item.number || ''
-          if (accountNumber.startsWith('64')) {
-            const debit = parseFloat(item.debits || '0')
-            const credit = parseFloat(item.credits || '0')
-            const solde = debit - credit
-            
-            if (solde > 0) {
-              const label = item.label || `Compte ${accountNumber}`
-              
-              breakdown[accountNumber] = {
-                number: accountNumber,
-                label: label,
-                amount: solde
-              }
-            }
-          }
-        })
-        
-        return breakdown
-      }
-
-      function calculateRevenusBreakdown(trialBalance) {
-        const items = trialBalance.items || []
-        const breakdown = {}
-        
-        items.forEach((item) => {
-          const accountNumber = item.number || ''
-          if (accountNumber.startsWith('7')) {
-            const debit = parseFloat(item.debits || '0')
-            const credit = parseFloat(item.credits || '0')
-            const solde = credit - debit
-            
-            const label = item.label || `Compte ${accountNumber}`
-            
-            if (!breakdown[accountNumber]) {
-              breakdown[accountNumber] = {
-                number: accountNumber,
-                label: label,
-                amount: 0
-              }
-            }
-            
-            breakdown[accountNumber].amount += solde
-          }
-        })
-        
-        return breakdown
-      }
-
-      function calculateTresorerieBreakdown(trialBalance) {
-        const items = trialBalance.items || []
-        const breakdown = {}
-        
-        items.forEach((item) => {
-          const accountNumber = item.number || ''
-          if (accountNumber.startsWith('512')) {
-            const debit = parseFloat(item.debits || '0')
-            const credit = parseFloat(item.credits || '0')
-            const balance = debit - credit
-            
-            const label = item.label || `Compte ${accountNumber}`
-            
-            breakdown[accountNumber] = {
-              number: accountNumber,
-              label: label,
-              balance: balance
-            }
-          }
-        })
-        
-        return breakdown
-      }
+      console.log(`📅 Synchronisation de ${monthsToSync.length} mois:`, monthsToSync.map(m => m.month))
 
       // Synchroniser chaque mois
       for (const { month, year, monthNumber } of monthsToSync) {
@@ -292,7 +78,6 @@ module.exports = async function handler(req, res) {
           // Calculer les KPIs à partir du trial balance
           const kpis = calculateKPIsFromTrialBalance(trialBalance, month)
           const chargesBreakdown = calculateChargesBreakdown(trialBalance)
-          const chargesSansAmortissementsBreakdown = calculateChargesSansAmortissementsBreakdown(trialBalance)
           const chargesSalarialesBreakdown = calculateChargesSalarialesBreakdown(trialBalance)
           const revenusBreakdown = calculateRevenusBreakdown(trialBalance)
           const tresorerieBreakdown = calculateTresorerieBreakdown(trialBalance)
@@ -303,7 +88,7 @@ module.exports = async function handler(req, res) {
           // Pour la synchronisation complète, on met à jour TOUS les mois
           const shouldUpdate = true
           
-          // Stocker dans la base de données (toujours mettre à jour)
+          // Stocker dans la base de données
           // Utiliser exactement la même syntaxe que sync.js
           const insertResult = await client.query(`
             INSERT INTO monthly_data (
@@ -312,14 +97,42 @@ module.exports = async function handler(req, res) {
               is_current_month, sync_version
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)
             ON CONFLICT (month) DO UPDATE SET
-              trial_balance = EXCLUDED.trial_balance,
-              kpis = EXCLUDED.kpis,
-              charges_breakdown = EXCLUDED.charges_breakdown,
-              charges_salariales_breakdown = EXCLUDED.charges_salariales_breakdown,
-              revenus_breakdown = EXCLUDED.revenus_breakdown,
-              tresorerie_breakdown = EXCLUDED.tresorerie_breakdown,
-              is_current_month = EXCLUDED.is_current_month,
-              updated_at = CURRENT_TIMESTAMP
+              trial_balance = CASE 
+                WHEN $11 THEN EXCLUDED.trial_balance 
+                ELSE monthly_data.trial_balance 
+              END,
+              kpis = CASE 
+                WHEN $11 THEN EXCLUDED.kpis 
+                ELSE monthly_data.kpis 
+              END,
+              charges_breakdown = CASE 
+                WHEN $11 THEN EXCLUDED.charges_breakdown 
+                ELSE monthly_data.charges_breakdown 
+              END,
+              charges_salariales_breakdown = CASE 
+                WHEN $11 THEN EXCLUDED.charges_salariales_breakdown 
+                ELSE monthly_data.charges_salariales_breakdown 
+              END,
+              revenus_breakdown = CASE 
+                WHEN $11 THEN EXCLUDED.revenus_breakdown 
+                ELSE monthly_data.revenus_breakdown 
+              END,
+              tresorerie_breakdown = CASE 
+                WHEN $11 THEN EXCLUDED.tresorerie_breakdown 
+                ELSE monthly_data.tresorerie_breakdown 
+              END,
+              is_current_month = CASE 
+                WHEN $11 THEN EXCLUDED.is_current_month 
+                ELSE monthly_data.is_current_month 
+              END,
+              sync_version = CASE 
+                WHEN $11 THEN monthly_data.sync_version + 1 
+                ELSE monthly_data.sync_version 
+              END,
+              updated_at = CASE 
+                WHEN $11 THEN CURRENT_TIMESTAMP 
+                ELSE monthly_data.updated_at 
+              END
           `, [
             month, year, monthNumber,
             JSON.stringify(trialBalance),
@@ -328,23 +141,35 @@ module.exports = async function handler(req, res) {
             JSON.stringify(chargesSalarialesBreakdown),
             JSON.stringify(revenusBreakdown),
             JSON.stringify(tresorerieBreakdown),
-            isCurrentMonth
+            isCurrentMonth,
+            shouldUpdate  // $11: condition pour mettre à jour (toujours true pour sync complète)
           ])
-
+          
           recordsProcessed++
-          console.log(`✅ ${month} synchronisé avec succès`)
-
-          // Délai pour éviter les rate limits
-          await new Promise(resolve => setTimeout(resolve, 500))
+          
         } catch (monthError) {
-          console.error(`❌ Erreur lors de la synchronisation de ${month}:`, monthError)
-          // Continuer avec les autres mois même en cas d'erreur
+          console.error(`❌ Erreur pour le mois ${month}:`, monthError)
+          // Continuer avec les autres mois même si un échoue
         }
       }
 
-      const duration = Date.now() - startTime
+      // Recalculer la trésorerie cumulée pour tous les mois synchronisés
+      console.log('💰 Recalcul de la trésorerie cumulée...')
+      for (const monthData of monthsToSync) {
+        const month = monthData.month
+        const cumulativeTreasury = await calculateCumulativeTreasury(client, month)
+        
+        // Mettre à jour la trésorerie dans les KPIs
+        await client.query(`
+          UPDATE monthly_data 
+          SET kpis = jsonb_set(kpis, '{tresorerie}', $1::text::jsonb)
+          WHERE month = $2
+        `, [cumulativeTreasury.toString(), month])
+        
+      }
 
       // Enregistrer le log de synchronisation
+      const duration = Date.now() - startTime
       await client.query(`
         INSERT INTO sync_logs (sync_type, status, message, months_synced, records_processed, duration_ms, api_calls_count)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -352,44 +177,348 @@ module.exports = async function handler(req, res) {
         'full_sync',
         'success',
         `Synchronisation complète réussie: ${recordsProcessed} mois synchronisés`,
-        monthsToSync.length,
+        monthsToSync.map(m => m.month),
         recordsProcessed,
         duration,
         apiCallsCount
       ])
 
-      client.release()
-      await pool.end()
-
-      console.log(`✅ Synchronisation complète terminée: ${recordsProcessed} mois synchronisés en ${duration}ms`)
-
-      res.status(200).json({
-        success: true,
-        message: `Synchronisation complète réussie: ${recordsProcessed} mois synchronisés`,
-        monthsSynced: monthsToSync.length,
-        recordsProcessed,
-        duration_ms: duration,
-        apiCallsCount
+      console.log(`✅ Synchronisation complète terminée: ${recordsProcessed} mois, ${apiCallsCount} appels API, ${duration}ms`)
+      res.status(200).json({ 
+        message: 'Synchronisation complète réussie',
+        monthsSynced: recordsProcessed,
+        apiCalls: apiCallsCount,
+        duration: duration
       })
-
-    } catch (dbError) {
-      console.error('❌ Erreur base de données:', dbError)
-      client.release()
-      await pool.end()
       
-      res.status(500).json({
-        error: 'Erreur lors de la synchronisation complète',
-        details: dbError.message,
-        type: 'FULL_SYNC_DB_ERROR'
-      })
+    } finally {
+      client.release()
     }
   } catch (error) {
-    console.error('❌ Erreur générale de synchronisation complète:', error)
-    res.status(500).json({
-      error: 'Erreur lors de la synchronisation complète',
+    console.error('❌ Erreur lors de la synchronisation complète:', error)
+    console.error('❌ Stack trace:', error.stack)
+    console.error('❌ Détails de l\'erreur:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    })
+    
+    // Enregistrer l'erreur dans les logs
+    try {
+      const pool = new Pool({
+        connectionString: process.env.POSTGRES_URL,
+        ssl: {
+          rejectUnauthorized: false
+        }
+      })
+      const client = await pool.connect()
+      await client.query(`
+        INSERT INTO sync_logs (sync_type, status, message, duration_ms, api_calls_count)
+        VALUES ($1, $2, $3, $4, $5)
+      `, ['full_sync', 'error', `${error.message} | Stack: ${error.stack}`, Date.now() - startTime, apiCallsCount])
+      client.release()
+    } catch (logError) {
+      console.error('❌ Erreur lors de l\'enregistrement du log:', logError)
+    }
+    
+    res.status(500).json({ 
+      error: 'Échec de la synchronisation complète',
       details: error.message,
-      type: 'FULL_SYNC_ERROR'
+      type: error.name
     })
   }
 }
 
+// Fonction pour récupérer les données Pennylane directement
+async function getTrialBalanceFromPennylane(startDate, endDate) {
+  try {
+    const url = `https://app.pennylane.com/api/external/v2/trial_balance?period_start=${startDate}&period_end=${endDate}&is_auxiliary=false&page=1&per_page=1000`
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${process.env.VITE_PENNYLANE_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Erreur API Pennylane: ${response.status} - ${response.statusText} - ${errorText}`)
+    }
+    
+    const responseData = await response.json()
+    
+    if (!responseData.items || responseData.items.length === 0) {
+      throw new Error('Aucune donnée disponible dans Pennylane pour cette période')
+    }
+    
+    return responseData
+  } catch (error) {
+    console.error('❌ Erreur lors de la récupération des données Pennylane:', error)
+    throw error
+  }
+}
+
+// Fonctions de calcul des KPIs (simplifiées pour la synchronisation)
+function calculateKPIsFromTrialBalance(trialBalance, month) {
+  const items = trialBalance.items || []
+  
+  // Calculer les KPIs de base
+  let ventes_706 = 0
+  let revenus_totaux = 0
+  let charges = 0
+  let charges_sans_amortissements = 0
+  let charges_salariales = 0
+  let tresorerie = 0
+  
+  items.forEach((item) => {
+    const accountNumber = item.number || ''
+    const debit = parseFloat(item.debits || '0')
+    const credit = parseFloat(item.credits || '0')
+    
+    // Ventes 706 (compte 706 uniquement) - Solde créditeur
+    if (accountNumber.startsWith('706')) {
+      ventes_706 += (credit - debit)
+    }
+    
+    // Revenus totaux (tous les comptes de la classe 7)
+    if (accountNumber.startsWith('7')) {
+      revenus_totaux += (credit - debit)
+    }
+    
+    // Charges (classe 6) - Tous les soldes (positifs et négatifs)
+    if (accountNumber.startsWith('6')) {
+      const solde = debit - credit
+      charges += solde // Inclure tous les soldes, même négatifs
+      
+      // Charges sans dotations aux amortissements (exclure les comptes 68)
+      if (!accountNumber.startsWith('68')) {
+        charges_sans_amortissements += solde
+      }
+    }
+    
+    // Charges salariales (comptes 64x - Personnel) - Exclure les extournes (soldes négatifs)
+    if (accountNumber.startsWith('64')) {
+      const solde = debit - credit
+      if (solde > 0) { // Seulement les soldes positifs (pas d'extournes)
+        charges_salariales += solde
+      }
+    }
+    
+    
+    // Trésorerie sera calculée séparément avec calculateCumulativeTreasury
+    // Pas de calcul ici pour éviter la double comptabilisation
+  })
+  
+  return {
+    ventes_706,
+    revenus_totaux,
+    charges,
+    charges_sans_amortissements,
+    charges_salariales,
+    resultat_net: revenus_totaux - charges,
+    tresorerie,
+    currency: 'EUR',
+    period: month
+  }
+}
+
+// Fonction pour calculer la trésorerie cumulée depuis le début d'exercice
+async function calculateCumulativeTreasury(client, targetMonth) {
+  try {
+    console.log(`💰 Calcul de la trésorerie cumulée pour ${targetMonth}`)
+    
+    // Récupérer l'année du mois cible
+    const targetYear = targetMonth.split('-')[0]
+    
+    // Récupérer tous les mois depuis le début d'année jusqu'au mois cible
+    const monthsQuery = `
+      SELECT month, trial_balance 
+      FROM monthly_data 
+      WHERE year = $1 AND month <= $2
+      ORDER BY month ASC
+    `
+    
+    const monthsResult = await client.query(monthsQuery, [targetYear, targetMonth])
+    
+    if (monthsResult.rows.length === 0) {
+      console.log('⚠️ Aucune donnée trouvée pour le calcul de trésorerie')
+      return 0
+    }
+    
+    // Calculer la trésorerie cumulée en additionnant tous les mouvements depuis le début d'exercice
+    console.log(`📊 Calcul cumulé pour ${monthsResult.rows.length} mois depuis le début d'exercice`)
+    
+    let cumulativeTreasury = 0
+    
+    for (const row of monthsResult.rows) {
+      const trialBalance = row.trial_balance
+      const items = trialBalance.items || []
+      
+      // Calculer la trésorerie pour ce mois (mouvements nets)
+      let monthlyTreasury = 0
+      items.forEach((item) => {
+        const accountNumber = item.number || ''
+        if (accountNumber.startsWith('512')) {
+          const debit = parseFloat(item.debits || '0')
+          const credit = parseFloat(item.credits || '0')
+          // Mouvement net du mois : débit - crédit
+          monthlyTreasury += debit - credit
+        }
+      })
+      
+      cumulativeTreasury += monthlyTreasury
+      console.log(`  - ${row.month}: ${monthlyTreasury}€ (cumulé: ${cumulativeTreasury}€)`)
+    }
+    
+    console.log(`✅ Trésorerie cumulée calculée: ${cumulativeTreasury}€`)
+    return cumulativeTreasury
+    
+  } catch (error) {
+    console.error('❌ Erreur lors du calcul de la trésorerie cumulée:', error)
+    return 0
+  }
+}
+
+function calculateChargesBreakdown(trialBalance) {
+  const items = trialBalance.items || []
+  const breakdown = {}
+  
+  items.forEach((item) => {
+    const accountNumber = item.number || ''
+    if (accountNumber.startsWith('6')) {
+      const debit = parseFloat(item.debits || '0')
+      const credit = parseFloat(item.credits || '0')
+      const solde = debit - credit
+      
+      // Utiliser le vrai libellé du compte depuis l'API Pennylane
+      const label = item.label || `Compte ${accountNumber}`
+      
+      if (!breakdown[accountNumber]) {
+        breakdown[accountNumber] = {
+          number: accountNumber,
+          label: label,
+          amount: 0
+        }
+      }
+      
+      breakdown[accountNumber].amount += solde
+    }
+  })
+  
+  return breakdown
+}
+
+function calculateChargesSansAmortissementsBreakdown(trialBalance) {
+  const items = trialBalance.items || []
+  const breakdown = {}
+  
+  items.forEach((item) => {
+    const accountNumber = item.number || ''
+    // Inclure tous les comptes de la classe 6 SAUF les comptes 68 (dotations aux amortissements)
+    if (accountNumber.startsWith('6') && !accountNumber.startsWith('68')) {
+      const debit = parseFloat(item.debits || '0')
+      const credit = parseFloat(item.credits || '0')
+      const solde = debit - credit
+      
+      // Utiliser le vrai libellé du compte depuis l'API Pennylane
+      const label = item.label || `Compte ${accountNumber}`
+      
+      if (!breakdown[accountNumber]) {
+        breakdown[accountNumber] = {
+          number: accountNumber,
+          label: label,
+          amount: 0
+        }
+      }
+      
+      breakdown[accountNumber].amount += solde
+    }
+  })
+  
+  return breakdown
+}
+
+function calculateChargesSalarialesBreakdown(trialBalance) {
+  const items = trialBalance.items || []
+  const breakdown = {}
+  
+  items.forEach((item) => {
+    const accountNumber = item.number || ''
+    if (accountNumber.startsWith('64')) {
+      const debit = parseFloat(item.debits || '0')
+      const credit = parseFloat(item.credits || '0')
+      const solde = debit - credit
+      
+      // Pour la masse salariale : seulement les soldes positifs
+      if (solde > 0) {
+        // Utiliser le vrai libellé du compte depuis l'API Pennylane
+        const label = item.label || `Compte ${accountNumber}`
+        
+        breakdown[accountNumber] = {
+        number: accountNumber,
+          label: label,
+          amount: solde
+        }
+      }
+    }
+  })
+  
+  return breakdown
+}
+
+
+function calculateRevenusBreakdown(trialBalance) {
+  const items = trialBalance.items || []
+  const breakdown = {}
+  
+  items.forEach((item) => {
+    const accountNumber = item.number || ''
+    if (accountNumber.startsWith('7')) {
+      const debit = parseFloat(item.debits || '0')
+      const credit = parseFloat(item.credits || '0')
+      const amount = credit - debit
+      
+      // Utiliser le vrai libellé du compte depuis l'API Pennylane
+      const label = item.label || `Compte ${accountNumber}`
+      
+      if (!breakdown[accountNumber]) {
+        breakdown[accountNumber] = {
+          number: accountNumber,
+          label: label,
+          amount: 0
+        }
+      }
+      
+      breakdown[accountNumber].amount += amount
+    }
+  })
+  
+  return breakdown
+}
+
+function calculateTresorerieBreakdown(trialBalance) {
+  const items = trialBalance.items || []
+  const breakdown = {}
+  
+  items.forEach((item) => {
+    const accountNumber = item.number || ''
+    if (accountNumber.startsWith('512')) {
+      const debit = parseFloat(item.debits || '0')
+      const credit = parseFloat(item.credits || '0')
+      const balance = debit - credit
+      
+      if (!breakdown[accountNumber]) {
+        breakdown[accountNumber] = {
+          number: accountNumber,
+          label: item.label || '',
+          balance: 0
+        }
+      }
+      
+      breakdown[accountNumber].balance += balance
+    }
+  })
+  
+  return breakdown
+}
