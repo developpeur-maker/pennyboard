@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getAllDataFromDatabase } from '../services/databaseApi'
@@ -14,7 +14,7 @@ interface ChartDataPoint {
 
 const Statistics: React.FC = () => {
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
-  const [monthOffset, setMonthOffset] = useState(0) // Offset pour la pagination (0 = 12 derniers mois)
+  const [monthOffset, setMonthOffset] = useState(0) // Offset pour la pagination (0 = 6 derniers mois)
   
   // États pour les pastilles (séries visibles)
   const [visibleSeries, setVisibleSeries] = useState({
@@ -27,6 +27,8 @@ const Statistics: React.FC = () => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null)
+  const prevMonthOffsetRef = useRef(0)
 
   // Fonction pour générer tous les mois disponibles depuis 2021
   const generateAllMonths = () => {
@@ -225,9 +227,9 @@ const Statistics: React.FC = () => {
     if (viewMode === 'year') {
       return chartData
     } else {
-      // Mode mois : afficher 12 mois à la fois selon l'offset
-      const startIndex = Math.max(0, chartData.length - 12 - monthOffset)
-      const endIndex = startIndex + 12
+      // Mode mois : afficher 6 mois à la fois selon l'offset
+      const startIndex = Math.max(0, chartData.length - 6 - monthOffset)
+      const endIndex = startIndex + 6
       return chartData.slice(startIndex, endIndex)
     }
   }
@@ -235,7 +237,7 @@ const Statistics: React.FC = () => {
   // Fonction pour vérifier si on peut naviguer vers la gauche (mois plus récents)
   const canNavigateLeft = () => {
     if (viewMode === 'year') return false
-    return monthOffset < chartData.length - 12
+    return monthOffset < chartData.length - 6
   }
 
   // Fonction pour vérifier si on peut naviguer vers la droite (mois plus anciens)
@@ -403,10 +405,19 @@ const Statistics: React.FC = () => {
         {/* Graphique */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           {/* Navigation avec flèches (uniquement en mode mois) */}
-          {viewMode === 'month' && chartData.length > 12 && (
+          {viewMode === 'month' && chartData.length > 6 && (
             <div className="flex justify-between items-center mb-4">
               <button
-                onClick={() => setMonthOffset(prev => Math.min(prev + 12, chartData.length - 12))}
+                onClick={() => {
+                  if (canNavigateLeft()) {
+                    setSlideDirection('right')
+                    setMonthOffset(prev => {
+                      prevMonthOffsetRef.current = prev
+                      return Math.min(prev + 1, chartData.length - 6)
+                    })
+                    setTimeout(() => setSlideDirection(null), 500)
+                  }
+                }}
                 disabled={!canNavigateLeft()}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   canNavigateLeft()
@@ -421,7 +432,16 @@ const Statistics: React.FC = () => {
                 {formatPeriod()}
               </span>
               <button
-                onClick={() => setMonthOffset(prev => Math.max(prev - 12, 0))}
+                onClick={() => {
+                  if (canNavigateRight()) {
+                    setSlideDirection('left')
+                    setMonthOffset(prev => {
+                      prevMonthOffsetRef.current = prev
+                      return Math.max(prev - 1, 0)
+                    })
+                    setTimeout(() => setSlideDirection(null), 500)
+                  }
+                }}
                 disabled={!canNavigateRight()}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   canNavigateRight()
@@ -453,8 +473,16 @@ const Statistics: React.FC = () => {
               <p className="text-gray-600 text-lg">Aucune donnée disponible pour cette période</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={500}>
-              <BarChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+            <div className="relative overflow-hidden">
+              <div 
+                key={monthOffset}
+                className={`transition-transform duration-500 ease-in-out ${
+                  slideDirection === 'left' ? 'animate-slide-left' : 
+                  slideDirection === 'right' ? 'animate-slide-right' : ''
+                }`}
+              >
+                <ResponsiveContainer width="100%" height={500}>
+                  <BarChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis 
                   dataKey="monthLabel" 
@@ -516,8 +544,10 @@ const Statistics: React.FC = () => {
                     name="Trésorerie"
                   />
                 )}
-              </BarChart>
-            </ResponsiveContainer>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           )}
         </div>
       </div>
