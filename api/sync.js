@@ -273,6 +273,7 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
   let ventes_706 = 0
   let revenus_totaux = 0
   let charges = 0
+  let charges_sans_amortissements = 0
   let charges_salariales = 0
   let tresorerie = 0
   
@@ -295,6 +296,11 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
     if (accountNumber.startsWith('6')) {
       const solde = debit - credit
       charges += solde // Inclure tous les soldes, même négatifs
+      
+      // Charges sans dotations aux amortissements (exclure les comptes 68)
+      if (!accountNumber.startsWith('68')) {
+        charges_sans_amortissements += solde
+      }
     }
     
     // Charges salariales (comptes 64x - Personnel) - Exclure les extournes (soldes négatifs)
@@ -314,6 +320,7 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
     ventes_706,
     revenus_totaux,
     charges,
+    charges_sans_amortissements,
     charges_salariales,
     resultat_net: revenus_totaux - charges,
     tresorerie,
@@ -386,6 +393,36 @@ function calculateChargesBreakdown(trialBalance) {
   items.forEach((item) => {
     const accountNumber = item.number || ''
     if (accountNumber.startsWith('6')) {
+      const debit = parseFloat(item.debits || '0')
+      const credit = parseFloat(item.credits || '0')
+      const solde = debit - credit
+      
+      // Utiliser le vrai libellé du compte depuis l'API Pennylane
+      const label = item.label || `Compte ${accountNumber}`
+      
+      if (!breakdown[accountNumber]) {
+        breakdown[accountNumber] = {
+          number: accountNumber,
+          label: label,
+          amount: 0
+        }
+      }
+      
+      breakdown[accountNumber].amount += solde
+    }
+  })
+  
+  return breakdown
+}
+
+function calculateChargesSansAmortissementsBreakdown(trialBalance) {
+  const items = trialBalance.items || []
+  const breakdown = {}
+  
+  items.forEach((item) => {
+    const accountNumber = item.number || ''
+    // Inclure tous les comptes de la classe 6 SAUF les comptes 68 (dotations aux amortissements)
+    if (accountNumber.startsWith('6') && !accountNumber.startsWith('68')) {
       const debit = parseFloat(item.debits || '0')
       const credit = parseFloat(item.credits || '0')
       const solde = debit - credit

@@ -9,6 +9,7 @@ interface KPIData {
   chiffre_affaires: number | null // CA Net (comptes 701-708 moins 709)
   total_produits_exploitation: number | null // Total des produits d'exploitation (tous les comptes 7)
   charges: number | null
+  charges_sans_amortissements: number | null // Charges sans dotations aux amortissements (exclut comptes 68)
   charges_salariales: number | null // Charges salariales (comptes 64x)
   resultat_net: number | null
   solde_tresorerie: number | null
@@ -40,6 +41,7 @@ interface UsePennylaneDataReturn {
   incomeStatement: any | null
   fiscalYears: Array<{id: string, name: string, start_date: string, end_date: string}>
   chargesBreakdown: Array<{code: string, label: string, description: string, amount: number}>
+  chargesSansAmortissementsBreakdown: Array<{code: string, label: string, description: string, amount: number}>
   chargesSalarialesBreakdown: Array<{code: string, label: string, description: string, amount: number}>
   revenusBreakdown: Array<{code: string, label: string, description: string, amount: number}>
   tresorerieBreakdown: Array<{code: string, label: string, description: string, amount: number}>
@@ -69,6 +71,7 @@ export const usePennylaneData = (
   const [incomeStatement] = useState<any | null>(null)
   const [fiscalYears] = useState<Array<{id: string, name: string, start_date: string, end_date: string}>>([])
   const [chargesBreakdown, setChargesBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
+  const [chargesSansAmortissementsBreakdown, setChargesSansAmortissementsBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [chargesSalarialesBreakdown, setChargesSalarialesBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [revenusBreakdown, setRevenusBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
   const [tresorerieBreakdown, setTresorerieBreakdown] = useState<Array<{code: string, label: string, description: string, amount: number}>>([])
@@ -139,6 +142,7 @@ export const usePennylaneData = (
         chiffre_affaires: null,
         total_produits_exploitation: null,
         charges: null,
+        charges_sans_amortissements: null,
         charges_salariales: null,
         resultat_net: null,
         solde_tresorerie: null,
@@ -224,6 +228,7 @@ export const usePennylaneData = (
           chiffre_affaires: null,
           total_produits_exploitation: null,
           charges: null,
+          charges_sans_amortissements: null,
           charges_salariales: null,
           resultat_net: null,
           solde_tresorerie: null,
@@ -238,6 +243,7 @@ export const usePennylaneData = (
           tresorerie_growth: null
         })
         setChargesBreakdown([])
+        setChargesSansAmortissementsBreakdown([])
         setChargesSalarialesBreakdown([])
         setRevenusBreakdown([])
         setTresorerieBreakdown([])
@@ -259,7 +265,12 @@ export const usePennylaneData = (
       
       // Utiliser les breakdowns directement depuis les données reçues
       if (data.charges_breakdown) {
-        setChargesBreakdown(convertBreakdownToArray(data.charges_breakdown))
+        const allCharges = convertBreakdownToArray(data.charges_breakdown)
+        setChargesBreakdown(allCharges)
+        
+        // Créer le breakdown des charges sans amortissements (exclure les comptes 68)
+        const chargesSansAmortissements = allCharges.filter(item => !item.code.startsWith('68'))
+        setChargesSansAmortissementsBreakdown(chargesSansAmortissements)
       }
       if (data.charges_salariales_breakdown) {
         console.log('🔍 Charges salariales breakdown reçu:', data.charges_salariales_breakdown)
@@ -299,6 +310,7 @@ export const usePennylaneData = (
         chiffre_affaires: kpisData.chiffre_affaires || 0,
         total_produits_exploitation: kpisData.revenus_totaux || 0,
         charges: kpisData.charges || 0,
+        charges_sans_amortissements: kpisData.charges_sans_amortissements || null,
         charges_salariales: kpisData.charges_salariales || 0,
         resultat_net: kpisData.resultat_net || 0,
         solde_tresorerie: kpisData.tresorerie || 0,
@@ -405,6 +417,7 @@ export const usePennylaneData = (
     let cumulativeChiffreAffaires = 0
     let cumulativeTotalProduits = 0
     let cumulativeCharges = 0
+    let cumulativeChargesSansAmortissements = 0
     let cumulativeChargesSalariales = 0
     let lastMonthTresorerie = 0
 
@@ -414,6 +427,7 @@ export const usePennylaneData = (
         cumulativeChiffreAffaires += monthData.kpis.chiffre_affaires || 0
         cumulativeTotalProduits += monthData.kpis.revenus_totaux || 0
         cumulativeCharges += monthData.kpis.charges || 0
+        cumulativeChargesSansAmortissements += monthData.kpis.charges_sans_amortissements || 0
         cumulativeChargesSalariales += monthData.kpis.charges_salariales || 0
         
         // Trésorerie = solde du dernier mois de l'année
@@ -436,6 +450,7 @@ export const usePennylaneData = (
       chiffre_affaires: cumulativeChiffreAffaires,
       total_produits_exploitation: cumulativeTotalProduits,
       charges: cumulativeCharges,
+      charges_sans_amortissements: cumulativeChargesSansAmortissements,
       charges_salariales: cumulativeChargesSalariales,
       resultat_net: cumulativeResultatNet,
       solde_tresorerie: lastMonthTresorerie, // Trésorerie du dernier mois
@@ -529,6 +544,7 @@ export const usePennylaneData = (
     incomeStatement,
     fiscalYears,
     chargesBreakdown,
+    chargesSansAmortissementsBreakdown,
     chargesSalarialesBreakdown,
     revenusBreakdown,
     tresorerieBreakdown,

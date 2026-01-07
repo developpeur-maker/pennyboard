@@ -6,7 +6,8 @@ import {
   Calculator,
   PiggyBank,
   Calendar,
-  Users
+  Users,
+  TrendingDown
 } from 'lucide-react'
 import KPICard from '../components/KPICard'
 import DetailModal from '../components/DetailModal'
@@ -79,6 +80,7 @@ const Dashboard: React.FC = () => {
     return year
   })
   const [isChargesModalOpen, setIsChargesModalOpen] = useState(false)
+  const [isChargesSansAmortissementsModalOpen, setIsChargesSansAmortissementsModalOpen] = useState(false)
   const [isChargesSalarialesModalOpen, setIsChargesSalarialesModalOpen] = useState(false)
   const [isRevenusModalOpen, setIsRevenusModalOpen] = useState(false)
   const [isTresorerieModalOpen, setIsTresorerieModalOpen] = useState(false)
@@ -87,7 +89,7 @@ const Dashboard: React.FC = () => {
   const isFullYear = viewMode === 'year' || selectedMonth.endsWith('-00')
   const actualSelectedMonth = isFullYear ? undefined : selectedMonth
   
-  const { kpis, chargesBreakdown, chargesSalarialesBreakdown, revenusBreakdown, tresorerieBreakdown, lastSyncDate, loading, error, refetch } = usePennylaneData(actualSelectedMonth, undefined, isFullYear ? 'year' : 'month', selectedYear)
+  const { kpis, chargesBreakdown, chargesSansAmortissementsBreakdown, chargesSalarialesBreakdown, revenusBreakdown, tresorerieBreakdown, lastSyncDate, loading, error, refetch } = usePennylaneData(actualSelectedMonth, undefined, isFullYear ? 'year' : 'month', selectedYear)
 
   // Debug pour les charges salariales
   console.log('🔍 Dashboard - chargesSalarialesBreakdown:', chargesSalarialesBreakdown)
@@ -366,6 +368,17 @@ const Dashboard: React.FC = () => {
             onClick={() => setIsChargesModalOpen(true)}
           />
           <KPICard
+            title="Charges sans amortissements"
+            period={formatPeriod()}
+            subtitle="Coûts hors dotations"
+            value={kpis && kpis.hasData && kpis.charges_sans_amortissements !== null ? formatCurrency(kpis.charges_sans_amortissements) : 'Aucune donnée'}
+            change={0}
+            changeType="neutral"
+            icon={<TrendingDown className="w-5 h-5 text-indigo-600" />}
+            color="blue"
+            onClick={() => setIsChargesSansAmortissementsModalOpen(true)}
+          />
+          <KPICard
             title="Rentabilité"
             period={formatPeriod()}
             subtitle={
@@ -429,6 +442,16 @@ const Dashboard: React.FC = () => {
         subtitle={formatPeriod()}
         items={chargesBreakdown}
         totalAmount={kpis?.charges || 0}
+      />
+
+      {/* Modal de détail des charges sans amortissements */}
+      <DetailModal
+        isOpen={isChargesSansAmortissementsModalOpen}
+        onClose={() => setIsChargesSansAmortissementsModalOpen(false)}
+        title="Détail des Charges sans Amortissements"
+        subtitle={formatPeriod()}
+        items={chargesSansAmortissementsBreakdown}
+        totalAmount={kpis?.charges_sans_amortissements || 0}
       />
 
       {/* Modal de détail des charges salariales */}
