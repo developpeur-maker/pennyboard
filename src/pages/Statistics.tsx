@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getAllDataFromDatabase } from '../services/databaseApi'
@@ -28,7 +28,8 @@ const Statistics: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null)
-  const prevMonthOffsetRef = useRef(0)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [nextOffset, setNextOffset] = useState<number | null>(null)
 
   // Fonction pour générer tous les mois disponibles depuis 2021
   const generateAllMonths = () => {
@@ -409,18 +410,22 @@ const Statistics: React.FC = () => {
             <div className="flex justify-between items-center mb-4">
               <button
                 onClick={() => {
-                  if (canNavigateLeft()) {
+                  if (canNavigateLeft() && !isTransitioning) {
+                    setIsTransitioning(true)
+                    const newOffset = Math.min(monthOffset + 1, chartData.length - 6)
+                    setNextOffset(newOffset)
                     setSlideDirection('right')
-                    setMonthOffset(prev => {
-                      prevMonthOffsetRef.current = prev
-                      return Math.min(prev + 1, chartData.length - 6)
-                    })
-                    setTimeout(() => setSlideDirection(null), 500)
+                    setTimeout(() => {
+                      setMonthOffset(newOffset)
+                      setSlideDirection(null)
+                      setNextOffset(null)
+                      setTimeout(() => setIsTransitioning(false), 50)
+                    }, 500)
                   }
                 }}
-                disabled={!canNavigateLeft()}
+                disabled={!canNavigateLeft() || isTransitioning}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  canNavigateLeft()
+                  canNavigateLeft() && !isTransitioning
                     ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }`}
@@ -433,18 +438,22 @@ const Statistics: React.FC = () => {
               </span>
               <button
                 onClick={() => {
-                  if (canNavigateRight()) {
+                  if (canNavigateRight() && !isTransitioning) {
+                    setIsTransitioning(true)
+                    const newOffset = Math.max(monthOffset - 1, 0)
+                    setNextOffset(newOffset)
                     setSlideDirection('left')
-                    setMonthOffset(prev => {
-                      prevMonthOffsetRef.current = prev
-                      return Math.max(prev - 1, 0)
-                    })
-                    setTimeout(() => setSlideDirection(null), 500)
+                    setTimeout(() => {
+                      setMonthOffset(newOffset)
+                      setSlideDirection(null)
+                      setNextOffset(null)
+                      setTimeout(() => setIsTransitioning(false), 50)
+                    }, 500)
                   }
                 }}
-                disabled={!canNavigateRight()}
+                disabled={!canNavigateRight() || isTransitioning}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  canNavigateRight()
+                  canNavigateRight() && !isTransitioning
                     ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }`}
@@ -473,16 +482,95 @@ const Statistics: React.FC = () => {
               <p className="text-gray-600 text-lg">Aucune donnée disponible pour cette période</p>
             </div>
           ) : (
-            <div className="relative overflow-hidden">
+            <div className="relative overflow-hidden w-full" style={{ height: '500px' }}>
               <div 
-                key={monthOffset}
-                className={`transition-transform duration-500 ease-in-out ${
-                  slideDirection === 'left' ? 'animate-slide-left' : 
-                  slideDirection === 'right' ? 'animate-slide-right' : ''
-                }`}
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{
+                  transform: slideDirection === 'left' 
+                    ? 'translateX(-50%)' 
+                    : slideDirection === 'right' 
+                    ? 'translateX(-50%)' 
+                    : 'translateX(0)',
+                  width: slideDirection ? '200%' : '100%'
+                }}
               >
-                <ResponsiveContainer width="100%" height={500}>
-                  <BarChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                {/* Graphique précédent/suivant (pour la transition) */}
+                {slideDirection && nextOffset !== null && (
+                  <div className="w-1/2 flex-shrink-0">
+                    <ResponsiveContainer width="100%" height={500}>
+                      <BarChart 
+                        data={getChartData(nextOffset)} 
+                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis 
+                          dataKey="monthLabel" 
+                          angle={viewMode === 'year' ? 0 : -45}
+                          textAnchor={viewMode === 'year' ? "middle" : "end"}
+                          height={viewMode === 'year' ? 40 : 80}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => {
+                            if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M€`
+                            if (value >= 1000) return `${(value / 1000).toFixed(0)}k€`
+                            return `${value}€`
+                          }}
+                        />
+                        <defs>
+                          <pattern id="hatchPatternNext" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+                            <path d="M 0,8 l 8,-8 M -2,2 l 4,-4 M 6,10 l 4,-4" stroke={seriesColors.charges_salariales} strokeWidth="1.5" />
+                          </pattern>
+                        </defs>
+                        <Tooltip
+                          formatter={(value: number) => formatCurrency(value)}
+                          contentStyle={{
+                            backgroundColor: 'white',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            padding: '8px'
+                          }}
+                        />
+                        <Legend />
+                        {visibleSeries.revenus_totaux && (
+                          <Bar 
+                            dataKey="revenus_totaux" 
+                            fill={seriesColors.revenus_totaux}
+                            name="Revenus totaux"
+                          />
+                        )}
+                        {visibleSeries.charges && (
+                          <Bar 
+                            dataKey="charges" 
+                            fill={seriesColors.charges}
+                            name="Achats et charges"
+                            stackId="charges"
+                          />
+                        )}
+                        {visibleSeries.charges_salariales && (
+                          <Bar 
+                            dataKey="charges_salariales" 
+                            fill="url(#hatchPatternNext)"
+                            name="Masse salariale (incluse dans les charges)"
+                            stackId="charges"
+                          />
+                        )}
+                        {visibleSeries.tresorerie && (
+                          <Bar 
+                            dataKey="tresorerie" 
+                            fill={seriesColors.tresorerie}
+                            name="Trésorerie"
+                          />
+                        )}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+                {/* Graphique actuel */}
+                <div className={slideDirection ? "w-1/2 flex-shrink-0" : "w-full"}>
+                  <ResponsiveContainer width="100%" height={500}>
+                    <BarChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis 
                   dataKey="monthLabel" 
