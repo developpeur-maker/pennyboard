@@ -269,15 +269,10 @@ const Statistics: React.FC = () => {
         filteredPoint.revenus_totaux = point.revenus_totaux
       }
       
-      // Pour les charges : si la masse salariale est visible, on soustrait la masse salariale des charges
-      // pour éviter la double comptabilisation dans l'empilement
+      // Pour les charges : afficher les charges telles quelles
+      // La masse salariale sera empilée par-dessus (même si elle dépasse les charges)
       if (visibleSeries.charges && point.charges !== null) {
-        if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
-          // Afficher les charges moins la masse salariale (qui sera empilée par-dessus)
-          filteredPoint.charges = point.charges - point.charges_salariales
-        } else {
-          filteredPoint.charges = point.charges
-        }
+        filteredPoint.charges = point.charges
       }
       
       if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
