@@ -1,3 +1,6 @@
+// Charger les variables d'environnement depuis .env.local
+require('dotenv').config({ path: '.env.local' })
+
 const { Pool } = require('pg')
 const bcrypt = require('bcryptjs')
 const readline = require('readline')
