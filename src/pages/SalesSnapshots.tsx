@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { DollarSign, Calendar, Search, TrendingDown, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Calendar, Search, TrendingDown, ArrowLeft, ArrowRight } from 'lucide-react'
 
 // ============================================================================
 // DONNÉES DE TEST - À REMPLACER PAR LES DONNÉES DE LA BDD
@@ -20,13 +20,13 @@ const generateTestData = () => {
 
   // Générer des données pour quelques semaines en 2025
   const weeks = [
-    { start: '2025-06-30', weekNum: 27 }, // Semaine 27: 30/06 au 05/07
-    { start: '2025-07-07', weekNum: 28 }, // Semaine 28: 07/07 au 12/07
-    { start: '2025-07-14', weekNum: 29 }, // Semaine 29: 14/07 au 19/07
-    { start: '2025-07-21', weekNum: 30 }, // Semaine 30: 21/07 au 26/07
+    { start: '2025-06-30' }, // Semaine 27: 30/06 au 05/07
+    { start: '2025-07-07' }, // Semaine 28: 07/07 au 12/07
+    { start: '2025-07-14' }, // Semaine 29: 14/07 au 19/07
+    { start: '2025-07-21' }, // Semaine 30: 21/07 au 26/07
   ]
 
-  weeks.forEach(({ start, weekNum }) => {
+  weeks.forEach(({ start }) => {
     const startDate = new Date(start)
     
     // Pour chaque jour de la semaine (lundi à samedi)
@@ -243,19 +243,6 @@ const SalesSnapshots: React.FC = () => {
     })
 
     return grouped
-  }, [filteredData])
-
-  // Obtenir les semaines uniques pour l'affichage
-  const weeksInData = useMemo(() => {
-    const weeks = new Set<string>()
-    filteredData.forEach(item => {
-      const date = new Date(item.date)
-      const monday = getMondayOfWeek(date)
-      weeks.add(monday.toISOString().split('T')[0])
-    })
-    return Array.from(weeks)
-      .map(d => new Date(d))
-      .sort((a, b) => a.getTime() - b.getTime())
   }, [filteredData])
 
   // Formater les montants
