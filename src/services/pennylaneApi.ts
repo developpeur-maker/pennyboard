@@ -279,19 +279,6 @@ export const pennylaneApi = {
     
     return parsed
   },
-  // Test de connexion de base
-  async testConnection(): Promise<boolean> {
-    try {
-      console.log('🧪 Test de connexion à l\'API Pennylane via proxy...')
-      // Utiliser l'endpoint /me pour tester la connexion (endpoint standard et léger)
-      const data = await apiCall<{success: boolean, raw_data: any}>('me')
-      console.log('✅ Connexion réussie:', data)
-      return data.success || true
-    } catch (error) {
-      console.error('❌ Erreur de connexion:', error)
-      return false
-    }
-  },
 
 
   // Récupérer le résultat comptable basé sur le trial balance
