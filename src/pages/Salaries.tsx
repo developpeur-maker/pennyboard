@@ -264,6 +264,7 @@ const Salaries: React.FC = () => {
   
   // État pour la synchronisation
   const [isSyncing, setIsSyncing] = useState(false)
+  const [isFullPayfitSyncing, setIsFullPayfitSyncing] = useState(false)
 
   // Fonction de synchronisation manuelle
   const handleManualSync = async () => {
@@ -297,6 +298,45 @@ const Salaries: React.FC = () => {
       alert('❌ Erreur lors de la synchronisation. Veuillez réessayer.')
     } finally {
       setIsSyncing(false)
+    }
+  }
+
+  // Fonction de synchronisation complète Payfit (tous les mois depuis 2021)
+  const handleFullPayfitSync = async () => {
+    if (!confirm('⚠️ Attention : Cette synchronisation Payfit va mettre à jour TOUS les mois depuis 2021. Cela peut prendre beaucoup de temps et être rate limited. Continuer ?')) {
+      return
+    }
+
+    setIsFullPayfitSyncing(true)
+    try {
+      console.log('🔄 Début de la synchronisation complète Payfit...')
+      
+      const response = await fetch('/api/sync-payfit-full', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'pennyboard_secret_key_2025'
+        }
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Synchronisation complète Payfit réussie:', result)
+        
+        // Actualiser les données après synchronisation
+        await refetch()
+        
+        alert(`✅ Synchronisation complète Payfit réussie !\n\n${result.summary?.total || 0} mois synchronisés\n${result.summary?.success || 0} succès, ${result.summary?.errors || 0} erreurs\nDurée: ${Math.round((result.summary?.duration_ms || 0) / 1000)} secondes`)
+      } else {
+        const error = await response.json()
+        console.error('❌ Erreur de synchronisation complète Payfit:', error)
+        alert(`❌ Erreur de synchronisation complète Payfit: ${error.error || 'Erreur inconnue'}\n\nDétails: ${error.details || 'Aucun détail'}\nType: ${error.type || 'Inconnu'}`)
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la synchronisation complète Payfit:', error)
+      alert('❌ Erreur lors de la synchronisation complète Payfit. Veuillez réessayer.')
+    } finally {
+      setIsFullPayfitSyncing(false)
     }
   }
 
@@ -432,7 +472,7 @@ const Salaries: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={handleManualSync}
-              disabled={isSyncing}
+              disabled={isSyncing || isFullPayfitSyncing}
               className={`flex items-center gap-2 px-3 py-1 text-white text-xs rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 lastSyncDate 
                   ? 'bg-green-600 hover:bg-green-700' 
@@ -448,6 +488,24 @@ const Salaries: React.FC = () => {
                 <>
                   <RefreshCw className="w-3 h-3" />
                   Synchroniser l'API Payfit
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleFullPayfitSync}
+              disabled={isSyncing || isFullPayfitSyncing}
+              className={`flex items-center gap-2 px-3 py-1 text-white text-xs rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-orange-600 hover:bg-orange-700`}
+              title="Synchronisation complète Payfit de tous les mois depuis 2021 (temporaire - peut être rate limited)"
+            >
+              {isFullPayfitSyncing ? (
+                <>
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  Sync Payfit complète...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3 h-3" />
+                  Sync Payfit complète (Admin - ne pas cliquer)
                 </>
               )}
             </button>
