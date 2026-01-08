@@ -528,22 +528,22 @@ const SalesSnapshots: React.FC = () => {
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-50">
+              <tfoot className="bg-gray-800">
                 <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-base font-bold text-white">
                     Total
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap"></td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-base font-bold text-white">
                     {formatCurrency(filteredSummaryData.reduce((sum, item) => sum + item.totalInitial, 0))}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-base font-bold text-white">
                     {formatCurrency(filteredSummaryData.reduce((sum, item) => sum + item.caFinal, 0))}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-red-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-base font-bold text-red-300">
                     {formatCurrency(filteredSummaryData.reduce((sum, item) => sum + item.perteAbsolue, 0))}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-red-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-base font-bold text-red-300">
                     {filteredSummaryData.reduce((sum, item) => sum + item.totalInitial, 0) > 0
                       ? ((filteredSummaryData.reduce((sum, item) => sum + item.perteAbsolue, 0) / filteredSummaryData.reduce((sum, item) => sum + item.totalInitial, 0)) * 100).toFixed(2)
                       : '0.00'}%
