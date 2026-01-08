@@ -9,7 +9,6 @@ interface ChartDataPoint {
   revenus_totaux: number | null
   charges: number | null
   charges_salariales: number | null
-  tresorerie: number | null
 }
 
 const Statistics: React.FC = () => {
@@ -20,8 +19,7 @@ const Statistics: React.FC = () => {
   const [visibleSeries, setVisibleSeries] = useState({
     revenus_totaux: true,
     charges: true,
-    charges_salariales: true,
-    tresorerie: true
+    charges_salariales: true
   })
 
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
@@ -64,7 +62,6 @@ const Statistics: React.FC = () => {
     revenus_totaux: number | null
     charges: number | null
     charges_salariales: number | null
-    tresorerie: number | null
   } | null> => {
     try {
       const monthsToFetch: string[] = []
@@ -93,25 +90,19 @@ const Statistics: React.FC = () => {
       let totalRevenus = 0
       let totalCharges = 0
       let totalChargesSalariales = 0
-      let lastTresorerie = 0
 
       validResults.forEach((data: any) => {
         const kpis = data.kpis || {}
         totalRevenus += kpis.revenus_totaux || 0
         totalCharges += kpis.charges || 0
         totalChargesSalariales += kpis.charges_salariales || 0
-        // Trésorerie = valeur du dernier mois de l'année
-        if (kpis.tresorerie !== null && kpis.tresorerie !== undefined) {
-          lastTresorerie = kpis.tresorerie
-        }
       })
 
       return {
         year,
         revenus_totaux: totalRevenus || null,
         charges: totalCharges || null,
-        charges_salariales: totalChargesSalariales || null,
-        tresorerie: lastTresorerie || null
+        charges_salariales: totalChargesSalariales || null
       }
     } catch (err) {
       console.error(`❌ Erreur lors de la récupération des données pour l'année ${year}:`, err)
@@ -147,8 +138,7 @@ const Statistics: React.FC = () => {
             monthLabel: result!.year,
             revenus_totaux: result!.revenus_totaux,
             charges: result!.charges,
-            charges_salariales: result!.charges_salariales,
-            tresorerie: result!.tresorerie
+            charges_salariales: result!.charges_salariales
           }))
       } else {
         // Mode mois : récupérer tous les mois disponibles
@@ -187,8 +177,7 @@ const Statistics: React.FC = () => {
               monthLabel: `${monthAbbreviations[monthIndex]} ${year}`,
               revenus_totaux: kpis.revenus_totaux || null,
               charges: kpis.charges || null,
-              charges_salariales: kpis.charges_salariales || null,
-              tresorerie: kpis.tresorerie || null
+              charges_salariales: kpis.charges_salariales || null
             }
           })
       }
@@ -287,9 +276,6 @@ const Statistics: React.FC = () => {
       if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
         filteredPoint.charges_salariales = point.charges_salariales
       }
-      if (visibleSeries.tresorerie && point.tresorerie !== null) {
-        filteredPoint.tresorerie = point.tresorerie
-      }
       
       return filteredPoint
     })
@@ -299,8 +285,7 @@ const Statistics: React.FC = () => {
   const seriesColors = {
     revenus_totaux: '#10b981', // green
     charges: '#ef4444', // red
-    charges_salariales: '#f97316', // orange
-    tresorerie: '#06b6d4' // cyan
+    charges_salariales: '#f97316' // orange
   }
 
   return (
@@ -386,16 +371,6 @@ const Statistics: React.FC = () => {
               }`}
             >
               Masse salariale
-            </button>
-            <button
-              onClick={() => toggleSeries('tresorerie')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                visibleSeries.tresorerie
-                  ? 'bg-cyan-100 text-cyan-800 ring-2 ring-cyan-500'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Trésorerie
             </button>
           </div>
         </div>
@@ -517,13 +492,6 @@ const Statistics: React.FC = () => {
                           fill="url(#hatchPattern)"
                           name="Masse salariale (incluse dans les charges)"
                           stackId="charges"
-                        />
-                      )}
-                      {visibleSeries.tresorerie && (
-                        <Bar 
-                          dataKey="tresorerie" 
-                          fill={seriesColors.tresorerie}
-                          name="Trésorerie"
                         />
                       )}
                     </BarChart>
