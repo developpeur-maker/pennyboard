@@ -83,13 +83,14 @@ const Breakeven: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Fonction pour générer tous les mois disponibles depuis 2021
+  // Fonction pour générer tous les mois disponibles depuis 2024
+  // (les données Payfit sont incomplètes/inexistantes pour 2023 et antérieures)
   const generateAllMonths = () => {
     const months: string[] = []
     const currentDate = new Date()
     const currentYear = currentDate.getFullYear()
     const currentMonth = currentDate.getMonth() + 1
-    const startYear = 2021
+    const startYear = 2024 // Exclure 2023 et antérieures (données Payfit incomplètes)
 
     for (let year = startYear; year <= currentYear; year++) {
       const maxMonth = year === currentYear ? currentMonth : 12
@@ -122,10 +123,11 @@ const Breakeven: React.FC = () => {
       let chartDataPoints: BreakevenDataPoint[] = []
 
       if (viewMode === 'year') {
-        // Mode année : récupérer toutes les années disponibles (2021 → année actuelle)
+        // Mode année : récupérer toutes les années disponibles (2024 → année actuelle)
+        // (les données Payfit sont incomplètes/inexistantes pour 2023 et antérieures)
         const currentDate = new Date()
         const currentYear = currentDate.getFullYear()
-        const startYear = 2021
+        const startYear = 2024 // Exclure 2023 et antérieures (données Payfit incomplètes)
         
         // Récupérer les données de toutes les années
         const yearPromises = []
