@@ -4,11 +4,12 @@ import Dashboard from './pages/Dashboard'
 import Salaries from './pages/Salaries'
 import Statistics from './pages/Statistics'
 import Breakeven from './pages/Breakeven'
+import SalesSnapshots from './pages/SalesSnapshots'
 import Login from './pages/Login'
 import { LogOut } from 'lucide-react'
 import './index.css'
 
-type Page = 'dashboard' | 'salaries' | 'statistics' | 'breakeven'
+type Page = 'dashboard' | 'salaries' | 'statistics' | 'breakeven' | 'sales-snapshots'
 
 function App() {
   const { isAuthenticated, loading, logout } = useAuth()
@@ -77,6 +78,16 @@ function App() {
               >
                 Seuil de rentabilité
               </button>
+              <button
+                onClick={() => setCurrentPage('sales-snapshots')}
+                className={`px-6 py-4 text-sm font-medium transition-colors ${
+                  currentPage === 'sales-snapshots'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Snapshots ventes
+              </button>
             </div>
             <button
               onClick={logout}
@@ -94,6 +105,7 @@ function App() {
       {currentPage === 'salaries' && <Salaries />}
       {currentPage === 'statistics' && <Statistics />}
       {currentPage === 'breakeven' && <Breakeven />}
+      {currentPage === 'sales-snapshots' && <SalesSnapshots />}
     </div>
   )
 }
