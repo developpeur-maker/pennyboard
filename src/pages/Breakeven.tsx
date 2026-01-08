@@ -178,12 +178,16 @@ const Breakeven: React.FC = () => {
             ventes = kpiResponse.data.kpis.ventes_706 || null
           }
 
-          // Compter le nombre de diagnostiqueurs uniques
+          // Compter le nombre de diagnostiqueurs uniques (salaire > 1000€)
           const diagnostiqueursSet = new Set()
           employees.forEach((emp) => {
             if (isDiagnostiqueur(emp.employeeName, emp.operations || [], yearNum)) {
-              const key = `${emp.employeeName}_${emp.contractId || 'unknown'}`
-              diagnostiqueursSet.add(key)
+              // Ne compter que les diagnostiqueurs avec un salaire supérieur à 1000€ pour ce mois
+              const salaryPaid = emp.salaryPaid || 0
+              if (salaryPaid > 1000) {
+                const key = `${emp.employeeName}_${emp.contractId || 'unknown'}`
+                diagnostiqueursSet.add(key)
+              }
             }
           })
           const diagnostiqueursCount = diagnostiqueursSet.size
@@ -292,12 +296,16 @@ const Breakeven: React.FC = () => {
           ventes = kpiResponse.data.kpis.ventes_706 || null
         }
 
-        // Compter les diagnostiqueurs
+        // Compter les diagnostiqueurs (salaire > 1000€)
         const diagnostiqueursSet = new Set()
         employees.forEach((emp) => {
           if (isDiagnostiqueur(emp.employeeName, emp.operations || [], yearNum)) {
-            const key = `${emp.employeeName}_${emp.contractId || 'unknown'}`
-            diagnostiqueursSet.add(key)
+            // Ne compter que les diagnostiqueurs avec un salaire supérieur à 1000€ pour ce mois
+            const salaryPaid = emp.salaryPaid || 0
+            if (salaryPaid > 1000) {
+              const key = `${emp.employeeName}_${emp.contractId || 'unknown'}`
+              diagnostiqueursSet.add(key)
+            }
           }
         })
 
@@ -403,14 +411,6 @@ const Breakeven: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* En-tête */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Seuil de rentabilité</h1>
-          <p className="text-gray-600">
-            Calcul du seuil de rentabilité par technicien (Charges totales / Nombre de diagnostiqueurs)
-          </p>
-        </div>
-
         {/* Filtres */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex justify-between items-center">
