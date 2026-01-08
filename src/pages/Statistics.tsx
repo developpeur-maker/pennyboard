@@ -170,9 +170,9 @@ const Statistics: React.FC = () => {
         const validResults = results.filter(r => r !== null) as Array<{ month: string; data: any }>
 
         // Transformer les données pour le graphique
-        const monthNames = [
-          'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        const monthAbbreviations = [
+          'Jan.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin',
+          'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'
         ]
 
         chartDataPoints = validResults
@@ -184,7 +184,7 @@ const Statistics: React.FC = () => {
 
             return {
               month: result.month,
-              monthLabel: `${monthNames[monthIndex]} ${year}`,
+              monthLabel: `${monthAbbreviations[monthIndex]} ${year}`,
               revenus_totaux: kpis.revenus_totaux || null,
               charges: kpis.charges || null,
               charges_salariales: kpis.charges_salariales || null,
@@ -468,13 +468,13 @@ const Statistics: React.FC = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis 
                         dataKey="monthLabel" 
-                        angle={viewMode === 'year' ? 0 : -45}
-                        textAnchor={viewMode === 'year' ? "middle" : "end"}
-                        height={viewMode === 'year' ? 40 : 80}
-                        tick={{ fontSize: 12 }}
+                        angle={0}
+                        textAnchor="middle"
+                        height={40}
+                        tick={{ fontSize: 12, fontWeight: 'bold' }}
                       />
                       <YAxis 
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 12, fontWeight: 'bold' }}
                         tickFormatter={(value) => {
                           if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M€`
                           if (value >= 1000) return `${(value / 1000).toFixed(0)}k€`

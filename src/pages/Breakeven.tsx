@@ -220,9 +220,9 @@ const Breakeven: React.FC = () => {
         const results = await Promise.all(dataPromises)
 
         // Transformer les données pour le graphique
-        const monthNames = [
-          'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        const monthAbbreviations = [
+          'Jan.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin',
+          'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'
         ]
 
         chartDataPoints = results
@@ -237,7 +237,7 @@ const Breakeven: React.FC = () => {
 
             return {
               ...point,
-              monthLabel: `${monthNames[monthIndex]} ${year}`
+              monthLabel: `${monthAbbreviations[monthIndex]} ${year}`
             }
           })
       }
@@ -526,13 +526,13 @@ const Breakeven: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis 
                     dataKey="monthLabel" 
-                    angle={viewMode === 'year' ? 0 : -45}
-                    textAnchor={viewMode === 'year' ? "middle" : "end"}
-                    height={viewMode === 'year' ? 40 : 80}
-                    tick={{ fontSize: 12 }}
+                    angle={0}
+                    textAnchor="middle"
+                    height={40}
+                    tick={{ fontSize: 12, fontWeight: 'bold' }}
                   />
                   <YAxis 
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 12, fontWeight: 'bold' }}
                     tickFormatter={(value) => {
                       if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M€`
                       if (value >= 1000) return `${(value / 1000).toFixed(0)}k€`
@@ -551,7 +551,7 @@ const Breakeven: React.FC = () => {
                   <Legend />
                   <Bar 
                     dataKey="breakeven" 
-                    fill="#3b82f6"
+                    fill="#ef4444"
                     name="Seuil de rentabilité (€)"
                   />
                   <Bar 
