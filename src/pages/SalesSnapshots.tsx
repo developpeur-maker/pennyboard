@@ -18,12 +18,12 @@ const generateTestData = () => {
     ca_reel: number
   }> = []
 
-  // Générer des données pour quelques semaines en 2025
+  // Générer des données pour quelques semaines en décembre 2025
   const weeks = [
-    { start: '2025-06-30' }, // Semaine 27: 30/06 au 05/07
-    { start: '2025-07-07' }, // Semaine 28: 07/07 au 12/07
-    { start: '2025-07-14' }, // Semaine 29: 14/07 au 19/07
-    { start: '2025-07-21' }, // Semaine 30: 21/07 au 26/07
+    { start: '2025-12-01' }, // Semaine: 01/12 au 06/12
+    { start: '2025-12-08' }, // Semaine: 08/12 au 13/12
+    { start: '2025-12-15' }, // Semaine: 15/12 au 20/12
+    { start: '2025-12-22' }, // Semaine: 22/12 au 27/12
   ]
 
   weeks.forEach(({ start }) => {
@@ -112,7 +112,7 @@ const getUniqueCommerciaux = (data: typeof testData): string[] => {
   return Array.from(new Set(data.map(item => item.commercial))).sort()
 }
 
-type ViewMode = 'week' | 'custom'
+type ViewMode = 'year' | 'week' | 'custom'
 
 const SalesSnapshots: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
@@ -120,6 +120,8 @@ const SalesSnapshots: React.FC = () => {
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(0)
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
+  const [lossPercentageFilter, setLossPercentageFilter] = useState('')
+  const [lossPercentageOperator, setLossPercentageOperator] = useState<'greater' | 'less'>('greater')
 
   // Obtenir toutes les semaines uniques
   const allWeeks = useMemo(() => getUniqueWeeks(testData), [])
@@ -136,7 +138,14 @@ const SalesSnapshots: React.FC = () => {
     let filtered = [...testData]
 
     // Filtrer par période
-    if (viewMode === 'week') {
+    if (viewMode === 'year') {
+      // Filtrer pour l'année en cours
+      const currentYear = new Date().getFullYear()
+      filtered = filtered.filter(item => {
+        const itemDate = new Date(item.date)
+        return itemDate.getFullYear() === currentYear
+      })
+    } else if (viewMode === 'week') {
       if (allWeeks.length > 0 && selectedWeekIndex >= 0 && selectedWeekIndex < allWeeks.length) {
         const selectedMonday = allWeeks[selectedWeekIndex]
         const selectedSunday = new Date(selectedMonday)
@@ -173,7 +182,10 @@ const SalesSnapshots: React.FC = () => {
 
   // Obtenir la période sélectionnée pour l'affichage
   const selectedPeriod = useMemo(() => {
-    if (viewMode === 'week' && allWeeks.length > 0 && selectedWeekIndex >= 0 && selectedWeekIndex < allWeeks.length) {
+    if (viewMode === 'year') {
+      const currentYear = new Date().getFullYear()
+      return `Année ${currentYear}`
+    } else if (viewMode === 'week' && allWeeks.length > 0 && selectedWeekIndex >= 0 && selectedWeekIndex < allWeeks.length) {
       return formatWeekPeriod(allWeeks[selectedWeekIndex])
     } else if (viewMode === 'custom' && customStartDate && customEndDate) {
       return `${formatDate(customStartDate)} au ${formatDate(customEndDate)}`
@@ -235,6 +247,29 @@ const SalesSnapshots: React.FC = () => {
     return summary
   }, [filteredData, selectedPeriod])
 
+  // Filtrer les données selon le pourcentage de perte
+  const filteredSummaryData = useMemo(() => {
+    let filtered = [...summaryData]
+
+    // Filtrer par pourcentage de perte
+    if (lossPercentageFilter.trim()) {
+      const percentageValue = parseFloat(lossPercentageFilter)
+      if (!isNaN(percentageValue)) {
+        filtered = filtered.filter(item => {
+          if (lossPercentageOperator === 'greater') {
+            // Afficher les pertes supérieures ou égales au pourcentage (plus négatif)
+            return item.pertePourcentage <= -percentageValue
+          } else {
+            // Afficher les pertes inférieures ou égales au pourcentage (moins négatif)
+            return item.pertePourcentage >= -percentageValue
+          }
+        })
+      }
+    }
+
+    return filtered
+  }, [summaryData, lossPercentageFilter, lossPercentageOperator])
+
   // État pour le modal de détail
   const [selectedCommercial, setSelectedCommercial] = useState<typeof summaryData[0] | null>(null)
 
@@ -284,6 +319,16 @@ const SalesSnapshots: React.FC = () => {
         <div className="flex items-center gap-4">
           <Calendar className="w-5 h-5 text-gray-600" />
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode('year')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                viewMode === 'year'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Cette année
+            </button>
             <button
               onClick={() => setViewMode('week')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -375,10 +420,48 @@ const SalesSnapshots: React.FC = () => {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
           />
         </div>
+
+        {/* Filtre par pourcentage de perte */}
+        <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
+          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+            Filtrer par % de perte:
+          </label>
+          <div className="flex items-center gap-2">
+            <select
+              value={lossPercentageOperator}
+              onChange={(e) => setLossPercentageOperator(e.target.value as 'greater' | 'less')}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+            >
+              <option value="greater">Supérieur ou égal à</option>
+              <option value="less">Inférieur ou égal à</option>
+            </select>
+            <input
+              type="number"
+              placeholder="20"
+              value={lossPercentageFilter}
+              onChange={(e) => setLossPercentageFilter(e.target.value)}
+              className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+              min="0"
+              step="0.1"
+            />
+            <span className="text-sm text-gray-600">%</span>
+            {lossPercentageFilter && (
+              <button
+                onClick={() => {
+                  setLossPercentageFilter('')
+                  setLossPercentageOperator('greater')
+                }}
+                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Réinitialiser
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Tableau global */}
-      {summaryData.length === 0 ? (
+      {filteredSummaryData.length === 0 ? (
         <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
           <TrendingDown className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600">
@@ -414,7 +497,7 @@ const SalesSnapshots: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {summaryData.map((item, index) => (
+                {filteredSummaryData.map((item, index) => (
                   <tr 
                     key={index} 
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -452,17 +535,17 @@ const SalesSnapshots: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap"></td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
-                    {formatCurrency(summaryData.reduce((sum, item) => sum + item.totalInitial, 0))}
+                    {formatCurrency(filteredSummaryData.reduce((sum, item) => sum + item.totalInitial, 0))}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
-                    {formatCurrency(summaryData.reduce((sum, item) => sum + item.caFinal, 0))}
+                    {formatCurrency(filteredSummaryData.reduce((sum, item) => sum + item.caFinal, 0))}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-red-900">
-                    {formatCurrency(summaryData.reduce((sum, item) => sum + item.perteAbsolue, 0))}
+                    {formatCurrency(filteredSummaryData.reduce((sum, item) => sum + item.perteAbsolue, 0))}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-red-900">
-                    {summaryData.reduce((sum, item) => sum + item.totalInitial, 0) > 0
-                      ? ((summaryData.reduce((sum, item) => sum + item.perteAbsolue, 0) / summaryData.reduce((sum, item) => sum + item.totalInitial, 0)) * 100).toFixed(2)
+                    {filteredSummaryData.reduce((sum, item) => sum + item.totalInitial, 0) > 0
+                      ? ((filteredSummaryData.reduce((sum, item) => sum + item.perteAbsolue, 0) / filteredSummaryData.reduce((sum, item) => sum + item.totalInitial, 0)) * 100).toFixed(2)
                       : '0.00'}%
                   </td>
                 </tr>
