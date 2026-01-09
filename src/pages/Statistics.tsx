@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts'
 import { getAllDataFromDatabase } from '../services/databaseApi'
 
 interface ChartDataPoint {
@@ -54,6 +54,14 @@ const Statistics: React.FC = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(value)
+  }
+
+  // Fonction pour formater les montants de manière compacte pour les labels
+  const formatLabel = (value: number | null) => {
+    if (value === null || value === undefined) return ''
+    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M€`
+    if (value >= 1000) return `${(value / 1000).toFixed(0)}k€`
+    return `${Math.round(value)}€`
   }
 
   // Fonction pour récupérer les données cumulées d'une année
@@ -476,7 +484,14 @@ const Statistics: React.FC = () => {
                           dataKey="revenus_totaux" 
                           fill={seriesColors.revenus_totaux}
                           name="Revenus totaux"
-                        />
+                        >
+                          <LabelList 
+                            dataKey="revenus_totaux" 
+                            position="top" 
+                            formatter={formatLabel}
+                            style={{ fontSize: '11px', fontWeight: 'bold', fill: '#10b981' }}
+                          />
+                        </Bar>
                       )}
                       {visibleSeries.charges && (
                         <Bar 
@@ -484,7 +499,20 @@ const Statistics: React.FC = () => {
                           fill={seriesColors.charges}
                           name="Achats et charges"
                           stackId="charges"
-                        />
+                        >
+                          {!visibleSeries.charges_salariales && (
+                            <LabelList 
+                              dataKey="charges" 
+                              position="top" 
+                              formatter={(value: number, entry: any) => {
+                                // Pour les charges, afficher le total (charges + masse salariale si visible)
+                                const totalCharges = entry.payload.charges + (entry.payload.charges_salariales || 0)
+                                return formatLabel(totalCharges)
+                              }}
+                              style={{ fontSize: '11px', fontWeight: 'bold', fill: '#ef4444' }}
+                            />
+                          )}
+                        </Bar>
                       )}
                       {visibleSeries.charges_salariales && (
                         <Bar 
@@ -492,7 +520,18 @@ const Statistics: React.FC = () => {
                           fill="url(#hatchPattern)"
                           name="Masse salariale (incluse dans les charges)"
                           stackId="charges"
-                        />
+                        >
+                          <LabelList 
+                            dataKey="charges_salariales" 
+                            position="top" 
+                            formatter={(value: number, entry: any) => {
+                              // Afficher le total des charges (charges + masse salariale)
+                              const totalCharges = (entry.payload.charges || 0) + (entry.payload.charges_salariales || 0)
+                              return formatLabel(totalCharges)
+                            }}
+                            style={{ fontSize: '11px', fontWeight: 'bold', fill: '#ef4444' }}
+                          />
+                        </Bar>
                       )}
                     </BarChart>
                   </ResponsiveContainer>
