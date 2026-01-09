@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getAllDataFromDatabase } from '../services/databaseApi'
 
@@ -112,14 +112,6 @@ const Breakeven: React.FC = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(value)
-  }
-
-  // Fonction pour formater les montants de manière compacte pour les labels
-  const formatLabel = (value: number | null) => {
-    if (value === null || value === undefined) return ''
-    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M€`
-    if (value >= 1000) return `${(value / 1000).toFixed(0)}k€`
-    return `${Math.round(value)}€`
   }
 
   // Fonction pour récupérer les données historiques
@@ -563,26 +555,12 @@ const Breakeven: React.FC = () => {
                     dataKey="breakeven" 
                     fill="#ef4444"
                     name="Seuil de rentabilité (€)"
-                  >
-                    <LabelList 
-                      dataKey="breakeven" 
-                      position="top" 
-                      formatter={formatLabel}
-                      style={{ fontSize: '11px', fontWeight: 'bold', fill: '#ef4444' }}
-                    />
-                  </Bar>
+                  />
                   <Bar 
                     dataKey="ventesParDiagnostiqueur" 
                     fill="#10b981"
                     name="Ventes moyennes par diagnostiqueur (€)"
-                  >
-                    <LabelList 
-                      dataKey="ventesParDiagnostiqueur" 
-                      position="top" 
-                      formatter={formatLabel}
-                      style={{ fontSize: '11px', fontWeight: 'bold', fill: '#10b981' }}
-                    />
-                  </Bar>
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
