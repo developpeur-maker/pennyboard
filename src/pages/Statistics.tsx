@@ -504,7 +504,7 @@ const Statistics: React.FC = () => {
                             <LabelList 
                               dataKey="charges" 
                               position="top" 
-                              formatter={(value: number, entry: any) => {
+                              formatter={(_value: number, entry: any) => {
                                 // Pour les charges, afficher le total (charges + masse salariale si visible)
                                 const totalCharges = entry.payload.charges + (entry.payload.charges_salariales || 0)
                                 return formatLabel(totalCharges)
@@ -524,7 +524,7 @@ const Statistics: React.FC = () => {
                           <LabelList 
                             dataKey="charges_salariales" 
                             position="top" 
-                            formatter={(value: number, entry: any) => {
+                            formatter={(_value: number, entry: any) => {
                               // Afficher le total des charges (charges + masse salariale)
                               const totalCharges = (entry.payload.charges || 0) + (entry.payload.charges_salariales || 0)
                               return formatLabel(totalCharges)
