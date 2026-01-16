@@ -1040,8 +1040,8 @@ export const pennylaneApi = {
         chiffre_affaires_previous: previousResultat?.chiffre_affaires || null,
         total_produits_exploitation_previous: previousResultat?.total_produits_exploitation || null,
         charges_previous: previousResultat?.charges || null,
-        charges_sans_amortissements_previous: previousResultat?.charges_sans_amortissements || null,
-        charges_salariales_previous: previousResultat?.charges_salariales || null,
+        charges_sans_amortissements_previous: null, // Non disponible dans PennylaneResultatComptable
+        charges_salariales_previous: null, // Non disponible dans PennylaneResultatComptable
         resultat_net_previous: previousResultat?.resultat_net || null,
         solde_tresorerie_previous: previousTresorerie?.solde_final || null
       }

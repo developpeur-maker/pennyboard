@@ -183,7 +183,15 @@ export const usePennylaneData = (
         total_produits_growth: null,
         charges_growth: null,
         resultat_growth: null,
-        tresorerie_growth: null
+        tresorerie_growth: null,
+        ventes_706_previous: null,
+        chiffre_affaires_previous: null,
+        total_produits_exploitation_previous: null,
+        charges_previous: null,
+        charges_sans_amortissements_previous: null,
+        charges_salariales_previous: null,
+        resultat_net_previous: null,
+        solde_tresorerie_previous: null
       })
       setChargesBreakdown([])
       setChargesSalarialesBreakdown([])
@@ -269,7 +277,15 @@ export const usePennylaneData = (
           total_produits_growth: null,
           charges_growth: null,
           resultat_growth: null,
-          tresorerie_growth: null
+          tresorerie_growth: null,
+          ventes_706_previous: null,
+          chiffre_affaires_previous: null,
+          total_produits_exploitation_previous: null,
+          charges_previous: null,
+          charges_sans_amortissements_previous: null,
+          charges_salariales_previous: null,
+          resultat_net_previous: null,
+          solde_tresorerie_previous: null
         })
         setChargesBreakdown([])
         setChargesSansAmortissementsBreakdown([])
@@ -509,7 +525,15 @@ export const usePennylaneData = (
       total_produits_growth: null,
       charges_growth: null,
       resultat_growth: null,
-      tresorerie_growth: null
+      tresorerie_growth: null,
+      ventes_706_previous: null,
+      chiffre_affaires_previous: null,
+      total_produits_exploitation_previous: null,
+      charges_previous: null,
+      charges_sans_amortissements_previous: null,
+      charges_salariales_previous: null,
+      resultat_net_previous: null,
+      solde_tresorerie_previous: null
     }
   }
 
