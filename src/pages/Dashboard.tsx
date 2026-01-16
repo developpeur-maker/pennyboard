@@ -403,6 +403,9 @@ const Dashboard: React.FC = () => {
             icon={<DollarSign className="w-5 h-5 text-green-600" />}
             color="green"
             previousValue={kpis?.ventes_706_previous}
+            previousYearValue={kpis?.ventes_706_previous_year}
+            previousYearChange={kpis?.ventes_706_previous_year !== null && kpis?.ventes_706 !== null ? ((kpis.ventes_706 - kpis.ventes_706_previous_year) / Math.abs(kpis.ventes_706_previous_year)) * 100 : null}
+            previousYearChangeType={kpis?.ventes_706_previous_year !== null && kpis?.ventes_706 !== null ? (kpis.ventes_706 >= kpis.ventes_706_previous_year ? 'increase' : 'decrease') : 'neutral'}
             formatCurrency={formatCurrency}
           />
           <KPICard
@@ -416,6 +419,9 @@ const Dashboard: React.FC = () => {
             color="green"
             onClick={() => setIsRevenusModalOpen(true)}
             previousValue={kpis?.total_produits_exploitation_previous}
+            previousYearValue={kpis?.total_produits_exploitation_previous_year}
+            previousYearChange={kpis?.total_produits_exploitation_previous_year !== null && kpis?.total_produits_exploitation !== null ? ((kpis.total_produits_exploitation - kpis.total_produits_exploitation_previous_year) / Math.abs(kpis.total_produits_exploitation_previous_year)) * 100 : null}
+            previousYearChangeType={kpis?.total_produits_exploitation_previous_year !== null && kpis?.total_produits_exploitation !== null ? (kpis.total_produits_exploitation >= kpis.total_produits_exploitation_previous_year ? 'increase' : 'decrease') : 'neutral'}
             formatCurrency={formatCurrency}
           />
           <KPICard
@@ -429,6 +435,9 @@ const Dashboard: React.FC = () => {
             color="cyan"
             onClick={() => setIsTresorerieModalOpen(true)}
             previousValue={kpis?.solde_tresorerie_previous}
+            previousYearValue={kpis?.solde_tresorerie_previous_year}
+            previousYearChange={kpis?.solde_tresorerie_previous_year !== null && kpis?.solde_tresorerie !== null ? ((kpis.solde_tresorerie - kpis.solde_tresorerie_previous_year) / Math.abs(kpis.solde_tresorerie_previous_year)) * 100 : null}
+            previousYearChangeType={kpis?.solde_tresorerie_previous_year !== null && kpis?.solde_tresorerie !== null ? (kpis.solde_tresorerie >= kpis.solde_tresorerie_previous_year ? 'increase' : 'decrease') : 'neutral'}
             formatCurrency={formatCurrency}
           />
           <KPICard
@@ -442,6 +451,9 @@ const Dashboard: React.FC = () => {
             color="red"
             onClick={() => setIsChargesModalOpen(true)}
             previousValue={kpis?.charges_previous}
+            previousYearValue={kpis?.charges_previous_year}
+            previousYearChange={kpis?.charges_previous_year !== null && kpis?.charges !== null ? ((kpis.charges - kpis.charges_previous_year) / Math.abs(kpis.charges_previous_year)) * 100 : null}
+            previousYearChangeType={kpis?.charges_previous_year !== null && kpis?.charges !== null ? (kpis.charges >= kpis.charges_previous_year ? 'increase' : 'decrease') : 'neutral'}
             formatCurrency={formatCurrency}
           />
           <KPICard
@@ -455,6 +467,9 @@ const Dashboard: React.FC = () => {
             color="red"
             onClick={() => setIsChargesSalarialesModalOpen(true)}
             previousValue={kpis?.charges_salariales_previous}
+            previousYearValue={kpis?.charges_salariales_previous_year}
+            previousYearChange={kpis?.charges_salariales_previous_year !== null && kpis?.charges_salariales !== null ? ((kpis.charges_salariales - kpis.charges_salariales_previous_year) / Math.abs(kpis.charges_salariales_previous_year)) * 100 : null}
+            previousYearChangeType={kpis?.charges_salariales_previous_year !== null && kpis?.charges_salariales !== null ? (kpis.charges_salariales >= kpis.charges_salariales_previous_year ? 'increase' : 'decrease') : 'neutral'}
             formatCurrency={formatCurrency}
           />
           <KPICard
@@ -476,17 +491,25 @@ const Dashboard: React.FC = () => {
                   )
                 : 'Aucune donnée'
             }
-            change={0}
+            change={kpis && kpis.hasData && kpis.rentabilite && kpis.rentabilite_previous_year !== null ? Math.abs(((kpis.rentabilite.ratio - kpis.rentabilite_previous_year) / Math.abs(kpis.rentabilite_previous_year)) * 100) : 0}
             changeType={
-              kpis && kpis.hasData && kpis.rentabilite 
-                ? (kpis.rentabilite.projection
-                    ? (kpis.rentabilite.projection.ratio > 15 ? 'increase' : kpis.rentabilite.projection.ratio > 0 ? 'neutral' : 'decrease')
-                    : (kpis.rentabilite.ratio > 15 ? 'increase' : kpis.rentabilite.ratio > 0 ? 'neutral' : 'decrease')
+              kpis && kpis.hasData && kpis.rentabilite && kpis.rentabilite_previous_year !== null
+                ? (kpis.rentabilite.ratio >= kpis.rentabilite_previous_year ? 'increase' : 'decrease')
+                : (kpis && kpis.hasData && kpis.rentabilite 
+                    ? (kpis.rentabilite.projection
+                        ? (kpis.rentabilite.projection.ratio > 15 ? 'increase' : kpis.rentabilite.projection.ratio > 0 ? 'neutral' : 'decrease')
+                        : (kpis.rentabilite.ratio > 15 ? 'increase' : kpis.rentabilite.ratio > 0 ? 'neutral' : 'decrease')
+                      )
+                    : 'neutral'
                   )
-                : 'neutral'
             }
             icon={<Calculator className="w-5 h-5 text-purple-600" />}
             color="turquoise"
+            previousValue={null}
+            previousYearValue={kpis?.rentabilite_previous_year !== null ? kpis.rentabilite_previous_year : null}
+            previousYearChange={kpis?.rentabilite_previous_year !== null && kpis?.rentabilite !== null ? ((kpis.rentabilite.ratio - kpis.rentabilite_previous_year) / Math.abs(kpis.rentabilite_previous_year)) * 100 : null}
+            previousYearChangeType={kpis?.rentabilite_previous_year !== null && kpis?.rentabilite !== null ? (kpis.rentabilite.ratio >= kpis.rentabilite_previous_year ? 'increase' : 'decrease') : 'neutral'}
+            formatCurrency={(value: number) => `${value.toFixed(2)}%`}
           />
           <KPICard
             title="Charges sans amortissements"
@@ -499,6 +522,9 @@ const Dashboard: React.FC = () => {
             color="blue"
             onClick={() => setIsChargesSansAmortissementsModalOpen(true)}
             previousValue={kpis?.charges_sans_amortissements_previous}
+            previousYearValue={kpis?.charges_sans_amortissements_previous_year}
+            previousYearChange={kpis?.charges_sans_amortissements_previous_year !== null && kpis?.charges_sans_amortissements !== null ? ((kpis.charges_sans_amortissements - kpis.charges_sans_amortissements_previous_year) / Math.abs(kpis.charges_sans_amortissements_previous_year)) * 100 : null}
+            previousYearChangeType={kpis?.charges_sans_amortissements_previous_year !== null && kpis?.charges_sans_amortissements !== null ? (kpis.charges_sans_amortissements >= kpis.charges_sans_amortissements_previous_year ? 'increase' : 'decrease') : 'neutral'}
             formatCurrency={formatCurrency}
           />
         </div>

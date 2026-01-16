@@ -41,6 +41,16 @@ interface KPIData {
   charges_salariales_previous: number | null
   resultat_net_previous: number | null
   solde_tresorerie_previous: number | null
+  // Valeurs du même mois de l'année précédente
+  ventes_706_previous_year: number | null
+  chiffre_affaires_previous_year: number | null
+  total_produits_exploitation_previous_year: number | null
+  charges_previous_year: number | null
+  charges_sans_amortissements_previous_year: number | null
+  charges_salariales_previous_year: number | null
+  resultat_net_previous_year: number | null
+  solde_tresorerie_previous_year: number | null
+  rentabilite_previous_year: number | null // Ratio de rentabilité du même mois année précédente
 }
 
 interface UsePennylaneDataReturn {
@@ -132,6 +142,13 @@ export const usePennylaneData = (
     return `${prevYear}-${prevMonth.toString().padStart(2, '0')}`
   }
 
+  // Fonction helper pour calculer le même mois de l'année précédente
+  const getPreviousYearMonth = (month: string): string => {
+    const [year, monthNum] = month.split('-').map(Number)
+    const prevYear = year - 1
+    return `${prevYear}-${monthNum.toString().padStart(2, '0')}`
+  }
+
   const fetchMonthData = async (month: string) => {
     try {
       // Essayer d'abord la base de données
@@ -158,8 +175,14 @@ export const usePennylaneData = (
         const previousDbResponse = await getAllDataFromDatabase(previousMonth)
         const previousData = previousDbResponse.success && previousDbResponse.data ? previousDbResponse.data : null
         
+        // Récupérer les données du même mois de l'année précédente
+        const previousYearMonth = getPreviousYearMonth(month)
+        console.log('📅 Récupération des données du même mois année précédente:', previousYearMonth)
+        const previousYearDbResponse = await getAllDataFromDatabase(previousYearMonth)
+        const previousYearData = previousYearDbResponse.success && previousYearDbResponse.data ? previousYearDbResponse.data : null
+        
         // Utiliser les données de la base (elles sont déjà synchronisées)
-        await processDatabaseData(dbResponse.data, previousData)
+        await processDatabaseData(dbResponse.data, previousData, previousYearData)
         return
       }
       
@@ -191,7 +214,16 @@ export const usePennylaneData = (
         charges_sans_amortissements_previous: null,
         charges_salariales_previous: null,
         resultat_net_previous: null,
-        solde_tresorerie_previous: null
+        solde_tresorerie_previous: null,
+        ventes_706_previous_year: null,
+        chiffre_affaires_previous_year: null,
+        total_produits_exploitation_previous_year: null,
+        charges_previous_year: null,
+        charges_sans_amortissements_previous_year: null,
+        charges_salariales_previous_year: null,
+        resultat_net_previous_year: null,
+        solde_tresorerie_previous_year: null,
+        rentabilite_previous_year: null
       })
       setChargesBreakdown([])
       setChargesSalarialesBreakdown([])
@@ -285,7 +317,16 @@ export const usePennylaneData = (
           charges_sans_amortissements_previous: null,
           charges_salariales_previous: null,
           resultat_net_previous: null,
-          solde_tresorerie_previous: null
+          solde_tresorerie_previous: null,
+          ventes_706_previous_year: null,
+          chiffre_affaires_previous_year: null,
+          total_produits_exploitation_previous_year: null,
+          charges_previous_year: null,
+          charges_sans_amortissements_previous_year: null,
+          charges_salariales_previous_year: null,
+          resultat_net_previous_year: null,
+          solde_tresorerie_previous_year: null,
+          rentabilite_previous_year: null
         })
         setChargesBreakdown([])
         setChargesSansAmortissementsBreakdown([])
@@ -311,7 +352,7 @@ export const usePennylaneData = (
   }
 
   // Traiter les données de la base de données
-  const processDatabaseData = async (data: any, previousData: any = null) => {
+  const processDatabaseData = async (data: any, previousData: any = null, previousYearData: any = null) => {
     try {
       console.log('🔄 Traitement des données de la base de données...')
       console.log('🔍 Toutes les données reçues:', data)
@@ -363,8 +404,10 @@ export const usePennylaneData = (
       // Traiter les KPIs
       const kpisData = data.kpis || {}
       const previousKpisData = previousData?.kpis || {}
+      const previousYearKpisData = previousYearData?.kpis || {}
       console.log('📊 KPIs reçus de la base:', kpisData)
       console.log('📊 KPIs du mois précédent:', previousKpisData)
+      console.log('📊 KPIs du même mois année précédente:', previousYearKpisData)
       
       // Fonction helper pour calculer le pourcentage de croissance
       const calculateGrowth = (current: number, previous: number | null | undefined): number | null => {
@@ -372,6 +415,11 @@ export const usePennylaneData = (
         const growth = ((current - previous) / Math.abs(previous)) * 100
         return Math.round(growth * 100) / 100
       }
+      
+      // Calculer la rentabilité de l'année précédente
+      const rentabilitePreviousYear = previousYearKpisData.resultat_net && previousYearKpisData.revenus_totaux
+        ? Math.round(((previousYearKpisData.resultat_net / previousYearKpisData.revenus_totaux) * 100) * 100) / 100
+        : null
       
       const processedKpis: KPIData = {
         ventes_706: kpisData.ventes_706 || 0,
@@ -403,7 +451,17 @@ export const usePennylaneData = (
         charges_sans_amortissements_previous: previousKpisData.charges_sans_amortissements || null,
         charges_salariales_previous: previousKpisData.charges_salariales || null,
         resultat_net_previous: previousKpisData.resultat_net || null,
-        solde_tresorerie_previous: previousKpisData.tresorerie || null
+        solde_tresorerie_previous: previousKpisData.tresorerie || null,
+        // Valeurs du même mois de l'année précédente
+        ventes_706_previous_year: previousYearKpisData.ventes_706 || null,
+        chiffre_affaires_previous_year: previousYearKpisData.chiffre_affaires || null,
+        total_produits_exploitation_previous_year: previousYearKpisData.revenus_totaux || null,
+        charges_previous_year: previousYearKpisData.charges || null,
+        charges_sans_amortissements_previous_year: previousYearKpisData.charges_sans_amortissements || null,
+        charges_salariales_previous_year: previousYearKpisData.charges_salariales || null,
+        resultat_net_previous_year: previousYearKpisData.resultat_net || null,
+        solde_tresorerie_previous_year: previousYearKpisData.tresorerie || null,
+        rentabilite_previous_year: rentabilitePreviousYear
       }
 
       console.log('📊 KPIs traités:', processedKpis)
@@ -547,7 +605,16 @@ export const usePennylaneData = (
       charges_sans_amortissements_previous: null,
       charges_salariales_previous: null,
       resultat_net_previous: null,
-      solde_tresorerie_previous: null
+      solde_tresorerie_previous: null,
+      ventes_706_previous_year: null,
+      chiffre_affaires_previous_year: null,
+      total_produits_exploitation_previous_year: null,
+      charges_previous_year: null,
+      charges_sans_amortissements_previous_year: null,
+      charges_salariales_previous_year: null,
+      resultat_net_previous_year: null,
+      solde_tresorerie_previous_year: null,
+      rentabilite_previous_year: null
     }
   }
 
