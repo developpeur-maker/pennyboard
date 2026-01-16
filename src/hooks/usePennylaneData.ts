@@ -300,6 +300,16 @@ export const usePennylaneData = (
     }
   }
 
+  // Comptes à exclure de la masse salariale (doivent être dans les charges mais pas dans la masse salariale)
+  const EXCLUDED_FROM_MASSE_SALARIALE = ['646', '646001', '64114', '64115']
+  
+  // Fonction helper pour vérifier si un compte doit être exclu de la masse salariale
+  const isExcludedFromMasseSalariale = (accountNumber: string): boolean => {
+    return EXCLUDED_FROM_MASSE_SALARIALE.some(excluded => 
+      accountNumber === excluded || accountNumber.startsWith(excluded)
+    )
+  }
+
   // Traiter les données de la base de données
   const processDatabaseData = async (data: any, previousData: any = null) => {
     try {
@@ -320,17 +330,21 @@ export const usePennylaneData = (
       if (data.charges_salariales_breakdown) {
         console.log('🔍 Charges salariales breakdown reçu:', data.charges_salariales_breakdown)
         const chargesSalarialesArray = convertBreakdownToArray(data.charges_salariales_breakdown)
-        console.log('🔍 Charges salariales array converti:', chargesSalarialesArray)
-        setChargesSalarialesBreakdown(chargesSalarialesArray)
+        // Filtrer les comptes exclus même si le breakdown existe (au cas où les données seraient anciennes)
+        const filteredChargesSalariales = chargesSalarialesArray.filter(item => 
+          !isExcludedFromMasseSalariale(item.code)
+        )
+        console.log('🔍 Charges salariales array converti et filtré:', filteredChargesSalariales)
+        setChargesSalarialesBreakdown(filteredChargesSalariales)
       } else if (data.charges_breakdown) {
         // Solution temporaire : filtrer les comptes 64 depuis les charges
         console.log('⚠️ charges_salariales_breakdown non trouvé, filtrage depuis charges_breakdown')
         const allCharges = convertBreakdownToArray(data.charges_breakdown)
-        // Pour la masse salariale : seulement les comptes 64 avec solde positif
+        // Pour la masse salariale : seulement les comptes 64 avec solde positif, en excluant les comptes spécifiés
         const chargesSalariales = allCharges.filter(item => 
-          item.code.startsWith('64') && item.amount > 0
+          item.code.startsWith('64') && item.amount > 0 && !isExcludedFromMasseSalariale(item.code)
         )
-        console.log('🔍 Charges salariales filtrées (positifs uniquement):', chargesSalariales)
+        console.log('🔍 Charges salariales filtrées (positifs uniquement, comptes exclus retirés):', chargesSalariales)
         setChargesSalarialesBreakdown(chargesSalariales)
       }
       if (data.revenus_breakdown) {
@@ -555,13 +569,26 @@ export const usePennylaneData = (
         })
       }
 
-      // Cumuler les charges salariales
+      // Cumuler les charges salariales (en excluant les comptes spécifiés)
       if (monthData.charges_salariales_breakdown) {
         Object.entries(monthData.charges_salariales_breakdown).forEach(([code, data]: [string, any]) => {
-          if (!cumulativeChargesSalariales[code]) {
-            cumulativeChargesSalariales[code] = { amount: 0, label: data.label || `Compte ${code}` }
+          // Exclure les comptes spécifiés de la masse salariale
+          if (!isExcludedFromMasseSalariale(code)) {
+            if (!cumulativeChargesSalariales[code]) {
+              cumulativeChargesSalariales[code] = { amount: 0, label: data.label || `Compte ${code}` }
+            }
+            cumulativeChargesSalariales[code].amount += data.amount || 0
           }
-          cumulativeChargesSalariales[code].amount += data.amount || 0
+        })
+      } else if (monthData.charges_breakdown) {
+        // Fallback : filtrer depuis charges_breakdown en excluant les comptes spécifiés
+        Object.entries(monthData.charges_breakdown).forEach(([code, data]: [string, any]) => {
+          if (code.startsWith('64') && (data.amount || 0) > 0 && !isExcludedFromMasseSalariale(code)) {
+            if (!cumulativeChargesSalariales[code]) {
+              cumulativeChargesSalariales[code] = { amount: 0, label: data.label || `Compte ${code}` }
+            }
+            cumulativeChargesSalariales[code].amount += data.amount || 0
+          }
         })
       }
 
