@@ -50,6 +50,7 @@ interface KPIData {
   charges_salariales_previous_year: number | null
   resultat_net_previous_year: number | null
   solde_tresorerie_previous_year: number | null
+  rentabilite_previous: number | null // Ratio de rentabilité du mois précédent
   rentabilite_previous_year: number | null // Ratio de rentabilité du même mois année précédente
 }
 
@@ -223,6 +224,7 @@ export const usePennylaneData = (
         charges_salariales_previous_year: null,
         resultat_net_previous_year: null,
         solde_tresorerie_previous_year: null,
+        rentabilite_previous: null,
         rentabilite_previous_year: null
       })
       setChargesBreakdown([])
@@ -326,6 +328,7 @@ export const usePennylaneData = (
           charges_salariales_previous_year: null,
           resultat_net_previous_year: null,
           solde_tresorerie_previous_year: null,
+          rentabilite_previous: null,
           rentabilite_previous_year: null
         })
         setChargesBreakdown([])
@@ -416,6 +419,11 @@ export const usePennylaneData = (
         return Math.round(growth * 100) / 100
       }
       
+      // Calculer la rentabilité du mois précédent
+      const rentabilitePrevious = previousKpisData.resultat_net && previousKpisData.revenus_totaux
+        ? Math.round(((previousKpisData.resultat_net / previousKpisData.revenus_totaux) * 100) * 100) / 100
+        : null
+      
       // Calculer la rentabilité de l'année précédente
       const rentabilitePreviousYear = previousYearKpisData.resultat_net && previousYearKpisData.revenus_totaux
         ? Math.round(((previousYearKpisData.resultat_net / previousYearKpisData.revenus_totaux) * 100) * 100) / 100
@@ -461,6 +469,7 @@ export const usePennylaneData = (
         charges_salariales_previous_year: previousYearKpisData.charges_salariales || null,
         resultat_net_previous_year: previousYearKpisData.resultat_net || null,
         solde_tresorerie_previous_year: previousYearKpisData.tresorerie || null,
+        rentabilite_previous: rentabilitePrevious,
         rentabilite_previous_year: rentabilitePreviousYear
       }
 
@@ -614,6 +623,7 @@ export const usePennylaneData = (
       charges_salariales_previous_year: null,
       resultat_net_previous_year: null,
       solde_tresorerie_previous_year: null,
+      rentabilite_previous: null,
       rentabilite_previous_year: null
     }
   }

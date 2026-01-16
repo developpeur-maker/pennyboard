@@ -493,21 +493,11 @@ const Dashboard: React.FC = () => {
                   )
                 : 'Aucune donnée'
             }
-            change={kpis && kpis.hasData && kpis.rentabilite && kpis.rentabilite_previous_year !== null ? ((kpis.rentabilite.ratio - kpis.rentabilite_previous_year) / Math.abs(kpis.rentabilite_previous_year)) * 100 : 0}
-            changeType={
-              kpis && kpis.hasData && kpis.rentabilite && kpis.rentabilite_previous_year !== null
-                ? (kpis.rentabilite.ratio >= kpis.rentabilite_previous_year ? 'increase' : 'decrease')
-                : (kpis && kpis.hasData && kpis.rentabilite 
-                    ? (kpis.rentabilite.projection
-                        ? (kpis.rentabilite.projection.ratio > 15 ? 'increase' : kpis.rentabilite.projection.ratio > 0 ? 'neutral' : 'decrease')
-                        : (kpis.rentabilite.ratio > 15 ? 'increase' : kpis.rentabilite.ratio > 0 ? 'neutral' : 'decrease')
-                      )
-                    : 'neutral'
-                  )
-            }
+            change={kpis && kpis.hasData && kpis.rentabilite && kpis.rentabilite_previous !== null ? ((kpis.rentabilite.ratio - kpis.rentabilite_previous) / Math.abs(kpis.rentabilite_previous)) * 100 : (kpis && kpis.hasData && kpis.rentabilite && kpis.rentabilite_previous_year !== null ? ((kpis.rentabilite.ratio - kpis.rentabilite_previous_year) / Math.abs(kpis.rentabilite_previous_year)) * 100 : 0)}
+            changeType={kpis && kpis.hasData && kpis.rentabilite && kpis.rentabilite_previous !== null ? (kpis.rentabilite.ratio >= kpis.rentabilite_previous ? 'increase' : 'decrease') : (kpis && kpis.hasData && kpis.rentabilite && kpis.rentabilite_previous_year !== null ? (kpis.rentabilite.ratio >= kpis.rentabilite_previous_year ? 'increase' : 'decrease') : (kpis && kpis.hasData && kpis.rentabilite ? (kpis.rentabilite.projection ? (kpis.rentabilite.projection.ratio > 15 ? 'increase' : kpis.rentabilite.projection.ratio > 0 ? 'neutral' : 'decrease') : (kpis.rentabilite.ratio > 15 ? 'increase' : kpis.rentabilite.ratio > 0 ? 'neutral' : 'decrease')) : 'neutral'))}
             icon={<Calculator className="w-5 h-5 text-purple-600" />}
             color="turquoise"
-            previousValue={null}
+            previousValue={kpis && kpis.rentabilite_previous !== null ? kpis.rentabilite_previous : null}
             previousYearValue={kpis && kpis.rentabilite_previous_year !== null ? kpis.rentabilite_previous_year : null}
             previousYearChange={kpis && kpis.rentabilite_previous_year !== null && kpis.rentabilite !== null ? ((kpis.rentabilite.ratio - kpis.rentabilite_previous_year) / Math.abs(kpis.rentabilite_previous_year)) * 100 : null}
             previousYearChangeType={kpis && kpis.rentabilite_previous_year !== null && kpis.rentabilite !== null ? (kpis.rentabilite.ratio >= kpis.rentabilite_previous_year ? 'increase' : 'decrease') : 'neutral'}
