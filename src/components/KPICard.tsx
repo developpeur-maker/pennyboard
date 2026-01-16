@@ -107,7 +107,7 @@ const KPICard: React.FC<KPICardProps> = ({
               )
             })()}
             <span className="text-sm text-gray-600">
-              Par rapport au mois précédent : {formatCurrency(previousValue)}
+              M-1 : {formatCurrency(previousValue)}
             </span>
             {changeType !== 'neutral' && change !== 0 && (
               <span className={`text-sm font-semibold ${
@@ -137,7 +137,7 @@ const KPICard: React.FC<KPICardProps> = ({
               )
             })()}
             <span className="text-sm text-gray-600">
-              Par rapport au même mois année précédente : {formatCurrency(previousYearValue)}
+              M de N-1 : {formatCurrency(previousYearValue)}
             </span>
             {previousYearChangeType !== 'neutral' && previousYearChange !== null && previousYearChange !== undefined && previousYearChange !== 0 && (
               <span className={`text-sm font-semibold ${
