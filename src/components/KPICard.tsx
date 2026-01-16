@@ -20,6 +20,7 @@ interface KPICardProps {
   previousYearChange?: number | null // Pourcentage de changement par rapport à l'année précédente
   previousYearChangeType?: 'increase' | 'decrease' | 'neutral' // Type de changement par rapport à l'année précédente
   formatCurrency?: (value: number) => string // Fonction pour formater la monnaie
+  invertColors?: boolean // Si true, inverse les couleurs (augmentation = rouge, diminution = vert)
 }
 
 const KPICard: React.FC<KPICardProps> = ({ 
@@ -37,7 +38,8 @@ const KPICard: React.FC<KPICardProps> = ({
   previousYearValue,
   previousYearChange,
   previousYearChangeType,
-  formatCurrency
+  formatCurrency,
+  invertColors = false
 }) => {
   const colorClasses = {
     green: 'text-green-600',
@@ -92,21 +94,28 @@ const KPICard: React.FC<KPICardProps> = ({
       <div className="flex flex-col gap-2">
         {previousValue !== null && previousValue !== undefined && formatCurrency ? (
           <div className="flex items-center gap-2 flex-wrap">
-            {changeType === 'increase' ? (
-              <ArrowUpRight className="w-4 h-4 text-green-600" />
-            ) : changeType === 'decrease' ? (
-              <ArrowDownRight className="w-4 h-4 text-red-500" />
-            ) : (
-              <span className="w-4 h-4"></span>
-            )}
+            {(() => {
+              const displayChangeType = invertColors 
+                ? (changeType === 'increase' ? 'decrease' : changeType === 'decrease' ? 'increase' : 'neutral')
+                : changeType
+              return displayChangeType === 'increase' ? (
+                <ArrowUpRight className={`w-4 h-4 ${invertColors ? 'text-red-500' : 'text-green-600'}`} />
+              ) : displayChangeType === 'decrease' ? (
+                <ArrowDownRight className={`w-4 h-4 ${invertColors ? 'text-green-600' : 'text-red-500'}`} />
+              ) : (
+                <span className="w-4 h-4"></span>
+              )
+            })()}
             <span className="text-sm text-gray-600">
-              M - 1  : {formatCurrency(previousValue)}
+              Par rapport au mois précédent : {formatCurrency(previousValue)}
             </span>
             {changeType !== 'neutral' && change !== 0 && (
               <span className={`text-sm font-semibold ${
-                changeType === 'increase' ? 'text-green-600' : 'text-red-500'
+                invertColors
+                  ? (changeType === 'increase' ? 'text-red-500' : 'text-green-600')
+                  : (changeType === 'increase' ? 'text-green-600' : 'text-red-500')
               }`}>
-                ({changeType === 'increase' ? '+' : ''}{change.toFixed(2)}%)
+                ({change >= 0 ? '+' : ''}{change.toFixed(2)}%)
               </span>
             )}
           </div>
@@ -115,21 +124,28 @@ const KPICard: React.FC<KPICardProps> = ({
         ) : null}
         {previousYearValue !== null && previousYearValue !== undefined && formatCurrency ? (
           <div className="flex items-center gap-2 flex-wrap">
-            {previousYearChangeType === 'increase' ? (
-              <ArrowUpRight className="w-4 h-4 text-green-600" />
-            ) : previousYearChangeType === 'decrease' ? (
-              <ArrowDownRight className="w-4 h-4 text-red-500" />
-            ) : (
-              <span className="w-4 h-4"></span>
-            )}
+            {(() => {
+              const displayChangeType = invertColors 
+                ? (previousYearChangeType === 'increase' ? 'decrease' : previousYearChangeType === 'decrease' ? 'increase' : 'neutral')
+                : previousYearChangeType
+              return displayChangeType === 'increase' ? (
+                <ArrowUpRight className={`w-4 h-4 ${invertColors ? 'text-red-500' : 'text-green-600'}`} />
+              ) : displayChangeType === 'decrease' ? (
+                <ArrowDownRight className={`w-4 h-4 ${invertColors ? 'text-green-600' : 'text-red-500'}`} />
+              ) : (
+                <span className="w-4 h-4"></span>
+              )
+            })()}
             <span className="text-sm text-gray-600">
-              M de N - 1 : {formatCurrency(previousYearValue)}
+              Par rapport au même mois année précédente : {formatCurrency(previousYearValue)}
             </span>
             {previousYearChangeType !== 'neutral' && previousYearChange !== null && previousYearChange !== undefined && previousYearChange !== 0 && (
               <span className={`text-sm font-semibold ${
-                previousYearChangeType === 'increase' ? 'text-green-600' : 'text-red-500'
+                invertColors
+                  ? (previousYearChangeType === 'increase' ? 'text-red-500' : 'text-green-600')
+                  : (previousYearChangeType === 'increase' ? 'text-green-600' : 'text-red-500')
               }`}>
-                ({previousYearChangeType === 'increase' ? '+' : ''}{previousYearChange.toFixed(2)}%)
+                ({previousYearChange >= 0 ? '+' : ''}{previousYearChange.toFixed(2)}%)
               </span>
             )}
           </div>

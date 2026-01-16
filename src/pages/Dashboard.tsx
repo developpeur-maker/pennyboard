@@ -398,7 +398,7 @@ const Dashboard: React.FC = () => {
             period={formatPeriod()}
             subtitle="Prestations de services"
             value={kpis && kpis.hasData && kpis.ventes_706 !== null ? formatCurrency(kpis.ventes_706) : 'Aucune donnée'}
-            change={kpis && kpis.hasData && kpis.ventes_growth !== null ? Math.abs(kpis.ventes_growth) : 0}
+            change={kpis && kpis.hasData && kpis.ventes_growth !== null ? kpis.ventes_growth : 0}
             changeType={kpis && kpis.hasData && kpis.ventes_growth !== null ? (kpis.ventes_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<DollarSign className="w-5 h-5 text-green-600" />}
             color="green"
@@ -413,7 +413,7 @@ const Dashboard: React.FC = () => {
             period={formatPeriod()}
             subtitle="Tous les produits"
             value={kpis && kpis.hasData && kpis.total_produits_exploitation !== null ? formatCurrency(kpis.total_produits_exploitation) : 'Aucune donnée'}
-            change={kpis && kpis.hasData && kpis.total_produits_growth !== null ? Math.abs(kpis.total_produits_growth) : 0}
+            change={kpis && kpis.hasData && kpis.total_produits_growth !== null ? kpis.total_produits_growth : 0}
             changeType={kpis && kpis.hasData && kpis.total_produits_growth !== null ? (kpis.total_produits_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
             color="green"
@@ -429,7 +429,7 @@ const Dashboard: React.FC = () => {
             period={formatPeriod()}
             subtitle="Liquidités disponibles"
             value={kpis && kpis.hasData && kpis.solde_tresorerie !== null ? formatCurrency(kpis.solde_tresorerie) : 'Aucune donnée'}
-            change={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? Math.abs(kpis.tresorerie_growth) : 0}
+            change={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? kpis.tresorerie_growth : 0}
             changeType={kpis && kpis.hasData && kpis.tresorerie_growth !== null ? (kpis.tresorerie_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
             color="cyan"
@@ -445,7 +445,7 @@ const Dashboard: React.FC = () => {
             period={formatPeriod()}
             subtitle="Coûts d'exploitation"
             value={kpis && kpis.hasData && kpis.charges !== null ? formatCurrency(kpis.charges) : 'Aucune donnée'}
-            change={kpis && kpis.hasData && kpis.charges_growth !== null ? Math.abs(kpis.charges_growth) : 0}
+            change={kpis && kpis.hasData && kpis.charges_growth !== null ? kpis.charges_growth : 0}
             changeType={kpis && kpis.hasData && kpis.charges_growth !== null ? (kpis.charges_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<CreditCard className="w-5 h-5 text-red-600" />}
             color="red"
@@ -455,13 +455,14 @@ const Dashboard: React.FC = () => {
             previousYearChange={kpis && kpis.charges_previous_year !== null && kpis.charges !== null ? ((kpis.charges - kpis.charges_previous_year) / Math.abs(kpis.charges_previous_year)) * 100 : null}
             previousYearChangeType={kpis && kpis.charges_previous_year !== null && kpis.charges !== null ? (kpis.charges >= kpis.charges_previous_year ? 'increase' : 'decrease') : 'neutral'}
             formatCurrency={formatCurrency}
+            invertColors={true}
           />
           <KPICard
             title="Masse Salariale"
             period={formatPeriod()}
             subtitle="Charges de personnel"
             value={kpis && kpis.hasData && kpis.charges_salariales !== null ? formatCurrency(kpis.charges_salariales) : 'Aucune donnée'}
-            change={kpis && kpis.hasData && kpis.charges_salariales_previous !== null && kpis.charges_salariales !== null ? Math.abs(((kpis.charges_salariales - kpis.charges_salariales_previous) / Math.abs(kpis.charges_salariales_previous)) * 100) : 0}
+            change={kpis && kpis.hasData && kpis.charges_salariales_previous !== null && kpis.charges_salariales !== null ? ((kpis.charges_salariales - kpis.charges_salariales_previous) / Math.abs(kpis.charges_salariales_previous)) * 100 : 0}
             changeType={kpis && kpis.hasData && kpis.charges_salariales_previous !== null && kpis.charges_salariales !== null ? (kpis.charges_salariales >= kpis.charges_salariales_previous ? 'increase' : 'decrease') : 'neutral'}
             icon={<Users className="w-5 h-5 text-orange-600" />}
             color="red"
@@ -471,6 +472,7 @@ const Dashboard: React.FC = () => {
             previousYearChange={kpis && kpis.charges_salariales_previous_year !== null && kpis.charges_salariales !== null ? ((kpis.charges_salariales - kpis.charges_salariales_previous_year) / Math.abs(kpis.charges_salariales_previous_year)) * 100 : null}
             previousYearChangeType={kpis && kpis.charges_salariales_previous_year !== null && kpis.charges_salariales !== null ? (kpis.charges_salariales >= kpis.charges_salariales_previous_year ? 'increase' : 'decrease') : 'neutral'}
             formatCurrency={formatCurrency}
+            invertColors={true}
           />
           <KPICard
             title="Rentabilité"
@@ -491,7 +493,7 @@ const Dashboard: React.FC = () => {
                   )
                 : 'Aucune donnée'
             }
-            change={kpis && kpis.hasData && kpis.rentabilite && kpis.rentabilite_previous_year !== null ? Math.abs(((kpis.rentabilite.ratio - kpis.rentabilite_previous_year) / Math.abs(kpis.rentabilite_previous_year)) * 100) : 0}
+            change={kpis && kpis.hasData && kpis.rentabilite && kpis.rentabilite_previous_year !== null ? ((kpis.rentabilite.ratio - kpis.rentabilite_previous_year) / Math.abs(kpis.rentabilite_previous_year)) * 100 : 0}
             changeType={
               kpis && kpis.hasData && kpis.rentabilite && kpis.rentabilite_previous_year !== null
                 ? (kpis.rentabilite.ratio >= kpis.rentabilite_previous_year ? 'increase' : 'decrease')
@@ -516,7 +518,7 @@ const Dashboard: React.FC = () => {
             period={formatPeriod()}
             subtitle="Coûts hors dotations"
             value={kpis && kpis.hasData && kpis.charges_sans_amortissements !== null ? formatCurrency(kpis.charges_sans_amortissements) : 'Aucune donnée'}
-            change={kpis && kpis.hasData && kpis.charges_sans_amortissements_previous !== null && kpis.charges_sans_amortissements !== null ? Math.abs(((kpis.charges_sans_amortissements - kpis.charges_sans_amortissements_previous) / Math.abs(kpis.charges_sans_amortissements_previous)) * 100) : 0}
+            change={kpis && kpis.hasData && kpis.charges_sans_amortissements_previous !== null && kpis.charges_sans_amortissements !== null ? ((kpis.charges_sans_amortissements - kpis.charges_sans_amortissements_previous) / Math.abs(kpis.charges_sans_amortissements_previous)) * 100 : 0}
             changeType={kpis && kpis.hasData && kpis.charges_sans_amortissements_previous !== null && kpis.charges_sans_amortissements !== null ? (kpis.charges_sans_amortissements >= kpis.charges_sans_amortissements_previous ? 'increase' : 'decrease') : 'neutral'}
             icon={<TrendingDown className="w-5 h-5 text-red-600" />}
             color="blue"
@@ -526,6 +528,7 @@ const Dashboard: React.FC = () => {
             previousYearChange={kpis && kpis.charges_sans_amortissements_previous_year !== null && kpis.charges_sans_amortissements !== null ? ((kpis.charges_sans_amortissements - kpis.charges_sans_amortissements_previous_year) / Math.abs(kpis.charges_sans_amortissements_previous_year)) * 100 : null}
             previousYearChangeType={kpis && kpis.charges_sans_amortissements_previous_year !== null && kpis.charges_sans_amortissements !== null ? (kpis.charges_sans_amortissements >= kpis.charges_sans_amortissements_previous_year ? 'increase' : 'decrease') : 'neutral'}
             formatCurrency={formatCurrency}
+            invertColors={true}
           />
         </div>
       </div>
