@@ -15,6 +15,8 @@ interface KPICardProps {
     message: string
   }
   onClick?: () => void
+  previousValue?: number | null // Valeur du mois précédent
+  formatCurrency?: (value: number) => string // Fonction pour formater la monnaie
 }
 
 const KPICard: React.FC<KPICardProps> = ({ 
@@ -27,7 +29,9 @@ const KPICard: React.FC<KPICardProps> = ({
   icon,
   color = 'green',
   projection,
-  onClick
+  onClick,
+  previousValue,
+  formatCurrency
 }) => {
   const colorClasses = {
     green: 'text-green-600',
@@ -80,24 +84,27 @@ const KPICard: React.FC<KPICardProps> = ({
         )}
       </div>
       <div className="flex items-center gap-2">
-        {changeType === 'increase' ? (
-          <ArrowUpRight className="w-4 h-4 text-green-600" />
-        ) : changeType === 'decrease' ? (
-          <ArrowDownRight className="w-4 h-4 text-red-500" />
-        ) : null}
-        {changeType !== 'neutral' && change !== 0 && (
+        {previousValue !== null && previousValue !== undefined && formatCurrency ? (
           <>
-            <span className={`text-sm font-semibold ${
-              changeType === 'increase' ? 'text-green-600' : 'text-red-500'
-            }`}>
-              {changeType === 'increase' ? '+' : ''}{change.toFixed(2)}%
+            {changeType === 'increase' ? (
+              <ArrowUpRight className="w-4 h-4 text-green-600" />
+            ) : changeType === 'decrease' ? (
+              <ArrowDownRight className="w-4 h-4 text-red-500" />
+            ) : (
+              <span className="w-4 h-4"></span>
+            )}
+            <span className="text-sm text-gray-600">
+              {formatCurrency(previousValue)}
             </span>
-            <span className="text-sm text-gray-500">
-              {changeType === 'increase' ? 'en hausse' : 'en baisse'} vs le mois dernier
-            </span>
+            {changeType !== 'neutral' && change !== 0 && (
+              <span className={`text-sm font-semibold ${
+                changeType === 'increase' ? 'text-green-600' : 'text-red-500'
+              }`}>
+                ({changeType === 'increase' ? '+' : ''}{change.toFixed(2)}%)
+              </span>
+            )}
           </>
-        )}
-        {(changeType === 'neutral' || change === 0) && (
+        ) : (
           <span className="text-sm text-gray-400">Pas de données du mois précédent</span>
         )}
       </div>

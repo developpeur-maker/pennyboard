@@ -32,6 +32,15 @@ interface KPIData {
   charges_growth: number | null
   resultat_growth: number | null
   tresorerie_growth: number | null
+  // Valeurs du mois précédent
+  ventes_706_previous: number | null
+  chiffre_affaires_previous: number | null
+  total_produits_exploitation_previous: number | null
+  charges_previous: number | null
+  charges_sans_amortissements_previous: number | null
+  charges_salariales_previous: number | null
+  resultat_net_previous: number | null
+  solde_tresorerie_previous: number | null
 }
 
 interface UsePennylaneDataReturn {
@@ -109,6 +118,20 @@ export const usePennylaneData = (
     }
   }
 
+  // Fonction helper pour calculer le mois précédent
+  const getPreviousMonth = (month: string): string => {
+    const [year, monthNum] = month.split('-').map(Number)
+    let prevYear = year
+    let prevMonth = monthNum - 1
+    
+    if (prevMonth === 0) {
+      prevMonth = 12
+      prevYear = year - 1
+    }
+    
+    return `${prevYear}-${prevMonth.toString().padStart(2, '0')}`
+  }
+
   const fetchMonthData = async (month: string) => {
     try {
       // Essayer d'abord la base de données
@@ -129,8 +152,14 @@ export const usePennylaneData = (
           kpis: dbResponse.data.kpis
         })
         
+        // Récupérer les données du mois précédent
+        const previousMonth = getPreviousMonth(month)
+        console.log('📅 Récupération des données du mois précédent:', previousMonth)
+        const previousDbResponse = await getAllDataFromDatabase(previousMonth)
+        const previousData = previousDbResponse.success && previousDbResponse.data ? previousDbResponse.data : null
+        
         // Utiliser les données de la base (elles sont déjà synchronisées)
-        await processDatabaseData(dbResponse.data)
+        await processDatabaseData(dbResponse.data, previousData)
         return
       }
       
@@ -256,7 +285,7 @@ export const usePennylaneData = (
   }
 
   // Traiter les données de la base de données
-  const processDatabaseData = async (data: any) => {
+  const processDatabaseData = async (data: any, previousData: any = null) => {
     try {
       console.log('🔄 Traitement des données de la base de données...')
       console.log('🔍 Toutes les données reçues:', data)
@@ -303,7 +332,16 @@ export const usePennylaneData = (
 
       // Traiter les KPIs
       const kpisData = data.kpis || {}
+      const previousKpisData = previousData?.kpis || {}
       console.log('📊 KPIs reçus de la base:', kpisData)
+      console.log('📊 KPIs du mois précédent:', previousKpisData)
+      
+      // Fonction helper pour calculer le pourcentage de croissance
+      const calculateGrowth = (current: number, previous: number | null | undefined): number | null => {
+        if (previous === null || previous === undefined || previous === 0) return null
+        const growth = ((current - previous) / Math.abs(previous)) * 100
+        return Math.round(growth * 100) / 100
+      }
       
       const processedKpis: KPIData = {
         ventes_706: kpisData.ventes_706 || 0,
@@ -314,19 +352,28 @@ export const usePennylaneData = (
         charges_salariales: kpisData.charges_salariales || 0,
         resultat_net: kpisData.resultat_net || 0,
         solde_tresorerie: kpisData.tresorerie || 0,
-        growth: 0, // À calculer si nécessaire
+        growth: calculateGrowth(kpisData.chiffre_affaires || 0, previousKpisData.chiffre_affaires) || 0,
         hasData: true,
         rentabilite: kpisData.resultat_net && kpisData.revenus_totaux ? {
           ratio: Math.round(((kpisData.resultat_net / kpisData.revenus_totaux) * 100) * 100) / 100,
           message: 'Rentabilité calculée',
           montant: kpisData.resultat_net
         } : null,
-        ventes_growth: 0,
-        ca_growth: 0,
-        total_produits_growth: 0,
-        charges_growth: 0,
-        resultat_growth: 0,
-        tresorerie_growth: 0
+        ventes_growth: calculateGrowth(kpisData.ventes_706 || 0, previousKpisData.ventes_706),
+        ca_growth: calculateGrowth(kpisData.chiffre_affaires || 0, previousKpisData.chiffre_affaires),
+        total_produits_growth: calculateGrowth(kpisData.revenus_totaux || 0, previousKpisData.revenus_totaux),
+        charges_growth: calculateGrowth(kpisData.charges || 0, previousKpisData.charges),
+        resultat_growth: calculateGrowth(kpisData.resultat_net || 0, previousKpisData.resultat_net),
+        tresorerie_growth: calculateGrowth(kpisData.tresorerie || 0, previousKpisData.tresorerie),
+        // Valeurs du mois précédent
+        ventes_706_previous: previousKpisData.ventes_706 || null,
+        chiffre_affaires_previous: previousKpisData.chiffre_affaires || null,
+        total_produits_exploitation_previous: previousKpisData.revenus_totaux || null,
+        charges_previous: previousKpisData.charges || null,
+        charges_sans_amortissements_previous: previousKpisData.charges_sans_amortissements || null,
+        charges_salariales_previous: previousKpisData.charges_salariales || null,
+        resultat_net_previous: previousKpisData.resultat_net || null,
+        solde_tresorerie_previous: previousKpisData.tresorerie || null
       }
 
       console.log('📊 KPIs traités:', processedKpis)

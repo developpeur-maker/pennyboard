@@ -402,6 +402,8 @@ const Dashboard: React.FC = () => {
             changeType={kpis && kpis.hasData && kpis.ventes_growth !== null ? (kpis.ventes_growth >= 0 ? 'increase' : 'decrease') : 'neutral'}
             icon={<DollarSign className="w-5 h-5 text-green-600" />}
             color="green"
+            previousValue={kpis?.ventes_706_previous}
+            formatCurrency={formatCurrency}
           />
           <KPICard
             title="Revenus Totaux"
@@ -413,6 +415,8 @@ const Dashboard: React.FC = () => {
             icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
             color="green"
             onClick={() => setIsRevenusModalOpen(true)}
+            previousValue={kpis?.total_produits_exploitation_previous}
+            formatCurrency={formatCurrency}
           />
           <KPICard
             title="Trésorerie"
@@ -424,6 +428,8 @@ const Dashboard: React.FC = () => {
             icon={<PiggyBank className="w-5 h-5 text-cyan-600" />}
             color="cyan"
             onClick={() => setIsTresorerieModalOpen(true)}
+            previousValue={kpis?.solde_tresorerie_previous}
+            formatCurrency={formatCurrency}
           />
           <KPICard
             title="Achats & Charges"
@@ -435,17 +441,21 @@ const Dashboard: React.FC = () => {
             icon={<CreditCard className="w-5 h-5 text-red-600" />}
             color="red"
             onClick={() => setIsChargesModalOpen(true)}
+            previousValue={kpis?.charges_previous}
+            formatCurrency={formatCurrency}
           />
           <KPICard
             title="Masse Salariale"
             period={formatPeriod()}
             subtitle="Charges de personnel"
             value={kpis && kpis.hasData && kpis.charges_salariales !== null ? formatCurrency(kpis.charges_salariales) : 'Aucune donnée'}
-            change={0}
-            changeType="neutral"
+            change={kpis && kpis.hasData && kpis.charges_salariales_previous !== null && kpis.charges_salariales !== null ? Math.abs(((kpis.charges_salariales - kpis.charges_salariales_previous) / Math.abs(kpis.charges_salariales_previous)) * 100) : 0}
+            changeType={kpis && kpis.hasData && kpis.charges_salariales_previous !== null && kpis.charges_salariales !== null ? (kpis.charges_salariales >= kpis.charges_salariales_previous ? 'increase' : 'decrease') : 'neutral'}
             icon={<Users className="w-5 h-5 text-orange-600" />}
             color="red"
             onClick={() => setIsChargesSalarialesModalOpen(true)}
+            previousValue={kpis?.charges_salariales_previous}
+            formatCurrency={formatCurrency}
           />
           <KPICard
             title="Rentabilité"
@@ -483,11 +493,13 @@ const Dashboard: React.FC = () => {
             period={formatPeriod()}
             subtitle="Coûts hors dotations"
             value={kpis && kpis.hasData && kpis.charges_sans_amortissements !== null ? formatCurrency(kpis.charges_sans_amortissements) : 'Aucune donnée'}
-            change={0}
-            changeType="neutral"
+            change={kpis && kpis.hasData && kpis.charges_sans_amortissements_previous !== null && kpis.charges_sans_amortissements !== null ? Math.abs(((kpis.charges_sans_amortissements - kpis.charges_sans_amortissements_previous) / Math.abs(kpis.charges_sans_amortissements_previous)) * 100) : 0}
+            changeType={kpis && kpis.hasData && kpis.charges_sans_amortissements_previous !== null && kpis.charges_sans_amortissements !== null ? (kpis.charges_sans_amortissements >= kpis.charges_sans_amortissements_previous ? 'increase' : 'decrease') : 'neutral'}
             icon={<TrendingDown className="w-5 h-5 text-red-600" />}
             color="blue"
             onClick={() => setIsChargesSansAmortissementsModalOpen(true)}
+            previousValue={kpis?.charges_sans_amortissements_previous}
+            formatCurrency={formatCurrency}
           />
         </div>
       </div>

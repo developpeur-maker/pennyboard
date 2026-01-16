@@ -260,6 +260,16 @@ async function getTrialBalanceFromPennylane(startDate, endDate) {
 }
 
 // Fonctions de calcul des KPIs (simplifiées pour la synchronisation)
+// Comptes à exclure de la masse salariale (doivent être dans les charges mais pas dans la masse salariale)
+const EXCLUDED_FROM_MASSE_SALARIALE = ['646', '646001', '64114', '64115']
+
+// Fonction helper pour vérifier si un compte doit être exclu de la masse salariale
+function isExcludedFromMasseSalariale(accountNumber) {
+  return EXCLUDED_FROM_MASSE_SALARIALE.some(excluded => 
+    accountNumber === excluded || accountNumber.startsWith(excluded)
+  )
+}
+
 function calculateKPIsFromTrialBalance(trialBalance, month) {
   const items = trialBalance.items || []
   
@@ -297,8 +307,8 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
       }
     }
     
-    // Charges salariales (comptes 64x - Personnel) - Exclure les extournes (soldes négatifs)
-    if (accountNumber.startsWith('64')) {
+    // Charges salariales (comptes 64x - Personnel) - Exclure les extournes (soldes négatifs) et les comptes exclus
+    if (accountNumber.startsWith('64') && !isExcludedFromMasseSalariale(accountNumber)) {
       const solde = debit - credit
       if (solde > 0) { // Seulement les soldes positifs (pas d'extournes)
         charges_salariales += solde
@@ -445,7 +455,8 @@ function calculateChargesSalarialesBreakdown(trialBalance) {
   
   items.forEach((item) => {
     const accountNumber = item.number || ''
-    if (accountNumber.startsWith('64')) {
+    // Exclure les comptes spécifiés de la masse salariale
+    if (accountNumber.startsWith('64') && !isExcludedFromMasseSalariale(accountNumber)) {
       const debit = parseFloat(item.debits || '0')
       const credit = parseFloat(item.credits || '0')
       const solde = debit - credit

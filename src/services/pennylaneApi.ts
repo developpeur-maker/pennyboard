@@ -918,6 +918,15 @@ export const pennylaneApi = {
     charges_growth: number | null
     resultat_growth: number | null
     tresorerie_growth: number | null
+    // Valeurs du mois précédent
+    ventes_706_previous: number | null
+    chiffre_affaires_previous: number | null
+    total_produits_exploitation_previous: number | null
+    charges_previous: number | null
+    charges_sans_amortissements_previous: number | null
+    charges_salariales_previous: number | null
+    resultat_net_previous: number | null
+    solde_tresorerie_previous: number | null
   }> {
     try {
       console.log(`📊 Récupération des KPIs pour ${selectedMonth}...`)
@@ -947,23 +956,31 @@ export const pennylaneApi = {
         console.log('❌ getKPIs: Données manquantes détectées')
         console.log('   - resultatData vide:', resultatData.length === 0)
         console.log('   - tresorerieData vide:', tresorerieData.length === 0)
-        return {
-          ventes_706: null,
-          chiffre_affaires: null,
-          total_produits_exploitation: null,
-          charges: null,
-          resultat_net: null,
-          solde_tresorerie: null,
-          growth: null,
-          hasData: false,
-          rentabilite: null,
-          ventes_growth: null,
-          ca_growth: null,
-          total_produits_growth: null,
-          charges_growth: null,
-          resultat_growth: null,
-          tresorerie_growth: null
-        }
+      return {
+        ventes_706: null,
+        chiffre_affaires: null,
+        total_produits_exploitation: null,
+        charges: null,
+        resultat_net: null,
+        solde_tresorerie: null,
+        growth: null,
+        hasData: false,
+        rentabilite: null,
+        ventes_growth: null,
+        ca_growth: null,
+        total_produits_growth: null,
+        charges_growth: null,
+        resultat_growth: null,
+        tresorerie_growth: null,
+        ventes_706_previous: null,
+        chiffre_affaires_previous: null,
+        total_produits_exploitation_previous: null,
+        charges_previous: null,
+        charges_sans_amortissements_previous: null,
+        charges_salariales_previous: null,
+        resultat_net_previous: null,
+        solde_tresorerie_previous: null
+      }
       }
       
       // Prendre les données du mois sélectionné
@@ -1017,7 +1034,16 @@ export const pennylaneApi = {
         total_produits_growth: totalProduitsGrowth,
         charges_growth: chargesGrowth,
         resultat_growth: resultatGrowth,
-        tresorerie_growth: tresorerieGrowth
+        tresorerie_growth: tresorerieGrowth,
+        // Valeurs du mois précédent
+        ventes_706_previous: previousResultat?.ventes_706 || null,
+        chiffre_affaires_previous: previousResultat?.chiffre_affaires || null,
+        total_produits_exploitation_previous: previousResultat?.total_produits_exploitation || null,
+        charges_previous: previousResultat?.charges || null,
+        charges_sans_amortissements_previous: previousResultat?.charges_sans_amortissements || null,
+        charges_salariales_previous: previousResultat?.charges_salariales || null,
+        resultat_net_previous: previousResultat?.resultat_net || null,
+        solde_tresorerie_previous: previousTresorerie?.solde_final || null
       }
       
     } catch (error) {
@@ -1037,7 +1063,15 @@ export const pennylaneApi = {
         total_produits_growth: null,
         charges_growth: null,
         resultat_growth: null,
-        tresorerie_growth: null
+        tresorerie_growth: null,
+        ventes_706_previous: null,
+        chiffre_affaires_previous: null,
+        total_produits_exploitation_previous: null,
+        charges_previous: null,
+        charges_sans_amortissements_previous: null,
+        charges_salariales_previous: null,
+        resultat_net_previous: null,
+        solde_tresorerie_previous: null
       }
     }
   },
@@ -1201,6 +1235,8 @@ export const pennylaneApi = {
       getClassBalance('644', trialBalance)
     
     // Cotisations sociales : comptes 645 à 647
+    // Note: Les comptes 646, 646001, 64114, 64115 sont exclus de la masse salariale dans les API routes
+    // mais restent ici dans les cotisations sociales pour le compte de résultat
     const cotisations_sociales_current = getClassBalance('645', trialBalance) + 
       getClassBalance('646', trialBalance) + 
       getClassBalance('647', trialBalance)
@@ -1270,6 +1306,8 @@ export const pennylaneApi = {
       getClassBalance('644', previousTrialBalance) : 0
     
     // Cotisations sociales : comptes 645 à 647
+    // Note: Les comptes 646, 646001, 64114, 64115 sont exclus de la masse salariale dans les API routes
+    // mais restent ici dans les cotisations sociales pour le compte de résultat
     const cotisations_sociales_previous = previousTrialBalance ? 
       getClassBalance('645', previousTrialBalance) + 
       getClassBalance('646', previousTrialBalance) + 
