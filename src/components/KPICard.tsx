@@ -95,13 +95,13 @@ const KPICard: React.FC<KPICardProps> = ({
         {previousValue !== null && previousValue !== undefined && formatCurrency ? (
           <div className="flex items-center gap-2 flex-wrap">
             {(() => {
-              const displayChangeType = invertColors 
-                ? (changeType === 'increase' ? 'decrease' : changeType === 'decrease' ? 'increase' : 'neutral')
-                : changeType
-              return displayChangeType === 'increase' ? (
-                <ArrowUpRight className={`w-4 h-4 ${invertColors ? 'text-red-500' : 'text-green-600'}`} />
-              ) : displayChangeType === 'decrease' ? (
-                <ArrowDownRight className={`w-4 h-4 ${invertColors ? 'text-green-600' : 'text-red-500'}`} />
+              const percentageColor = invertColors
+                ? (changeType === 'increase' ? 'text-red-500' : 'text-green-600')
+                : (changeType === 'increase' ? 'text-green-600' : 'text-red-500')
+              return changeType === 'increase' ? (
+                <ArrowUpRight className={`w-4 h-4 ${percentageColor}`} />
+              ) : changeType === 'decrease' ? (
+                <ArrowDownRight className={`w-4 h-4 ${percentageColor}`} />
               ) : (
                 <span className="w-4 h-4"></span>
               )
@@ -125,13 +125,13 @@ const KPICard: React.FC<KPICardProps> = ({
         {previousYearValue !== null && previousYearValue !== undefined && formatCurrency ? (
           <div className="flex items-center gap-2 flex-wrap">
             {(() => {
-              const displayChangeType = invertColors 
-                ? (previousYearChangeType === 'increase' ? 'decrease' : previousYearChangeType === 'decrease' ? 'increase' : 'neutral')
-                : previousYearChangeType
-              return displayChangeType === 'increase' ? (
-                <ArrowUpRight className={`w-4 h-4 ${invertColors ? 'text-red-500' : 'text-green-600'}`} />
-              ) : displayChangeType === 'decrease' ? (
-                <ArrowDownRight className={`w-4 h-4 ${invertColors ? 'text-green-600' : 'text-red-500'}`} />
+              const percentageColor = invertColors
+                ? (previousYearChangeType === 'increase' ? 'text-red-500' : 'text-green-600')
+                : (previousYearChangeType === 'increase' ? 'text-green-600' : 'text-red-500')
+              return previousYearChangeType === 'increase' ? (
+                <ArrowUpRight className={`w-4 h-4 ${percentageColor}`} />
+              ) : previousYearChangeType === 'decrease' ? (
+                <ArrowDownRight className={`w-4 h-4 ${percentageColor}`} />
               ) : (
                 <span className="w-4 h-4"></span>
               )
