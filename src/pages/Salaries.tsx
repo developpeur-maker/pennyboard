@@ -16,7 +16,7 @@ const TAG_CONFIG: Record<string, { color: string; bgColor: string }> = {
   'Tech - Toulouse': { color: '#062B16', bgColor: '#E8F5E9' },
   'Tech - Bordeaux': { color: '#062B16', bgColor: '#E8F5E9' },
   'RH': { color: '#800080', bgColor: '#F3E5F5' },
-  'Opti': { color: '#FFFF00', bgColor: '#FFFDE7' },
+  'Opti': { color: '#B8860B', bgColor: '#FFF8DC' },
   'Market&Dev': { color: '#FF5000', bgColor: '#FFE0CC' },
   'Support technique': { color: '#787878', bgColor: '#E0E0E0' },
   'Commercial': { color: '#FF0000', bgColor: '#FFEBEE' },
