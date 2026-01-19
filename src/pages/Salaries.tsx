@@ -341,6 +341,24 @@ const Salaries: React.FC = () => {
       setSortOrder('asc')
     }
   }
+
+  // Fonction pour tout cocher
+  const handleSelectAll = () => {
+    const allSelected: Record<string, boolean> = {}
+    Object.keys(EMPLOYEES_BY_TAG).forEach(tag => {
+      allSelected[tag] = true
+    })
+    setTagFilters(allSelected)
+  }
+
+  // Fonction pour tout décocher
+  const handleDeselectAll = () => {
+    const allDeselected: Record<string, boolean> = {}
+    Object.keys(EMPLOYEES_BY_TAG).forEach(tag => {
+      allDeselected[tag] = false
+    })
+    setTagFilters(allDeselected)
+  }
   
   // État pour la synchronisation
   const [isSyncing, setIsSyncing] = useState(false)
@@ -680,6 +698,22 @@ const Salaries: React.FC = () => {
                 </button>
               )
             })}
+          </div>
+
+          {/* Boutons tout cocher / tout décocher */}
+          <div className="flex items-center gap-2 mt-3 mb-4">
+            <button
+              onClick={handleSelectAll}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Tout cocher
+            </button>
+            <button
+              onClick={handleDeselectAll}
+              className="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Tout décocher
+            </button>
           </div>
 
           {/* Champ de recherche */}
