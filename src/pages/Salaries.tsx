@@ -2,61 +2,133 @@ import React, { useState, useMemo } from 'react'
 import { DollarSign, Users, Calendar, RefreshCw, TrendingUp, Gift, X, ArrowUp, ArrowDown, Search } from 'lucide-react'
 import { usePayfitSalaries } from '../hooks/usePayfitSalaries'
 
-// Listes des employés par équipe
-const DIAGNOSTIQUEURS = [
-  'BENJAMIN BERNARD', 'CAROLE TOULORGE', 'JEAN-LAURENT GUELTON', 'Sarah Hecketsweiler', 'Alexandre Ellul-Renuy', 
-  'Servane GENTILHOMME', 'Jules Freulard', 'Jacques de Castelnau', 'Grégoire DE RICARD', 'Brice Gretha', 
-  'Sylvain COHERGNE', 'Fabien BETEILLE', 'Ilan TEICHNER', 'Christophe Metzger', 'Elie Dahan', 'Simon ZERBIB', 
-  'Yanis Lacroix', 'Jonathan Pichon', 'Robin Zeni', 'José GARCIA CUERDA', 'Cyril Cedileau', 'Julien Colinet', 
-  'Arnaud Larregain', 'Alexandre SIMONOT', 'Theo Termessant', 'Pierre-Louis VILLA', 'Antoine Fauvet', 
-  'Laurent Marty', 'Yannick MBOMA', 'Nassim Bidouche', 'Mickael ERB', 'KEVIN COURTEAUX', 'Nicolas MAGERE', 
-  'Yanisse Chekireb', 'Louca ANTONIOLLI', 'Pascal ALLAMELOU', 'Léo PAYAN', 'Mohamed Berete', 'Simon Benezra Simon', 
-  'Rémi NAUDET', 'Sylvain Gomes', 'Nicolas Fabre', 'Armend Letaj', 'Sabry Ouadada', 'Brice GRETHA', 
-  'Guillaume FATOUX', 'Amel TOUATI PINSOLLE', 'Christophe MARCHAL', 'Anis Fekih', 'Martial Macari', 
-  'Faycal Zerizer', 'Morgan Lorrain', 'Nathan Jurado', 'Corentin BANIA', 'Samir BONHUR', 'Eric Loviny', 
-  'Clément BUISINE', 'Steeve JEAN-PHILIPPE', 'Guillaume Lavigne', 'Stéphane MABIALA', 'Laurent Belchi', 
-  'Nicolas FABRE', 'Lucas MEZERETTE', 'Khalil BOUKLOUCHE', 'Grégory LAMBING', 'Radwane FARADJI', 
-  'John RAKOTONDRABAO', 'Olivier MIRAT', 'Fabien PRÉVOT', 'Onur SONMEZ', 'Jérôme BENHAMOU', 'Pierre SIONG', 
-  'Océane DIOT', 'Mickael FIGUIERES', 'Romain CINIER', 'Arnaud BOUSSIDAN', 'Lydiane CAND', 'Enzo SAYIN', 
-  'Mathieu TABOULOT', 'Léo MOLITES', 'Yves GRANVILLE', 'BAPTISTE BAUET', 'Mounir MAROUANE', 'François LASRET', 
-  'Osman KIZILKAYA', 'Abdeltife GARTI', 'Maxime LE BRIS', 'Christopher PITA', 'David EPINEAUX', 
-  'Olivier Corsin', 'Jaouad NELSON', 'Lionel THOMASSET', 'Florian VIVES', 'Maxime LEROY', 'Maxime PELLIER', 
-  'Idriss TCHINI', 'Danny FIDANZA', 'Lucille GRIFFAY', 'Sofiane ZEKRI', 'Sofiane KHELFAOUI', 'Romain GUEHO', 
-  'Jérôme SAUVAGE', 'Yohann LAILLIER-JARDÉ', 'Pascal CABELEIRA', 'Aziz AOURAGH', 'Téo DOUBLIER', 
-  'Sébastien SOUYRIS', 'Fabrice STECIUK', 'Jérémie JOURNAUX', 'Ariles MERAD', 'Simon PACAUD'
-].map(name => name.toUpperCase().trim())
+// Configuration des tags avec leurs couleurs
+const TAG_CONFIG: Record<string, { color: string; bgColor: string }> = {
+  'Tech - Paris': { color: '#062B16', bgColor: '#E8F5E9' },
+  'Tech - Marseille': { color: '#062B16', bgColor: '#E8F5E9' },
+  'Tech - Nice': { color: '#062B16', bgColor: '#E8F5E9' },
+  'Tech - Nimes': { color: '#062B16', bgColor: '#E8F5E9' },
+  'Tech - Montpellier': { color: '#062B16', bgColor: '#E8F5E9' },
+  'Tech - Lyon': { color: '#062B16', bgColor: '#E8F5E9' },
+  'Tech - Strasbourg': { color: '#062B16', bgColor: '#E8F5E9' },
+  'Tech - Lille': { color: '#062B16', bgColor: '#E8F5E9' },
+  'Tech - Nantes': { color: '#062B16', bgColor: '#E8F5E9' },
+  'Tech - Toulouse': { color: '#062B16', bgColor: '#E8F5E9' },
+  'Tech - Bordeaux': { color: '#062B16', bgColor: '#E8F5E9' },
+  'RH': { color: '#800080', bgColor: '#F3E5F5' },
+  'Opti': { color: '#FFFF00', bgColor: '#FFFDE7' },
+  'Market&Dev': { color: '#FF5000', bgColor: '#FFE0CC' },
+  'Support technique': { color: '#787878', bgColor: '#E0E0E0' },
+  'Commercial': { color: '#FF0000', bgColor: '#FFEBEE' },
+  'Comptabilité': { color: '#0000FF', bgColor: '#E3F2FD' }
+}
 
-const BUREAUX = [
-  'TEDDY MUNOZ DE LA NAVA', 'LOUIS LORIN', 'Romain Baldassarre', 'Ambre Deligny', 'François Kulczak', 
-  'WIAME Papin', 'Floriane Mermoud', 'Saad Lahlou', 'valérie LAUNE', 'Caroline Sola', 'Amine Guellati', 
-  'Mounir Harchaoui', 'Lilou Raja', 'Tom Le Louédec', 'Marceau DI COSTANZO', 'Charles Lorin', 
-  'Cédric Weishaar', 'Kevin Sousa', 'Yéléna Cordin', 'Romane Vallaud', 'Corentin Sarkissian', 
-  'Enola Enjelvin', 'Nicolas Martinez White', 'Manon Fabra', 'Robin Merlo', 'Théophile Lequeux', 
-  'Karine ATTOLOU', 'Bastien Bosviel', 'Egor PEREDERIY', 'Fabien Chodaton', 'Winona Iuhasz', 
-  'David Zerbib', 'Aimeric Mir', 'Julie LE TRAOU', 'Maurice DIOUF', 'Sacha DOBERVA', 
-  'Térence TAAFFET OGANDAGA', 'Younes Khalfi', 'Tom Vea', 'Tifany Oussal', 'Matthieu CREPIN', 
-  'Clément JAUBERT', 'Damien RENNEVILLE', 'Gabriel Nuel', 'Marion Wilhelm', 'Arina Georgiyeva', 
-  'Michel Pesant', 'O\'Bryan MIEZAN', 'Naomi Coulaud', 'Laurie AUDDINO', 'Abdelkhaliq DIDAH', 
-  'Adrien BISSET', 'Azedine LEBBAD', 'Miriam Marty', 'Nathan CATANIA', 'Thibaut Bissuel', 
-  'Sharon elbaz', 'Olga Julien-Pannie', 'Romane MESLIN', 'Marine Bramand', 'PAUL Grieneisen', 
-  'Ian SIGUIER', 'Claire BOISMENU', 'Circée Cabayot', 'Laurine Tourasse', 'Ethella Bettahar-Ripert', 
-  'Laura ADAM', 'Célia Turgot', 'Kily JACKSON', 'Marine SZCZEPANIAK', 'Raphael daumas', 'Jaad SEKKAL', 
-  'Matheo JIMENEZ', 'Clement Lennuyeux', 'Marilyne Ly', 'Paul Bigot', 'Romeo Fayaud', 
-  'Talia-noor Thahouly', 'Louis TEICHNER', 'Nawal BELOUALI', 'Svetlana Sokolova', 'Octhave JOSSERAND', 
-  'Robin Pina', 'Lucie Mirabile', 'Annabel CREVAUX - VIDAL', 'Jade Piochelle', 'Matheo Jimenez', 
-  'Nathan BOURBON', 'Naomi COULAUD', 'Luc BUENO', 'Gigi BERNAD', 'Lou NAVARRO', 'Raphael DEFLANDRE', 
-  'Nicolas SCHNEIDER', 'Thibault FAYOL', 'Caitline LAMBOLEY', 'Inès IKAR', 'Romane WETTERWALD', 
-  'Walid Selmani', 'Samia EL OMARI', 'Carla SIBILLIN', 'Tom ARNAUD BERGER', 'Claudia MATTERA', 
-  'Célia BONFIGLIO', 'François LOPEZ', 'Ikram MESLOUHI', 'Laurine MONTEL', 'Aurélie GAILLARD', 
-  'Isabelle Tchesnokov', 'Jade FOUCHER', 'Chloé Gazagne', 'Christopher MICHEL', 'Julien GEBALA', 
-  'Kim Abbruzzese', 'Jonathan LAMPER', 'Larry BOULANGER', 'Jade PLANAS', 'Sarah LAVALY', 
-  'Kamilia BENASR', 'Cloé GAVE', 'Cherazade RAMDANI', 'Sana KASSEM', 'Noe RIBEIRO', 'Estelle Kozlow', 
-  'David LILLO', 'Sully FABULAS', 'Julie DUGUE', 'Hiba MISSAOUI', 'Coline ETOURNEAUD', 
-  'Pauline LE GUILLOU', 'Théo PLAZAS', 'Arnaud CHAMPEIL', 'Hélène GEORGET', 'Marina BROSOLO', 
-  'Cédric CÉCÉ', 'Alexia COSTA', 'Amélie MOREAU', 'Sheilcy NEOCEL', 'Luna COUTEAU', 'Fabien BERTRAND', 
-  'Lucas DANTIN', 'Zéphir DUBERT', 'Victor ANTECH', 'Maxime TURION', 'Aurélien GRAZIANO', 
-  'Stéphane MARKOVIC', 'Jordane REBOUL', 'Anaïs BENI', 'Lucas BAJEOT', 'Kevin VANNIER'
-].map(name => name.toUpperCase().trim())
+// Listes des employés par tag (UNIQUEMENT pour les données historiques)
+// Pour les mois futurs, les tags seront récupérés directement via l'API (champ `tag` dans les données)
+const EMPLOYEES_BY_TAG: Record<string, string[]> = {
+  'Comptabilité': [
+    'Lilou Raja', 'Charles Lorin', 'Enola Enjelvin', 'Arina Georgiyeva', 'Ian SIGUIER', 
+    'Laura ADAM', 'Marilyne Ly', 'Lucie Mirabile', 'Jonathan LAMPER', 'Hélène GEORGET'
+  ],
+  'RH': [
+    'Olga Julien-Pannie', 'Nawal BELOUALI', 'Claudia MATTERA', 'Aurélie GAILLARD'
+  ],
+  'Support technique': [
+    'Romain Baldassarre', 'Louca ANTONIOLLI', 'Laurent Belchi', 'Romeo Fayaud', 
+    'Caitline LAMBOLEY', 'Larry BOULANGER', 'Amélie MOREAU'
+  ],
+  'Opti': [
+    'Yéléna Cordin', 'Abdelkhaliq DIDAH', 'Marine Bramand', 'Jade Piochelle', 
+    'Kim Abbruzzese', 'Jade PLANAS', 'Pauline LE GUILLOU'
+  ],
+  'Market&Dev': [
+    'François Kulczak', 'WIAME Papin', 'Saad Lahlou', 'Caroline Sola', 
+    'Corentin Sarkissian', 'Nicolas Martinez White', 'Manon Fabra', 'Karine ATTOLOU', 
+    'Fabien Chodaton', 'Winona Iuhasz', 'Julie LE TRAOU', 'Maurice DIOUF', 
+    'Younes Khalfi', 'Damien RENNEVILLE', 'Gabriel Nuel', 'Marion Wilhelm', 
+    'O\'Bryan MIEZAN', 'Naomi Coulaud', 'Thibaut Bissuel', 'Claire BOISMENU', 
+    'Marine SZCZEPANIAK', 'Raphael daumas', 'Jaad SEKKAL', 'Annabel CREVAUX - VIDAL', 
+    'Naomi COULAUD', 'Gigi BERNAD', 'Raphael DEFLANDRE', 'Thibault FAYOL', 
+    'Inès IKAR', 'Romane WETTERWALD', 'Walid Selmani', 'Samia EL OMARI', 
+    'Tom ARNAUD BERGER', 'Ikram MESLOUHI'
+  ],
+  'Commercial': [
+    'TEDDY MUNOZ DE LA NAVA', 'Ambre Deligny', 'Floriane Mermoud', 'valérie LAUNE', 
+    'Amine Guellati', 'Mounir Harchaoui', 'Tom Le Louédec', 'Marceau DI COSTANZO', 
+    'Cédric Weishaar', 'Kevin Sousa', 'Romane Vallaud', 'Robin Merlo', 
+    'Théophile Lequeux', 'Bastien Bosviel', 'Egor PEREDERIY', 'David Zerbib', 
+    'Aimeric Mir', 'Sacha DOBERVA', 'Térence TAAFFET OGANDAGA', 'Tom Vea', 
+    'Tifany Oussal', 'Clément JAUBERT', 'Michel Pesant', 'Laurie AUDDINO', 
+    'Adrien BISSET', 'Azedine LEBBAD', 'Miriam Marty', 'Nathan CATANIA', 
+    'Sharon elbaz', 'Romane MESLIN', 'PAUL Grieneisen', 'Circée Cabayot', 
+    'Laurine Tourasse', 'Ethella Bettahar-Ripert', 'Célia Turgot', 'Kily JACKSON', 
+    'Matheo JIMENEZ', 'Clement Lennuyeux', 'Paul Bigot', 'Talia-noor Thahouly', 
+    'Louis TEICHNER', 'Svetlana Sokolova', 'Octhave JOSSERAND', 'Robin Pina', 
+    'Matheo Jimenez', 'Nathan BOURBON', 'Luc BUENO', 'Lou NAVARRO', 
+    'Nicolas SCHNEIDER', 'Carla SIBILLIN', 'Célia BONFIGLIO', 'François LOPEZ', 
+    'Laurine MONTEL', 'Isabelle Tchesnokov', 'Jade FOUCHER', 'Chloé Gazagne', 
+    'Christopher MICHEL', 'Julien GEBALA', 'Sarah LAVALY', 'Kamilia BENASR', 
+    'Cloé GAVE', 'Cherazade RAMDANI', 'Sana KASSEM', 'Noe RIBEIRO', 
+    'Estelle Kozlow', 'David LILLO', 'Sully FABULAS', 'Julie DUGUE', 
+    'Hiba MISSAOUI', 'Coline ETOURNEAUD', 'Théo PLAZAS', 'Arnaud CHAMPEIL', 
+    'Marina BROSOLO', 'Cédric CÉCÉ', 'Alexia COSTA', 'Sheilcy NEOCEL', 
+    'Luna COUTEAU', 'Fabien BERTRAND', 'Lucas DANTIN', 'Zéphir DUBERT', 
+    'Victor ANTECH', 'Maxime TURION', 'Aurélien GRAZIANO', 'Stéphane MARKOVIC', 
+    'Jordane REBOUL', 'Anaïs BENI', 'Lucas BAJEOT', 'Kevin VANNIER'
+  ],
+  'Tech - Paris': [
+    'Yannick MBOMA', 'Nassim Bidouche', 'Léo PAYAN', 'Mohamed Berete', 
+    'Guillaume FATOUX', 'Faycal Zerizer', 'Nathan Jurado', 'Clément BUISINE', 
+    'Steeve JEAN-PHILIPPE', 'John RAKOTONDRABAO', 'Océane DIOT', 'Enzo SAYIN', 
+    'Léo MOLITES', 'Yves GRANVILLE', 'Mounir MAROUANE', 'Christopher PITA', 
+    'David EPINEAUX', 'Olivier Corsin', 'Jaouad NELSON', 'Lionel THOMASSET', 
+    'Florian VIVES', 'Maxime LEROY', 'Idriss TCHINI', 'Danny FIDANZA', 
+    'Sofiane ZEKRI', 'Sofiane KHELFAOUI', 'Romain GUEHO', 'Pascal CABELEIRA', 
+    'Aziz AOURAGH', 'Jérémie JOURNAUX', 'Ariles MERAD'
+  ],
+  'Tech - Marseille': [
+    'Jules Freulard', 'Elie Dahan', 'José GARCIA CUERDA', 'Christophe MARCHAL', 
+    'Eric Loviny', 'Lucille GRIFFAY'
+  ],
+  'Tech - Nice': [
+    'KEVIN COURTEAUX', 'Anis Fekih', 'Arnaud BOUSSIDAN'
+  ],
+  'Tech - Nimes': [
+    'BENJAMIN BERNARD', 'JEAN-LAURENT GUELTON', 'Sarah Hecketsweiler', 
+    'Alexandre Ellul-Renuy', 'Servane GENTILHOMME', 'Pierre-Louis VILLA', 
+    'Antoine Fauvet', 'Mickael ERB', 'Nicolas MAGERE', 'Rémi NAUDET', 
+    'Morgan Lorrain', 'Corentin BANIA', 'Yohann LAILLIER-JARDÉ', 
+    'Sébastien SOUYRIS'
+  ],
+  'Tech - Montpellier': [
+    'CAROLE TOULORGE', 'Grégoire DE RICARD', 'Sylvain COHERGNE', 'Ilan TEICHNER', 
+    'Jonathan Pichon', 'Robin Zeni', 'Arnaud Larregain', 'Laurent Marty', 
+    'Sylvain Gomes', 'Nicolas FABRE', 'Mathieu TABOULOT'
+  ],
+  'Tech - Lyon': [
+    'Simon ZERBIB', 'Pascal ALLAMELOU', 'Martial Macari', 'Khalil BOUKLOUCHE', 
+    'Radwane FARADJI', 'Pierre SIONG', 'Romain CINIER', 'Lydiane CAND', 
+    'Osman KIZILKAYA', 'Maxime PELLIER', 'Téo DOUBLIER'
+  ],
+  'Tech - Strasbourg': [
+    'Brice GRETHA', 'Grégory LAMBING', 'Onur SONMEZ', 'Abdeltife GARTI'
+  ],
+  'Tech - Lille': [
+    'Sabry Ouadada', 'Stéphane MABIALA', 'BAPTISTE BAUET'
+  ],
+  'Tech - Nantes': [
+    'Simon Benezra Simon', 'Fabien PRÉVOT', 'Jérôme BENHAMOU', 'Mickael FIGUIERES', 
+    'Jérôme SAUVAGE', 'Simon PACAUD'
+  ],
+  'Tech - Toulouse': [
+    'Jacques de Castelnau', 'Fabien BETEILLE', 'Julien Colinet', 'Alexandre SIMONOT', 
+    'Yanisse Chekireb', 'Armend Letaj', 'Olivier MIRAT'
+  ],
+  'Tech - Bordeaux': [
+    'Christophe Metzger', 'Cyril Cedileau', 'Theo Termessant', 'Amel TOUATI PINSOLLE', 
+    'Samir BONHUR', 'Lucas MEZERETTE', 'François LASRET', 'Fabrice STECIUK'
+  ]
+}
 
 // Fonction pour normaliser un nom (enlever accents, espaces multiples, etc.)
 const normalizeName = (name: string): string => {
@@ -68,16 +140,22 @@ const normalizeName = (name: string): string => {
     .replace(/\s+/g, ' ') // Remplacer les espaces multiples par un seul
 }
 
-// Fonction pour déterminer l'équipe d'un employé
-const getEmployeeTeam = (employeeName: string): 'Bureau' | 'Diagnostiqueur' | null => {
-  const normalizedName = normalizeName(employeeName)
-  
-  if (DIAGNOSTIQUEURS.some(name => normalizeName(name) === normalizedName)) {
-    return 'Diagnostiqueur'
+// Fonction pour déterminer le tag d'un employé
+// Priorité : 1) Tag de l'API (pour les données futures), 2) Structure codée en dur (pour les données historiques)
+const getEmployeeTag = (employee: { employeeName: string; tag?: string | null }): string | null => {
+  // 1. Si l'API fournit un tag, l'utiliser en priorité (pour les mois futurs)
+  if (employee.tag) {
+    return employee.tag
   }
   
-  if (BUREAUX.some(name => normalizeName(name) === normalizedName)) {
-    return 'Bureau'
+  // 2. Sinon, utiliser la structure codée en dur (pour les données historiques)
+  const normalizedName = normalizeName(employee.employeeName)
+  
+  // Parcourir tous les tags pour trouver celui de l'employé
+  for (const [tag, employees] of Object.entries(EMPLOYEES_BY_TAG)) {
+    if (employees.some(name => normalizeName(name) === normalizedName)) {
+      return tag
+    }
   }
   
   return null
@@ -144,9 +222,13 @@ const Salaries: React.FC = () => {
   const [sortColumn, setSortColumn] = useState<SortColumn>('name')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [searchQuery, setSearchQuery] = useState('')
-  const [teamFilters, setTeamFilters] = useState({
-    diagnostiqueur: true,
-    bureau: true
+  // Initialiser les filtres de tags (tous activés par défaut)
+  const [tagFilters, setTagFilters] = useState<Record<string, boolean>>(() => {
+    const filters: Record<string, boolean> = {}
+    Object.keys(EMPLOYEES_BY_TAG).forEach(tag => {
+      filters[tag] = true
+    })
+    return filters
   })
 
   // Déterminer si on affiche l'année complète ou un mois spécifique
@@ -160,16 +242,14 @@ const Salaries: React.FC = () => {
   const filteredAndSortedEmployees = useMemo(() => {
     if (!employees || employees.length === 0) return []
 
-    // Filtrer par équipe
+    // Filtrer par tag
     let filtered = employees.filter(employee => {
-      const team = getEmployeeTeam(employee.employeeName)
-      if (team === 'Diagnostiqueur') {
-        return teamFilters.diagnostiqueur
-      } else if (team === 'Bureau') {
-        return teamFilters.bureau
+      const tag = getEmployeeTag(employee)
+      if (tag) {
+        return tagFilters[tag] === true
       }
-      // Si l'employé n'a pas d'équipe définie, on l'inclut si au moins un filtre est actif
-      return teamFilters.diagnostiqueur || teamFilters.bureau
+      // Si l'employé n'a pas de tag défini, on l'inclut si au moins un filtre est actif
+      return Object.values(tagFilters).some(active => active === true)
     })
 
     // Filtrer par recherche textuelle
@@ -207,8 +287,8 @@ const Salaries: React.FC = () => {
           bValue = b.totalGrossCost || 0
           break
         case 'team':
-          aValue = getEmployeeTeam(a.employeeName) || ''
-          bValue = getEmployeeTeam(b.employeeName) || ''
+          aValue = getEmployeeTag(a) || ''
+          bValue = getEmployeeTag(b) || ''
           break
         default:
           return 0
@@ -224,7 +304,7 @@ const Salaries: React.FC = () => {
     })
 
     return sorted
-  }, [employees, sortColumn, sortOrder, searchQuery, teamFilters])
+  }, [employees, sortColumn, sortOrder, searchQuery, tagFilters])
 
   // Calculer les totaux filtrés pour les cards
   const filteredTotals = useMemo(() => {
@@ -576,29 +656,30 @@ const Salaries: React.FC = () => {
             </p>
           </div>
           
-          {/* Filtres par équipe */}
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-sm font-medium text-gray-700">Filtrer par équipe :</span>
-            <button
-              onClick={() => setTeamFilters(prev => ({ ...prev, diagnostiqueur: !prev.diagnostiqueur }))}
-              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                teamFilters.diagnostiqueur
-                  ? 'bg-yellow-100 text-yellow-800 ring-2 ring-yellow-500'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-            >
-              Diagnostiqueur
-            </button>
-            <button
-              onClick={() => setTeamFilters(prev => ({ ...prev, bureau: !prev.bureau }))}
-              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                teamFilters.bureau
-                  ? 'bg-blue-100 text-blue-800 ring-2 ring-blue-500'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-            >
-              Bureau
-            </button>
+          {/* Filtres par tag */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <span className="text-sm font-medium text-gray-700">Filtrer par tag :</span>
+            {Object.keys(EMPLOYEES_BY_TAG).map(tag => {
+              const config = TAG_CONFIG[tag]
+              const isActive = tagFilters[tag] === true
+              return (
+                <button
+                  key={tag}
+                  onClick={() => setTagFilters(prev => ({ ...prev, [tag]: !prev[tag] }))}
+                  className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                  style={isActive ? {
+                    backgroundColor: config.bgColor,
+                    color: config.color,
+                    border: `2px solid ${config.color}`
+                  } : {
+                    backgroundColor: '#F3F4F6',
+                    color: '#6B7280'
+                  }}
+                >
+                  {tag}
+                </button>
+              )
+            })}
           </div>
 
           {/* Champ de recherche */}
@@ -699,7 +780,8 @@ const Salaries: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredAndSortedEmployees.map((employee, index) => {
-                  const team = getEmployeeTeam(employee.employeeName)
+                  const tag = getEmployeeTag(employee)
+                  const tagConfig = tag ? TAG_CONFIG[tag] : null
                   return (
                   <tr 
                     key={`${employee.employeeName}-${index}`} 
@@ -717,13 +799,15 @@ const Salaries: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {team && (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          team === 'Bureau' 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {team}
+                      {tag && tagConfig && (
+                        <span 
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                          style={{
+                            backgroundColor: tagConfig.bgColor,
+                            color: tagConfig.color
+                          }}
+                        >
+                          {tag}
                         </span>
                       )}
                     </td>
