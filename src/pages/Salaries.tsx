@@ -118,7 +118,7 @@ const EMPLOYEES_BY_TAG: Record<string, string[]> = {
   ],
   'Tech - Nantes': [
     'Simon Benezra Simon', 'Fabien PRÉVOT', 'Jérôme BENHAMOU', 'Mickael FIGUIERES', 
-    'Jérôme SAUVAGE', 'Simon PACAUD'
+    'Jérôme SAUVAGE', 'Simon PACAUD', 'Maxime LE BRIS'
   ],
   'Tech - Toulouse': [
     'Jacques de Castelnau', 'Fabien BETEILLE', 'Julien Colinet', 'Alexandre SIMONOT', 
