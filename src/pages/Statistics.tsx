@@ -468,7 +468,13 @@ const Statistics: React.FC = () => {
         filteredPoint.charges_total = point.charges
       }
       
-      if (visibleSeries.charges && point.charges !== null) {
+      // Cas des mois projetés : on n'a que charges_fixes, on affiche une barre = projection des charges fixes
+      if (point.isProjection && point.charges_fixes != null && visibleSeries.charges) {
+        filteredPoint.charges_total = point.charges_fixes
+        filteredPoint.charges = 0
+        filteredPoint.charges_fixes_display = point.charges_fixes
+        filteredPoint.charges_fixes_breakdown = point.charges_fixes_breakdown
+      } else if (visibleSeries.charges && point.charges !== null) {
         const totalCharges = point.charges
         const chargesSalariales = point.charges_salariales || 0
         const chargesFixes = point.charges_fixes || 0
@@ -498,8 +504,8 @@ const Statistics: React.FC = () => {
       }
       
       // La masse salariale est empilée par-dessus les charges (base)
-      // pour que la barre totale = charges
-      if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
+      // pour que la barre totale = charges (pas pour les projections, elles n'ont pas de masse salariale)
+      if (visibleSeries.charges_salariales && point.charges_salariales !== null && !point.isProjection) {
         filteredPoint.charges_salariales = point.charges_salariales
       }
       
@@ -694,41 +700,44 @@ const Statistics: React.FC = () => {
                         </pattern>
                       </defs>
                       <Tooltip
-                        formatter={(value: number, name: string, props: any) => {
-                          // Ne pas afficher la ligne "Charges fixes" dans le tooltip (l'info est déjà dans "Achats et charges")
-                          if (name === 'Charges fixes' || name === 'Charges fixes (incluse dans les charges)') {
-                            return null
-                          }
-                          
-                          // Pour "Achats et charges", afficher le total avec le détail des charges fixes
-                          if (name === 'Achats et charges') {
-                            // Utiliser le total original des charges (charges_total) pour éviter les doubles comptages
-                            const totalCharges = props.payload.charges_total || 
-                              ((props.payload.charges || 0) + 
-                               (props.payload.charges_salariales || 0) + 
-                               (props.payload.charges_fixes_display || 0))
-                            // Récupérer les charges fixes depuis les données originales du point
-                            const originalPoint = chartData.find(p => p.monthLabel === props.payload.monthLabel)
-                            const chargesFixes = originalPoint?.charges_fixes || 0
-                            if (chargesFixes > 0) {
-                              return `${formatCurrency(totalCharges)} (dont ${formatCurrency(chargesFixes)} de charges fixes)`
-                            }
-                            return formatCurrency(totalCharges)
-                          }
-                          return formatCurrency(value)
-                        }}
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          padding: '8px'
-                        }}
-                        labelFormatter={(label) => {
+                        content={({ active, payload, label }) => {
+                          if (!active || !payload || !payload.length) return null
+                          // Retirer la ligne "Charges fixes" / "Charges fixes (incluse...)" du tooltip (déjà dans "Achats et charges")
+                          const filteredPayload = payload.filter(
+                            (entry: any) => entry.name !== 'Charges fixes' && entry.name !== 'Charges fixes (incluse dans les charges)'
+                          )
+                          if (filteredPayload.length === 0) return null
                           const point = getChartData().find(p => p.monthLabel === label)
-                          if (point?.isProjection) {
-                            return `${label} (projection)`
-                          }
-                          return label
+                          const labelDisplay = point?.isProjection ? `${label} (projection)` : label
+                          return (
+                            <div
+                              className="bg-white border border-gray-200 rounded-lg shadow-lg p-3"
+                              style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '8px' }}
+                            >
+                              <p className="font-semibold text-gray-900 mb-2">{labelDisplay}</p>
+                              {filteredPayload.map((entry: any) => {
+                                let displayValue: string
+                                if (entry.name === 'Achats et charges') {
+                                  const totalCharges = entry.payload.charges_total ||
+                                    ((entry.payload.charges || 0) + (entry.payload.charges_salariales || 0) + (entry.payload.charges_fixes_display || 0))
+                                  const originalPoint = chartData.find((p: ChartDataPoint) => p.monthLabel === entry.payload.monthLabel)
+                                  const chargesFixes = originalPoint?.charges_fixes ?? entry.payload.charges_fixes_display ?? 0
+                                  if (chargesFixes > 0) {
+                                    displayValue = `${formatCurrency(totalCharges)} (dont ${formatCurrency(chargesFixes)} de charges fixes)`
+                                  } else {
+                                    displayValue = formatCurrency(totalCharges)
+                                  }
+                                } else {
+                                  displayValue = formatCurrency(entry.value)
+                                }
+                                return (
+                                  <p key={entry.dataKey} style={{ color: entry.color, margin: '2px 0' }}>
+                                    {entry.name} : {displayValue}
+                                  </p>
+                                )
+                              })}
+                            </div>
+                          )
                         }}
                       />
                       <Legend />
