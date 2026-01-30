@@ -3,6 +3,16 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getAllDataFromDatabase } from '../services/databaseApi'
 
+// Éclatement de la masse salariale (quand seul le filtre Masse salariale est sélectionné)
+interface MasseSalarialeBreakdown {
+  salaire_net: number      // 6411
+  cotisations: number      // 645..., 646...
+  conges_payes: number     // 6412
+  avantages_nature: number // 6414, 6417, 6476
+  primes_pourboires: number // 6413, 6431
+  autres: number
+}
+
 interface ChartDataPoint {
   month: string
   monthLabel: string
@@ -11,6 +21,7 @@ interface ChartDataPoint {
   charges_salariales: number | null
   charges_fixes: number | null
   charges_fixes_breakdown?: any
+  charges_salariales_breakdown?: MasseSalarialeBreakdown
   isProjection?: boolean
 }
 
@@ -57,6 +68,48 @@ const Statistics: React.FC = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(value)
+  }
+
+  // Comptes exclus de la masse salariale (aligné sur le backend)
+  const EXCLUDED_FROM_MASSE_SALARIALE = ['646', '646001', '64114', '64115']
+  const isExcludedFromMasseSalariale = (accountNumber: string) =>
+    EXCLUDED_FROM_MASSE_SALARIALE.some(excluded => accountNumber === excluded || accountNumber.startsWith(excluded + '.') || accountNumber.startsWith(excluded + '-'))
+
+  // Éclater la masse salariale par catégorie à partir du trial balance
+  const computeMasseSalarialeBreakdown = (trialBalance: any): MasseSalarialeBreakdown | null => {
+    if (!trialBalance?.items?.length) return null
+    const items = trialBalance.items as Array<{ number?: string; debits?: string; credits?: string; debit?: string; credit?: string }>
+    const breakdown: MasseSalarialeBreakdown = {
+      salaire_net: 0,
+      cotisations: 0,
+      conges_payes: 0,
+      avantages_nature: 0,
+      primes_pourboires: 0,
+      autres: 0
+    }
+    for (const item of items) {
+      const accountNumber = (item.number || '').trim()
+      if (!accountNumber.startsWith('64') || isExcludedFromMasseSalariale(accountNumber)) continue
+      const debit = parseFloat((item.debits ?? item.debit ?? '0') as string) || 0
+      const credit = parseFloat((item.credits ?? item.credit ?? '0') as string) || 0
+      const solde = debit - credit
+      if (solde <= 0) continue
+      const amount = Math.round(solde * 100) / 100
+      if (accountNumber.startsWith('6411')) {
+        breakdown.salaire_net += amount
+      } else if (accountNumber.startsWith('6412')) {
+        breakdown.conges_payes += amount
+      } else if (accountNumber.startsWith('645') || accountNumber.startsWith('646')) {
+        breakdown.cotisations += amount
+      } else if (accountNumber.startsWith('6414') || accountNumber.startsWith('6417') || accountNumber.startsWith('6476')) {
+        breakdown.avantages_nature += amount
+      } else if (accountNumber.startsWith('6413') || accountNumber.startsWith('6431')) {
+        breakdown.primes_pourboires += amount
+      } else {
+        breakdown.autres += amount
+      }
+    }
+    return breakdown
   }
 
   // Fonction pour calculer les projections des 3 mois suivants
@@ -255,6 +308,8 @@ const Statistics: React.FC = () => {
             const [year, month] = result.month.split('-')
             const monthIndex = parseInt(month) - 1
             const kpis = result.data.kpis || {}
+            const trialBalance = result.data.trial_balance
+            const charges_salariales_breakdown = trialBalance ? computeMasseSalarialeBreakdown(trialBalance) : null
 
             return {
               month: result.month,
@@ -263,7 +318,8 @@ const Statistics: React.FC = () => {
               charges: kpis.charges || null,
               charges_salariales: kpis.charges_salariales || null,
               charges_fixes: kpis.charges_fixes || null,
-              charges_fixes_breakdown: kpis.charges_fixes_breakdown || null
+              charges_fixes_breakdown: kpis.charges_fixes_breakdown || null,
+              charges_salariales_breakdown: charges_salariales_breakdown || undefined
             }
           })
       }
@@ -342,6 +398,7 @@ const Statistics: React.FC = () => {
   const getChartData = () => {
     const displayedData = getDisplayedData()
     const onlyChargesSelected = visibleSeries.charges && !visibleSeries.charges_salariales && !visibleSeries.revenus_totaux
+    const onlyMasseSalarialeSelected = visibleSeries.charges_salariales && !visibleSeries.charges && !visibleSeries.revenus_totaux
     
     return displayedData.map(point => {
       const filteredPoint: any = {
@@ -400,10 +457,19 @@ const Statistics: React.FC = () => {
         }
       }
       
-      // La masse salariale est empilée par-dessus les charges (base)
-      // pour que la barre totale = charges (pas pour les projections, elles n'ont pas de masse salariale)
-      if (visibleSeries.charges_salariales && point.charges_salariales !== null && !point.isProjection) {
-        filteredPoint.charges_salariales = point.charges_salariales
+      // Masse salariale : si seul filtre "Masse salariale" et breakdown dispo → éclater en catégories
+      if (visibleSeries.charges_salariales && !point.isProjection) {
+        if (onlyMasseSalarialeSelected && point.charges_salariales_breakdown) {
+          const b = point.charges_salariales_breakdown
+          if (b.salaire_net > 0) filteredPoint.salaire_net = b.salaire_net
+          if (b.cotisations > 0) filteredPoint.cotisations = b.cotisations
+          if (b.conges_payes > 0) filteredPoint.conges_payes = b.conges_payes
+          if (b.avantages_nature > 0) filteredPoint.avantages_nature = b.avantages_nature
+          if (b.primes_pourboires > 0) filteredPoint.primes_pourboires = b.primes_pourboires
+          if (b.autres > 0) filteredPoint.autres = b.autres
+        } else if (point.charges_salariales !== null) {
+          filteredPoint.charges_salariales = point.charges_salariales
+        }
       }
       
       return filteredPoint
@@ -419,6 +485,18 @@ const Statistics: React.FC = () => {
   }
   
   const onlyChargesSelected = visibleSeries.charges && !visibleSeries.charges_salariales && !visibleSeries.revenus_totaux
+  const onlyMasseSalarialeSelected = visibleSeries.charges_salariales && !visibleSeries.charges && !visibleSeries.revenus_totaux
+  const hasMasseSalarialeBreakdown = onlyMasseSalarialeSelected && getChartData().some(p => (p.salaire_net ?? 0) > 0 || (p.cotisations ?? 0) > 0 || (p.conges_payes ?? 0) > 0 || (p.avantages_nature ?? 0) > 0 || (p.primes_pourboires ?? 0) > 0 || (p.autres ?? 0) > 0)
+
+  // Couleurs pour l'éclatement masse salariale
+  const masseSalarialeBreakdownColors = {
+    salaire_net: '#22c55e',
+    cotisations: '#3b82f6',
+    conges_payes: '#8b5cf6',
+    avantages_nature: '#f59e0b',
+    primes_pourboires: '#ec4899',
+    autres: '#64748b'
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -653,7 +731,18 @@ const Statistics: React.FC = () => {
                           stackId="charges"
                         />
                       )}
-                      {visibleSeries.charges_salariales && (
+                      {/* Masse salariale : éclatée en catégories si seul filtre sélectionné */}
+                      {visibleSeries.charges_salariales && hasMasseSalarialeBreakdown && (
+                        <>
+                          <Bar dataKey="salaire_net" fill={masseSalarialeBreakdownColors.salaire_net} name="Salaire net (6411)" stackId="masse_salariale" />
+                          <Bar dataKey="cotisations" fill={masseSalarialeBreakdownColors.cotisations} name="Cotisations (645..., 646...)" stackId="masse_salariale" />
+                          <Bar dataKey="conges_payes" fill={masseSalarialeBreakdownColors.conges_payes} name="Congés payés (6412)" stackId="masse_salariale" />
+                          <Bar dataKey="avantages_nature" fill={masseSalarialeBreakdownColors.avantages_nature} name="Avantages en nature (6414, 6417, 6476)" stackId="masse_salariale" />
+                          <Bar dataKey="primes_pourboires" fill={masseSalarialeBreakdownColors.primes_pourboires} name="Primes et pourboires (6413, 6431)" stackId="masse_salariale" />
+                          <Bar dataKey="autres" fill={masseSalarialeBreakdownColors.autres} name="Autres" stackId="masse_salariale" />
+                        </>
+                      )}
+                      {visibleSeries.charges_salariales && !hasMasseSalarialeBreakdown && (
                         <Bar 
                           dataKey="charges_salariales" 
                           fill="url(#hatchPattern)"
