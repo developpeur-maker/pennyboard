@@ -457,9 +457,11 @@ const Statistics: React.FC = () => {
       }
       
       // Logique pour les charges : 
-      // - charges = le TOTAL des charges (barre complète)
-      // - charges_salariales = partie hachurée orange (incluse dans charges)
-      // - charges_fixes = partie hachurée violette (incluse dans charges, peut chevaucher avec masse salariale)
+      // - charges = le TOTAL des charges (barre complète = 428k€ par exemple)
+      // - charges_salariales = partie hachurée orange (incluse dans charges, ex: 200k€)
+      // - charges_fixes = partie hachurée violette (incluse dans charges, peut chevaucher avec masse salariale, ex: 300k€)
+      // IMPORTANT: Les charges fixes et masse salariale sont des PARTIES des charges, pas des additions
+      // Le total de la barre doit TOUJOURS être égal aux charges totales
       
       // Stocker le total original pour le tooltip
       if (point.charges !== null) {
@@ -467,27 +469,32 @@ const Statistics: React.FC = () => {
       }
       
       if (visibleSeries.charges && point.charges !== null) {
-        // Calculer la base des charges (ce qui reste après avoir soustrait les parties hachurées)
-        let chargesBase = point.charges
+        const totalCharges = point.charges
+        const chargesSalariales = point.charges_salariales || 0
+        const chargesFixes = point.charges_fixes || 0
         
-        // Si la masse salariale est visible, on la soustrait de la base
-        if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
-          chargesBase = chargesBase - point.charges_salariales
-        }
+        // Les charges fixes incluent TOUS les comptes 64..., donc elles incluent la masse salariale
+        // On doit calculer la partie des charges fixes qui n'est PAS dans la masse salariale
+        // charges_fixes_hors_masse = charges_fixes - charges_salariales (si charges_fixes > charges_salariales)
+        const chargesFixesHorsMasse = Math.max(0, chargesFixes - chargesSalariales)
         
-        // Toujours afficher les charges fixes si elles existent et que les charges sont visibles
-        if (point.charges_fixes !== null && point.charges_fixes > 0) {
-          // Si seul "Achats et charges" est sélectionné, soustraire les charges fixes de la base
-          // pour que le hachuré violet représente les charges fixes
-          if (onlyChargesSelected) {
-            chargesBase = chargesBase - point.charges_fixes
-          }
-          // Sinon, on les affiche aussi mais on ne les soustrait pas (elles peuvent chevaucher avec masse salariale)
-          filteredPoint.charges_fixes_display = point.charges_fixes
+        if (onlyChargesSelected) {
+          // Si seul "Achats et charges" est sélectionné, le hachuré violet = charges fixes
+          // Base = charges totales - charges fixes
+          filteredPoint.charges = Math.max(0, totalCharges - chargesFixes)
+          filteredPoint.charges_fixes_display = chargesFixes
           filteredPoint.charges_fixes_breakdown = point.charges_fixes_breakdown
+        } else if (visibleSeries.charges_salariales && chargesSalariales > 0) {
+          // Si masse salariale ET charges fixes sont visibles
+          // Base = charges totales - masse salariale - charges fixes hors masse
+          filteredPoint.charges = Math.max(0, totalCharges - chargesSalariales - chargesFixesHorsMasse)
+          // Les charges fixes affichées = la partie qui n'est pas dans la masse salariale
+          filteredPoint.charges_fixes_display = chargesFixesHorsMasse
+          filteredPoint.charges_fixes_breakdown = point.charges_fixes_breakdown
+        } else {
+          // Si seulement les charges sont visibles (sans masse salariale ni charges fixes visibles)
+          filteredPoint.charges = totalCharges
         }
-        
-        filteredPoint.charges = chargesBase
       }
       
       // La masse salariale est empilée par-dessus les charges (base)
