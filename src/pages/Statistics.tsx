@@ -28,8 +28,8 @@ const Statistics: React.FC = () => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showProjections, setShowProjections] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+  const [detailedData, setDetailedData] = useState<Record<string, any[]>>({})
 
   // Fonction pour générer tous les mois disponibles depuis 2021
   const generateAllMonths = () => {
@@ -270,8 +270,10 @@ const Statistics: React.FC = () => {
       }
 
       // Calculer les projections des 3 mois suivants si on est en mode mois
-      // (on le fait après avoir récupéré toutes les données historiques)
-      // Note: les projections seront ajoutées dans un useEffect séparé
+      if (viewMode === 'month') {
+        const projections = calculateProjections(chartDataPoints)
+        chartDataPoints = [...chartDataPoints, ...projections]
+      }
 
       setChartData(chartDataPoints)
     } catch (err) {
@@ -287,19 +289,107 @@ const Statistics: React.FC = () => {
     fetchHistoricalData()
   }, [viewMode])
   
-  // Ajouter les projections quand showProjections change
+  // Charger les données détaillées quand showDetails change
   useEffect(() => {
-    if (viewMode === 'month' && chartData.length > 0) {
-      const historicalData = chartData.filter(d => !d.isProjection)
-      if (showProjections) {
-        const projections = calculateProjections(historicalData)
-        setChartData([...historicalData, ...projections])
-      } else {
-        setChartData(historicalData)
+    if (showDetails && viewMode === 'month') {
+      fetchDetailedData()
+    }
+  }, [showDetails, viewMode, chartData])
+  
+  // Fonction pour récupérer les données détaillées des comptes
+  const fetchDetailedData = async () => {
+    const detailed: Record<string, any[]> = {}
+    const monthsToFetch = chartData.filter(d => !d.isProjection).map(d => d.month)
+    
+    for (const month of monthsToFetch) {
+      try {
+        const response = await getAllDataFromDatabase(month)
+        if (response.success && response.data && response.data.trial_balance) {
+          const trialBalance = response.data.trial_balance
+          const accounts = extractFixedChargesAccounts(trialBalance)
+          detailed[month] = accounts
+        }
+      } catch (err) {
+        console.error(`Erreur lors de la récupération des données détaillées pour ${month}:`, err)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showProjections])
+    
+    setDetailedData(detailed)
+  }
+  
+  // Fonction pour extraire les comptes de charges fixes du trial balance
+  const extractFixedChargesAccounts = (trialBalance: any): any[] => {
+    const items = trialBalance.items || []
+    const accounts: any[] = []
+    const honorairesAccounts = ['622', '6226', '62263', '62265']
+    
+    items.forEach((item: any) => {
+      const accountNumber = item.number || ''
+      const debit = parseFloat(item.debits || item.debit || '0')
+      const credit = parseFloat(item.credits || item.credit || '0')
+      const solde = debit - credit
+      
+      let category = ''
+      let shouldInclude = false
+      
+      // 60614, 62511, 62512 (essence, péage et parking)
+      if (accountNumber === '60614' || accountNumber === '62511' || accountNumber === '62512') {
+        category = 'Essence, péage et parking'
+        shouldInclude = true
+      }
+      // 612... (leasings)
+      else if (accountNumber.startsWith('612')) {
+        category = 'Leasings'
+        shouldInclude = true
+      }
+      // 613... (locations, logiciels et loyers)
+      else if (accountNumber.startsWith('613')) {
+        category = 'Locations, logiciels et loyers'
+        shouldInclude = true
+      }
+      // 616... (assurances)
+      else if (accountNumber.startsWith('616')) {
+        category = 'Assurances'
+        shouldInclude = true
+      }
+      // 64... (salaires et cotisations) - TOUS les comptes
+      else if (accountNumber.startsWith('64')) {
+        if (solde > 0) {
+          category = 'Salaires et cotisations'
+          shouldInclude = true
+        }
+      }
+      // 622, 6226, 62263, 62265 (honoraires divers)
+      else if (honorairesAccounts.includes(accountNumber)) {
+        category = 'Honoraires divers'
+        shouldInclude = true
+      }
+      // 6262 (téléphone et internet)
+      else if (accountNumber === '6262') {
+        category = 'Téléphone et internet'
+        shouldInclude = true
+      }
+      
+      if (shouldInclude && solde !== 0) {
+        accounts.push({
+          accountNumber,
+          accountLabel: item.label || item.name || `Compte ${accountNumber}`,
+          category,
+          solde: Math.round(solde * 100) / 100,
+          debit,
+          credit
+        })
+      }
+    })
+    
+    return accounts.sort((a, b) => {
+      // Trier par catégorie puis par numéro de compte
+      if (a.category !== b.category) {
+        return a.category.localeCompare(b.category)
+      }
+      return a.accountNumber.localeCompare(b.accountNumber)
+    })
+  }
 
   // Réinitialiser l'offset quand on change de mode
   useEffect(() => {
@@ -366,50 +456,44 @@ const Statistics: React.FC = () => {
         filteredPoint.revenus_totaux = point.revenus_totaux
       }
       
-      // Pour les charges : si la masse salariale est visible, on affiche les charges sans masse salariale
-      // comme base, puis on empile la masse salariale par-dessus pour que la barre totale = charges
-      if (visibleSeries.charges && point.charges !== null) {
-        if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
-          // Si la masse salariale est visible, on soustrait pour avoir la base (charges sans masse salariale)
-          const chargesSalariales = point.charges_salariales
-          filteredPoint.charges = point.charges - chargesSalariales
-        } else {
-          // Si la masse salariale n'est pas visible, on affiche les charges complètes
-          filteredPoint.charges = point.charges
-        }
+      // Logique pour les charges : 
+      // - charges = le TOTAL des charges (barre complète)
+      // - charges_salariales = partie hachurée orange (incluse dans charges)
+      // - charges_fixes = partie hachurée violette (incluse dans charges, peut chevaucher avec masse salariale)
+      
+      // Stocker le total original pour le tooltip
+      if (point.charges !== null) {
+        filteredPoint.charges_total = point.charges
       }
       
-      // La masse salariale est empilée par-dessus les charges (sans masse salariale)
-      // pour que la barre totale = charges, avec une partie hachurée = masse salariale
+      if (visibleSeries.charges && point.charges !== null) {
+        // Calculer la base des charges (ce qui reste après avoir soustrait les parties hachurées)
+        let chargesBase = point.charges
+        
+        // Si la masse salariale est visible, on la soustrait de la base
+        if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
+          chargesBase = chargesBase - point.charges_salariales
+        }
+        
+        // Toujours afficher les charges fixes si elles existent et que les charges sont visibles
+        if (point.charges_fixes !== null && point.charges_fixes > 0) {
+          // Si seul "Achats et charges" est sélectionné, soustraire les charges fixes de la base
+          // pour que le hachuré violet représente les charges fixes
+          if (onlyChargesSelected) {
+            chargesBase = chargesBase - point.charges_fixes
+          }
+          // Sinon, on les affiche aussi mais on ne les soustrait pas (elles peuvent chevaucher avec masse salariale)
+          filteredPoint.charges_fixes_display = point.charges_fixes
+          filteredPoint.charges_fixes_breakdown = point.charges_fixes_breakdown
+        }
+        
+        filteredPoint.charges = chargesBase
+      }
+      
+      // La masse salariale est empilée par-dessus les charges (base)
+      // pour que la barre totale = charges
       if (visibleSeries.charges_salariales && point.charges_salariales !== null) {
         filteredPoint.charges_salariales = point.charges_salariales
-      }
-      
-      // Gérer les charges fixes
-      if (point.charges_fixes !== null && point.charges_fixes > 0) {
-        filteredPoint.charges_fixes = point.charges_fixes
-        filteredPoint.charges_fixes_breakdown = point.charges_fixes_breakdown
-        
-        // Si seul "Achats et charges" est sélectionné, le hachuré devient les charges fixes
-        if (onlyChargesSelected && point.charges !== null) {
-          // On affiche les charges sans charges fixes comme base, puis les charges fixes en hachuré
-          if (filteredPoint.charges !== undefined) {
-            filteredPoint.charges = filteredPoint.charges - point.charges_fixes
-          } else {
-            filteredPoint.charges = point.charges - point.charges_fixes
-          }
-          filteredPoint.charges_fixes_display = point.charges_fixes
-        } else if (visibleSeries.charges && point.charges !== null && !visibleSeries.charges_salariales) {
-          // Si les charges sont visibles mais pas la masse salariale, on affiche les charges fixes en hachuré
-          // On doit ajuster la base des charges
-          if (filteredPoint.charges !== undefined) {
-            filteredPoint.charges = filteredPoint.charges - point.charges_fixes
-          }
-          filteredPoint.charges_fixes_display = point.charges_fixes
-        } else if (visibleSeries.charges && point.charges !== null) {
-          // Si les charges et la masse salariale sont visibles, on affiche les charges fixes après la masse salariale
-          filteredPoint.charges_fixes_display = point.charges_fixes
-        }
       }
       
       return filteredPoint
@@ -511,23 +595,6 @@ const Statistics: React.FC = () => {
               Masse salariale
             </button>
           </div>
-          
-          {/* Toggle pour les projections (uniquement en mode mois) */}
-          {viewMode === 'month' && (
-            <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showProjections}
-                  onChange={(e) => setShowProjections(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  Afficher les projections des 3 mois suivants
-                </span>
-              </label>
-            </div>
-          )}
         </div>
 
         {/* Graphique */}
@@ -621,8 +688,17 @@ const Statistics: React.FC = () => {
                       </defs>
                       <Tooltip
                         formatter={(value: number, name: string, props: any) => {
-                          if (name === 'Achats et charges' && props.payload.charges_fixes_display) {
-                            return `${formatCurrency(value)} (dont ${formatCurrency(props.payload.charges_fixes_display)} de charges fixes)`
+                          // Pour "Achats et charges", afficher le total avec le détail des charges fixes
+                          if (name === 'Achats et charges') {
+                            // Utiliser le total original des charges (charges_total) pour éviter les doubles comptages
+                            const totalCharges = props.payload.charges_total || 
+                              ((props.payload.charges || 0) + 
+                               (props.payload.charges_salariales || 0) + 
+                               (props.payload.charges_fixes_display || 0))
+                            if (props.payload.charges_fixes_display && props.payload.charges_fixes_display > 0) {
+                              return `${formatCurrency(totalCharges)} (dont ${formatCurrency(props.payload.charges_fixes_display)} de charges fixes)`
+                            }
+                            return formatCurrency(totalCharges)
                           }
                           return formatCurrency(value)
                         }}
@@ -664,7 +740,7 @@ const Statistics: React.FC = () => {
                           stackId="charges"
                         />
                       )}
-                      {/* Charges fixes : affichées différemment selon le contexte */}
+                      {/* Charges fixes : affichées en hachuré violet */}
                       {visibleSeries.charges && getChartData().some(p => p.charges_fixes_display !== undefined && p.charges_fixes_display > 0) && (
                         <Bar 
                           dataKey="charges_fixes_display"
@@ -701,41 +777,103 @@ const Statistics: React.FC = () => {
             </div>
             
             {showDetails && (
-              <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Comptes utilisés pour les charges fixes :</h3>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                    <li><strong>60614, 62511, 62512</strong> : Essence, péage et parking</li>
-                    <li><strong>612...</strong> : Leasings (tous les comptes commençant par 612)</li>
-                    <li><strong>613...</strong> : Locations, logiciels et loyers (tous les comptes commençant par 613)</li>
-                    <li><strong>616...</strong> : Assurances (tous les comptes commençant par 616)</li>
-                    <li><strong>64...</strong> : Salaires et cotisations (tous les comptes commençant par 64)</li>
-                    <li><strong>622, 6226, 62263, 62265</strong> : Honoraires divers (comptes exacts)</li>
-                    <li><strong>6262</strong> : Téléphone et internet</li>
-                  </ul>
+              <div className="space-y-6">
+                {/* Tableau détaillé par mois */}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mois</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Catégorie</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Compte</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Libellé</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Solde</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {chartData
+                        .filter(d => !d.isProjection)
+                        .sort((a, b) => a.month.localeCompare(b.month))
+                        .map((point) => {
+                          const monthAccounts = detailedData[point.month] || []
+                          if (monthAccounts.length === 0) {
+                            return (
+                              <tr key={point.month}>
+                                <td colSpan={5} className="px-6 py-4 text-sm text-gray-500 text-center">
+                                  {point.monthLabel} - Chargement des données...
+                                </td>
+                              </tr>
+                            )
+                          }
+                          return monthAccounts.map((account, idx) => (
+                            <tr key={`${point.month}-${account.accountNumber}-${idx}`} className="hover:bg-gray-50">
+                              {idx === 0 && (
+                                <td rowSpan={monthAccounts.length} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 align-top">
+                                  {point.monthLabel}
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Total: {formatCurrency(point.charges_fixes || 0)}
+                                  </div>
+                                </td>
+                              )}
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{account.category}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{account.accountNumber}</td>
+                              <td className="px-6 py-4 text-sm text-gray-700">{account.accountLabel}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                                {formatCurrency(account.solde)}
+                              </td>
+                            </tr>
+                          ))
+                        })}
+                    </tbody>
+                  </table>
                 </div>
                 
-                {showProjections && (
+                {/* Projections */}
+                {chartData.some(p => p.isProjection) && (
                   <div className="bg-blue-50 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-2">Calcul des projections :</h3>
-                    <p className="text-sm text-gray-700">
+                    <p className="text-sm text-gray-700 mb-3">
                       Pour chaque mois projeté, la moyenne de chaque catégorie est calculée sur les 12 mois précédents, puis les moyennes sont additionnées.
                     </p>
-                    <div className="mt-3 space-y-2">
-                      {getChartData()
+                    <div className="space-y-3">
+                      {chartData
                         .filter(p => p.isProjection && p.charges_fixes_breakdown)
                         .map((projection, idx) => (
-                          <div key={idx} className="bg-white rounded p-3 border border-blue-200">
-                            <h4 className="font-medium text-gray-900 mb-2">{projection.monthLabel} (projection)</h4>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div>Essence/Péage/Parking : {formatCurrency(projection.charges_fixes_breakdown.essence_peage_parking)}</div>
-                              <div>Leasings : {formatCurrency(projection.charges_fixes_breakdown.leasings)}</div>
-                              <div>Locations/Logiciels/Loyers : {formatCurrency(projection.charges_fixes_breakdown.locations_logiciels_loyers)}</div>
-                              <div>Assurances : {formatCurrency(projection.charges_fixes_breakdown.assurances)}</div>
-                              <div>Salaires et cotisations : {formatCurrency(projection.charges_fixes_breakdown.salaires_cotisations)}</div>
-                              <div>Honoraires divers : {formatCurrency(projection.charges_fixes_breakdown.honoraires_divers)}</div>
-                              <div>Téléphone/Internet : {formatCurrency(projection.charges_fixes_breakdown.telephone_internet)}</div>
-                              <div className="font-semibold">Total charges fixes : {formatCurrency(projection.charges_fixes)}</div>
+                          <div key={idx} className="bg-white rounded p-4 border border-blue-200">
+                            <h4 className="font-medium text-gray-900 mb-3">{projection.monthLabel} (projection)</h4>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Essence/Péage/Parking :</span>
+                                <span className="font-medium">{formatCurrency(projection.charges_fixes_breakdown.essence_peage_parking)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Leasings :</span>
+                                <span className="font-medium">{formatCurrency(projection.charges_fixes_breakdown.leasings)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Locations/Logiciels/Loyers :</span>
+                                <span className="font-medium">{formatCurrency(projection.charges_fixes_breakdown.locations_logiciels_loyers)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Assurances :</span>
+                                <span className="font-medium">{formatCurrency(projection.charges_fixes_breakdown.assurances)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Salaires et cotisations :</span>
+                                <span className="font-medium">{formatCurrency(projection.charges_fixes_breakdown.salaires_cotisations)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Honoraires divers :</span>
+                                <span className="font-medium">{formatCurrency(projection.charges_fixes_breakdown.honoraires_divers)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Téléphone/Internet :</span>
+                                <span className="font-medium">{formatCurrency(projection.charges_fixes_breakdown.telephone_internet)}</span>
+                              </div>
+                              <div className="flex justify-between col-span-2 pt-2 border-t border-gray-200">
+                                <span className="font-semibold text-gray-900">Total charges fixes :</span>
+                                <span className="font-bold text-gray-900">{formatCurrency(projection.charges_fixes)}</span>
+                              </div>
                             </div>
                           </div>
                         ))}
