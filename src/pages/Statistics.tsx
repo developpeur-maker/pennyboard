@@ -142,6 +142,7 @@ const Statistics: React.FC = () => {
     revenus_totaux: number | null
     charges: number | null
     charges_salariales: number | null
+    charges_fixes: number | null
   } | null> => {
     try {
       const monthsToFetch: string[] = []
