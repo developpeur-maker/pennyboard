@@ -92,9 +92,10 @@ const Statistics: React.FC = () => {
       // Vérifier que ce mois est dans le futur
       if (monthKey <= currentMonthKey) continue
       
-      // Récupérer les 3 derniers mois (mois réels uniquement, pas de projections)
+      // Récupérer les 3 derniers mois AVANT le mois en cours (sans compter le mois en cours)
+      // Ex: en janvier, pour la projection de février on utilise oct, nov, déc
       const historicalMonths = historicalData
-        .filter(d => !d.isProjection && d.month < monthKey)
+        .filter(d => !d.isProjection && d.month < currentMonthKey)
         .sort((a, b) => b.month.localeCompare(a.month))
         .slice(0, 3)
       
