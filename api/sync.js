@@ -275,6 +275,80 @@ function isExcludedFromMasseSalariale(accountNumber) {
   )
 }
 
+// Fonction pour calculer les charges fixes à partir des comptes spécifiés
+function calculateFixedCharges(trialBalance) {
+  const items = trialBalance.items || []
+  let charges_fixes = 0
+  const charges_fixes_breakdown = {
+    essence_peage_parking: 0,      // 60614, 62511, 62512
+    leasings: 0,                    // 612...
+    locations_logiciels_loyers: 0,  // 613...
+    assurances: 0,                  // 616...
+    salaires_cotisations: 0,       // 64... (TOUS, même ceux exclus ailleurs)
+    honoraires_divers: 0,           // 622, 6226, 62263, 62265 (comptes exacts)
+    telephone_internet: 0           // 6262
+  }
+  
+  // Comptes exacts pour honoraires divers
+  const honorairesAccounts = ['622', '6226', '62263', '62265']
+  
+  items.forEach((item) => {
+    const accountNumber = item.number || ''
+    const debit = parseFloat(item.debits || '0')
+    const credit = parseFloat(item.credits || '0')
+    const solde = debit - credit
+    
+    // 60614, 62511, 62512 (essence, péage et parking)
+    if (accountNumber === '60614' || accountNumber === '62511' || accountNumber === '62512') {
+      charges_fixes += solde
+      charges_fixes_breakdown.essence_peage_parking += solde
+    }
+    
+    // 612... (leasings)
+    if (accountNumber.startsWith('612')) {
+      charges_fixes += solde
+      charges_fixes_breakdown.leasings += solde
+    }
+    
+    // 613... (locations, logiciels et loyers)
+    if (accountNumber.startsWith('613')) {
+      charges_fixes += solde
+      charges_fixes_breakdown.locations_logiciels_loyers += solde
+    }
+    
+    // 616... (assurances)
+    if (accountNumber.startsWith('616')) {
+      charges_fixes += solde
+      charges_fixes_breakdown.assurances += solde
+    }
+    
+    // 64... (salaires et cotisations) - TOUS les comptes, même ceux exclus ailleurs
+    if (accountNumber.startsWith('64')) {
+      if (solde > 0) { // Seulement les soldes positifs (pas d'extournes)
+        charges_fixes += solde
+        charges_fixes_breakdown.salaires_cotisations += solde
+      }
+    }
+    
+    // 622, 6226, 62263, 62265 (honoraires divers) - uniquement ces comptes exacts
+    if (honorairesAccounts.includes(accountNumber)) {
+      charges_fixes += solde
+      charges_fixes_breakdown.honoraires_divers += solde
+    }
+    
+    // 6262 (téléphone et internet)
+    if (accountNumber === '6262') {
+      charges_fixes += solde
+      charges_fixes_breakdown.telephone_internet += solde
+    }
+  })
+  
+  return {
+    charges_fixes: Math.round(charges_fixes * 100) / 100,
+    charges_fixes_breakdown
+  }
+}
+
 // Fonctions de calcul des KPIs (simplifiées pour la synchronisation)
 function calculateKPIsFromTrialBalance(trialBalance, month) {
   const items = trialBalance.items || []
@@ -326,12 +400,17 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
     // Pas de calcul ici pour éviter la double comptabilisation
   })
   
+  // Calculer les charges fixes
+  const fixedChargesData = calculateFixedCharges(trialBalance)
+  
   return {
     ventes_706,
     revenus_totaux,
     charges,
     charges_sans_amortissements,
     charges_salariales,
+    charges_fixes: fixedChargesData.charges_fixes,
+    charges_fixes_breakdown: fixedChargesData.charges_fixes_breakdown,
     resultat_net: revenus_totaux - charges,
     tresorerie,
     currency: 'EUR',
