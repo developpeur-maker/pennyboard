@@ -178,6 +178,9 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
   // Calculer les charges fixes
   const fixedChargesData = calculateFixedCharges(trialBalance)
   
+  // S'assurer que charges_fixes >= charges_salariales (car charges_fixes inclut TOUS les comptes 64...)
+  const charges_fixes = Math.max(fixedChargesData.charges_fixes, charges_salariales)
+  
   return {
     period: month,
     ventes_706: Math.round(ventes_706 * 100) / 100,
@@ -185,7 +188,7 @@ function calculateKPIsFromTrialBalance(trialBalance, month) {
     revenus_totaux: Math.round(revenus_totaux * 100) / 100,
     charges: Math.round(charges * 100) / 100,
     charges_salariales: Math.round(charges_salariales * 100) / 100,
-    charges_fixes: fixedChargesData.charges_fixes,
+    charges_fixes: charges_fixes,
     charges_fixes_breakdown: fixedChargesData.charges_fixes_breakdown,
     resultat_net: Math.round(resultat_net * 100) / 100,
     solde_tresorerie: Math.round(tresorerie * 100) / 100

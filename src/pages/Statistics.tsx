@@ -92,15 +92,15 @@ const Statistics: React.FC = () => {
       // Vérifier que ce mois est dans le futur
       if (monthKey <= currentMonthKey) continue
       
-      // Récupérer les 12 mois précédents (mois réels uniquement, pas de projections)
+      // Récupérer les 3 derniers mois (mois réels uniquement, pas de projections)
       const historicalMonths = historicalData
         .filter(d => !d.isProjection && d.month < monthKey)
         .sort((a, b) => b.month.localeCompare(a.month))
-        .slice(0, 12)
+        .slice(0, 3)
       
       if (historicalMonths.length === 0) continue
       
-      // Calculer la moyenne de chaque catégorie
+      // Calculer la moyenne de chaque catégorie sur les 3 derniers mois
       const validMonths = historicalMonths.filter(d => d.charges_fixes !== null && d.charges_fixes !== undefined)
       if (validMonths.length === 0) continue
       
@@ -695,6 +695,11 @@ const Statistics: React.FC = () => {
                       </defs>
                       <Tooltip
                         formatter={(value: number, name: string, props: any) => {
+                          // Ne pas afficher la ligne "Charges fixes" dans le tooltip (l'info est déjà dans "Achats et charges")
+                          if (name === 'Charges fixes' || name === 'Charges fixes (incluse dans les charges)') {
+                            return null
+                          }
+                          
                           // Pour "Achats et charges", afficher le total avec le détail des charges fixes
                           if (name === 'Achats et charges') {
                             // Utiliser le total original des charges (charges_total) pour éviter les doubles comptages
@@ -702,8 +707,11 @@ const Statistics: React.FC = () => {
                               ((props.payload.charges || 0) + 
                                (props.payload.charges_salariales || 0) + 
                                (props.payload.charges_fixes_display || 0))
-                            if (props.payload.charges_fixes_display && props.payload.charges_fixes_display > 0) {
-                              return `${formatCurrency(totalCharges)} (dont ${formatCurrency(props.payload.charges_fixes_display)} de charges fixes)`
+                            // Récupérer les charges fixes depuis les données originales du point
+                            const originalPoint = chartData.find(p => p.monthLabel === props.payload.monthLabel)
+                            const chargesFixes = originalPoint?.charges_fixes || 0
+                            if (chargesFixes > 0) {
+                              return `${formatCurrency(totalCharges)} (dont ${formatCurrency(chargesFixes)} de charges fixes)`
                             }
                             return formatCurrency(totalCharges)
                           }
@@ -840,7 +848,7 @@ const Statistics: React.FC = () => {
                   <div className="bg-blue-50 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-2">Calcul des projections :</h3>
                     <p className="text-sm text-gray-700 mb-3">
-                      Pour chaque mois projeté, la moyenne de chaque catégorie est calculée sur les 12 mois précédents, puis les moyennes sont additionnées.
+                      Pour chaque mois projeté, la moyenne de chaque catégorie est calculée sur les 3 derniers mois, puis les moyennes sont additionnées.
                     </p>
                     <div className="space-y-3">
                       {chartData
