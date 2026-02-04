@@ -454,6 +454,13 @@ const Salaries: React.FC = () => {
   const totalContributions = filteredTotals.totalContributions
   const totalGrossCost = filteredTotals.totalGrossCost
 
+  // Pourcentages par rapport au total brut global (s'ajustent avec les filtres exercice / mois / tags)
+  const totalForPercent = totalGrossCost > 0 ? totalGrossCost : 1
+  const percentSalary = Math.round((totalSalaryPaid / totalForPercent) * 1000) / 10
+  const percentPrimes = Math.round((totalPrimes / totalForPercent) * 1000) / 10
+  const percentContributions = Math.round((totalContributions / totalForPercent) * 1000) / 10
+  const percentTotal = totalGrossCost > 0 ? 100 : 0
+
   // Formater la période affichée
   const formatPeriod = () => {
     if (isFullYear) {
@@ -620,6 +627,9 @@ const Salaries: React.FC = () => {
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {formatCurrency(totalSalaryPaid)}
               </p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                ({percentSalary} %)
+              </p>
             </div>
             <DollarSign className="w-8 h-8 text-green-600" />
           </div>
@@ -631,6 +641,9 @@ const Salaries: React.FC = () => {
               <p className="text-sm font-medium text-gray-600">Primes totales</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {formatCurrency(totalPrimes)}
+              </p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                ({percentPrimes} %)
               </p>
             </div>
             <Gift className="w-8 h-8 text-blue-600" />
@@ -644,6 +657,9 @@ const Salaries: React.FC = () => {
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {formatCurrency(totalContributions)}
               </p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                ({percentContributions} %)
+              </p>
             </div>
             <TrendingUp className="w-8 h-8 text-orange-600" />
           </div>
@@ -655,6 +671,9 @@ const Salaries: React.FC = () => {
               <p className="text-sm font-medium text-gray-600">Total brut global</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {formatCurrency(totalGrossCost)}
+              </p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                ({percentTotal} %)
               </p>
             </div>
             <Users className="w-8 h-8 text-purple-600" />
