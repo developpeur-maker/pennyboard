@@ -76,27 +76,12 @@ interface BreakevenDataPoint {
   hasData: boolean
 }
 
-type PipedrivePeriod = 'day' | 'week' | 'month'
-
 const Breakeven: React.FC = () => {
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
   const [monthOffset, setMonthOffset] = useState(0) // Offset pour la pagination (0 = 6 derniers mois)
   const [chartData, setChartData] = useState<BreakevenDataPoint[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Données Pipedrive (deals) — section séparée sous le graphique et le tableau
-  const [pipedriveData, setPipedriveData] = useState<{ deals: any[]; aggregated: { day: any[]; week: any[]; month: any[] } } | null>(null)
-  const [pipedriveLoading, setPipedriveLoading] = useState(false)
-  const [pipedriveError, setPipedriveError] = useState<string | null>(null)
-  const [pipedrivePeriod, setPipedrivePeriod] = useState<PipedrivePeriod>('month')
-  // Valeur de la période sélectionnée : jour (YYYY-MM-DD), semaine (YYYY-Wnn), mois (YYYY-MM)
-  const [pipedrivePeriodValue, setPipedrivePeriodValue] = useState<string>(() => {
-    const d = new Date()
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    return `${y}-${m}`
-  })
 
   // Fonction pour générer tous les mois disponibles depuis 2024
   // (les données Payfit sont incomplètes/inexistantes pour 2023 et antérieures)
@@ -382,46 +367,6 @@ const Breakeven: React.FC = () => {
     setMonthOffset(0)
   }, [viewMode])
 
-  // Charger les données Pipedrive (deals) pour la section dédiée
-  useEffect(() => {
-    let cancelled = false
-    setPipedriveLoading(true)
-    setPipedriveError(null)
-    fetch('/api/pipedrive-deals')
-      .then(async (res) => {
-        const text = await res.text()
-        let data: any
-        try {
-          data = JSON.parse(text)
-        } catch {
-          throw new Error(res.ok ? 'Réponse invalide' : text || res.statusText)
-        }
-        if (!res.ok) {
-          throw new Error(data?.error || data?.message || res.statusText)
-        }
-        return data
-      })
-      .then((data) => {
-        if (!cancelled && data.success) {
-          setPipedriveData({
-            deals: data.deals || [],
-            aggregated: data.aggregated || { day: [], week: [], month: [] }
-          })
-          setPipedriveError(null)
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setPipedriveError(err.message || 'Erreur chargement Pipedrive')
-          setPipedriveData(null)
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setPipedriveLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [])
-
   // Fonction pour obtenir les données à afficher (pagination pour le mode mois)
   const getDisplayedData = () => {
     if (viewMode === 'year') {
@@ -462,42 +407,6 @@ const Breakeven: React.FC = () => {
   // Fonction pour obtenir les données du graphique
   const getChartData = () => {
     return getDisplayedData().filter(point => point.hasData)
-  }
-
-  // Retourne la semaine au format ISO (YYYY-Wnn) pour une date
-  const getWeekKey = (date: Date) => {
-    const d = new Date(date)
-    d.setHours(0, 0, 0, 0)
-    const thursday = new Date(d)
-    thursday.setDate(d.getDate() - d.getDay() + 4)
-    const jan1 = new Date(thursday.getFullYear(), 0, 1)
-    const weekNum = Math.ceil((((thursday.getTime() - jan1.getTime()) / 86400000) + jan1.getDay() + 1) / 7)
-    return `${thursday.getFullYear()}-W${String(weekNum).padStart(2, '0')}`
-  }
-
-  // Données Pipedrive filtrées par période sélectionnée, agrégées par diagnostiqueur (un total par personne)
-  const pipedriveFilteredByDiagnostician = (() => {
-    if (!pipedriveData?.aggregated) return []
-    const list = pipedriveData.aggregated[pipedrivePeriod] || []
-    const byPeriod = list.filter((row: any) => row.periodKey === pipedrivePeriodValue)
-    const byDiag: Record<string, number> = {}
-    byPeriod.forEach((row: any) => {
-      const key = row.diagnostician ?? '__sans_nom__'
-      byDiag[key] = (byDiag[key] || 0) + (row.totalValue || 0)
-    })
-    return Object.entries(byDiag).map(([diagnostician, totalValue]) => ({ diagnostician, totalValue }))
-  })()
-
-  const handlePipedrivePeriodChange = (p: PipedrivePeriod) => {
-    setPipedrivePeriod(p)
-    const d = new Date()
-    if (p === 'day') {
-      setPipedrivePeriodValue(d.toISOString().slice(0, 10))
-    } else if (p === 'week') {
-      setPipedrivePeriodValue(getWeekKey(d))
-    } else {
-      setPipedrivePeriodValue(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
-    }
   }
 
   return (
@@ -744,89 +653,6 @@ const Breakeven: React.FC = () => {
                   })}
                 </tbody>
               </table>
-            </div>
-          )}
-        </div>
-
-        {/* Section Pipedrive (deals) — totaux par diagnostiqueur sur une période choisie */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Données Pipedrive (deals)
-          </h2>
-          <p className="text-gray-500 text-sm mb-4">
-            Total des deals gagnés avec facture par diagnostiqueur sur la période choisie (date RDV au format YYYY-MM-DD).
-          </p>
-          <div className="flex flex-wrap items-center gap-4 mb-4">
-            <span className="text-sm font-medium text-gray-700">Période :</span>
-            {(['day', 'week', 'month'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => handlePipedrivePeriodChange(p)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium ${
-                  pipedrivePeriod === p
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {p === 'day' ? 'Jour' : p === 'week' ? 'Semaine' : 'Mois'}
-              </button>
-            ))}
-            {pipedrivePeriod === 'day' && (
-              <input
-                type="date"
-                value={pipedrivePeriodValue}
-                onChange={(e) => setPipedrivePeriodValue(e.target.value)}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
-              />
-            )}
-            {pipedrivePeriod === 'week' && (
-              <input
-                type="week"
-                value={pipedrivePeriodValue}
-                onChange={(e) => setPipedrivePeriodValue(e.target.value)}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
-              />
-            )}
-            {pipedrivePeriod === 'month' && (
-              <input
-                type="month"
-                value={pipedrivePeriodValue}
-                onChange={(e) => setPipedrivePeriodValue(e.target.value)}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
-              />
-            )}
-          </div>
-          {pipedriveLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : pipedriveError ? (
-            <p className="text-red-600 text-sm py-4">{pipedriveError}</p>
-          ) : !pipedriveData ? (
-            <p className="text-gray-500 text-sm py-4">Aucune donnée Pipedrive.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Diagnostiqueur</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Période</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total (€)</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {pipedriveFilteredByDiagnostician.map((row) => (
-                    <tr key={row.diagnostician}>
-                      <td className="px-4 py-2 text-sm font-medium text-gray-900">{row.diagnostician === '__sans_nom__' ? '—' : row.diagnostician}</td>
-                      <td className="px-4 py-2 text-sm text-gray-600">{pipedrivePeriodValue}</td>
-                      <td className="px-4 py-2 text-sm text-right font-medium text-gray-900">{formatCurrency(row.totalValue)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {pipedriveFilteredByDiagnostician.length === 0 && (
-                <p className="text-gray-500 text-sm py-4">Aucun deal pour la période sélectionnée.</p>
-              )}
             </div>
           )}
         </div>

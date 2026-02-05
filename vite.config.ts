@@ -25,10 +25,6 @@ export default defineConfig({
             console.log('📊 Proxy response:', proxyRes.statusCode, req.url)
           })
         }
-      },
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true
       }
     }
   }
