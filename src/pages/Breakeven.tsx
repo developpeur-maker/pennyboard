@@ -76,12 +76,20 @@ interface BreakevenDataPoint {
   hasData: boolean
 }
 
+type PipedrivePeriod = 'day' | 'week' | 'month'
+
 const Breakeven: React.FC = () => {
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
   const [monthOffset, setMonthOffset] = useState(0) // Offset pour la pagination (0 = 6 derniers mois)
   const [chartData, setChartData] = useState<BreakevenDataPoint[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Données Pipedrive (deals) — section séparée sous le graphique et le tableau
+  const [pipedriveData, setPipedriveData] = useState<{ deals: any[]; aggregated: { day: any[]; week: any[]; month: any[] } } | null>(null)
+  const [pipedriveLoading, setPipedriveLoading] = useState(false)
+  const [pipedriveError, setPipedriveError] = useState<string | null>(null)
+  const [pipedrivePeriod, setPipedrivePeriod] = useState<PipedrivePeriod>('month')
 
   // Fonction pour générer tous les mois disponibles depuis 2024
   // (les données Payfit sont incomplètes/inexistantes pour 2023 et antérieures)
@@ -254,7 +262,6 @@ const Breakeven: React.FC = () => {
     }
   }
 
-  // Utiliser useMemo pour calculer les données uniquement quand nécessaire
   // Fonction pour récupérer les données cumulées d'une année
   const fetchYearData = async (year: string): Promise<{
     year: number
@@ -367,6 +374,36 @@ const Breakeven: React.FC = () => {
   useEffect(() => {
     setMonthOffset(0)
   }, [viewMode])
+
+  // Charger les données Pipedrive (deals) pour la section dédiée
+  useEffect(() => {
+    let cancelled = false
+    setPipedriveLoading(true)
+    setPipedriveError(null)
+    fetch('/api/pipedrive-deals')
+      .then((res) => {
+        if (!res.ok) throw new Error(res.statusText)
+        return res.json()
+      })
+      .then((data) => {
+        if (!cancelled && data.success) {
+          setPipedriveData({
+            deals: data.deals || [],
+            aggregated: data.aggregated || { day: [], week: [], month: [] }
+          })
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setPipedriveError(err.message || 'Erreur chargement Pipedrive')
+          setPipedriveData(null)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setPipedriveLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [])
 
   // Fonction pour obtenir les données à afficher (pagination pour le mode mois)
   const getDisplayedData = () => {
@@ -654,6 +691,67 @@ const Breakeven: React.FC = () => {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+        </div>
+
+        {/* Section Pipedrive (deals) — séparée du graphique et tableau ci‑dessus */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Données Pipedrive (deals)
+          </h2>
+          <p className="text-gray-500 text-sm mb-4">
+            Deals gagnés avec facture (status=won, value&gt;0, date RDV et n° facture renseignés). Date de RDV au format YYYY-MM-DD.
+          </p>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm font-medium text-gray-700">Période :</span>
+            {(['day', 'week', 'month'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPipedrivePeriod(p)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium ${
+                  pipedrivePeriod === p
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {p === 'day' ? 'Jour' : p === 'week' ? 'Semaine' : 'Mois'}
+              </button>
+            ))}
+          </div>
+          {pipedriveLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : pipedriveError ? (
+            <p className="text-red-600 text-sm py-4">{pipedriveError}</p>
+          ) : !pipedriveData ? (
+            <p className="text-gray-500 text-sm py-4">Aucune donnée Pipedrive.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Diagnostiqueur</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      {pipedrivePeriod === 'day' ? 'Jour (YYYY-MM-DD)' : pipedrivePeriod === 'week' ? 'Semaine' : 'Mois (YYYY-MM)'}
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Montant total (€)</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {(pipedriveData.aggregated[pipedrivePeriod] || []).map((row: any, idx: number) => (
+                    <tr key={`${row.diagnostician}-${row.periodKey}-${idx}`}>
+                      <td className="px-4 py-2 text-sm text-gray-900">{row.diagnostician ?? '—'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-600">{row.periodKey ?? '—'}</td>
+                      <td className="px-4 py-2 text-sm text-right font-medium text-gray-900">{formatCurrency(row.totalValue)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {(pipedriveData.aggregated[pipedrivePeriod] || []).length === 0 && (
+                <p className="text-gray-500 text-sm py-4">Aucun deal pour cette granularité.</p>
+              )}
             </div>
           )}
         </div>
