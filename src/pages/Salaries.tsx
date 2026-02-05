@@ -330,6 +330,29 @@ const Salaries: React.FC = () => {
     })
   }, [filteredAndSortedEmployees])
 
+  // Totaux globaux (tous les collaborateurs de la période, sans filtre de tags) → pour le calcul des %
+  const globalTotals = useMemo(() => {
+    if (!employees || employees.length === 0) {
+      return {
+        totalSalaryPaid: 0,
+        totalPrimes: 0,
+        totalContributions: 0,
+        totalGrossCost: 0
+      }
+    }
+    return employees.reduce((acc, employee) => ({
+      totalSalaryPaid: acc.totalSalaryPaid + (employee.salaryPaid || 0),
+      totalPrimes: acc.totalPrimes + (employee.totalPrimes || 0),
+      totalContributions: acc.totalContributions + (employee.totalContributions || 0),
+      totalGrossCost: acc.totalGrossCost + (employee.totalGrossCost || 0)
+    }), {
+      totalSalaryPaid: 0,
+      totalPrimes: 0,
+      totalContributions: 0,
+      totalGrossCost: 0
+    })
+  }, [employees])
+
   // Fonction pour gérer le clic sur un en-tête de colonne
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -454,12 +477,12 @@ const Salaries: React.FC = () => {
   const totalContributions = filteredTotals.totalContributions
   const totalGrossCost = filteredTotals.totalGrossCost
 
-  // Pourcentages par rapport au total brut global (s'ajustent avec les filtres exercice / mois / tags)
-  const totalForPercent = totalGrossCost > 0 ? totalGrossCost : 1
-  const percentSalary = Math.round((totalSalaryPaid / totalForPercent) * 1000) / 10
-  const percentPrimes = Math.round((totalPrimes / totalForPercent) * 1000) / 10
-  const percentContributions = Math.round((totalContributions / totalForPercent) * 1000) / 10
-  const percentTotal = totalGrossCost > 0 ? 100 : 0
+  // Pourcentages par rapport au GLOBAL (tous les collaborateurs de la période) : montants filtrés / total brut global
+  const globalTotalBrut = globalTotals.totalGrossCost > 0 ? globalTotals.totalGrossCost : 1
+  const percentSalary = Math.round((totalSalaryPaid / globalTotalBrut) * 1000) / 10
+  const percentPrimes = Math.round((totalPrimes / globalTotalBrut) * 1000) / 10
+  const percentContributions = Math.round((totalContributions / globalTotalBrut) * 1000) / 10
+  const percentTotal = Math.round((totalGrossCost / globalTotalBrut) * 1000) / 10
 
   // Formater la période affichée
   const formatPeriod = () => {
