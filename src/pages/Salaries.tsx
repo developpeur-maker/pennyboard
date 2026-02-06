@@ -1,8 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { DollarSign, Users, Calendar, RefreshCw, TrendingUp, Gift, X, ArrowUp, ArrowDown, Search } from 'lucide-react'
-import { usePayfitSalaries, type EmployeeSalaryData } from '../hooks/usePayfitSalaries'
-
-type EmployeeWithJours = EmployeeSalaryData & { joursTravailles?: number | null }
+import { usePayfitSalaries } from '../hooks/usePayfitSalaries'
 
 // Configuration des tags avec leurs couleurs
 const TAG_CONFIG: Record<string, { color: string; bgColor: string }> = {
@@ -163,7 +161,7 @@ const getEmployeeTag = (employee: { employeeName: string; tag?: string | null })
   return null
 }
 
-type SortColumn = 'name' | 'salaryPaid' | 'totalPrimes' | 'totalContributions' | 'totalGrossCost' | 'team' | 'joursTravailles'
+type SortColumn = 'name' | 'salaryPaid' | 'totalPrimes' | 'totalContributions' | 'totalGrossCost' | 'team'
 type SortOrder = 'asc' | 'desc'
 
 const Salaries: React.FC = () => {
@@ -292,10 +290,6 @@ const Salaries: React.FC = () => {
           aValue = getEmployeeTag(a) || ''
           bValue = getEmployeeTag(b) || ''
           break
-        case 'joursTravailles':
-          aValue = (a as EmployeeWithJours).joursTravailles ?? -1
-          bValue = (b as EmployeeWithJours).joursTravailles ?? -1
-          break
         default:
           return 0
       }
@@ -319,8 +313,7 @@ const Salaries: React.FC = () => {
         totalSalaryPaid: 0,
         totalPrimes: 0,
         totalContributions: 0,
-        totalGrossCost: 0,
-        totalJoursTravailles: 0
+        totalGrossCost: 0
       }
     }
 
@@ -328,14 +321,12 @@ const Salaries: React.FC = () => {
       totalSalaryPaid: acc.totalSalaryPaid + (employee.salaryPaid || 0),
       totalPrimes: acc.totalPrimes + (employee.totalPrimes || 0),
       totalContributions: acc.totalContributions + (employee.totalContributions || 0),
-      totalGrossCost: acc.totalGrossCost + (employee.totalGrossCost || 0),
-      totalJoursTravailles: acc.totalJoursTravailles + ((employee as EmployeeWithJours).joursTravailles ?? 0)
+      totalGrossCost: acc.totalGrossCost + (employee.totalGrossCost || 0)
     }), {
       totalSalaryPaid: 0,
       totalPrimes: 0,
       totalContributions: 0,
-      totalGrossCost: 0,
-      totalJoursTravailles: 0
+      totalGrossCost: 0
     })
   }, [filteredAndSortedEmployees])
 
@@ -346,8 +337,7 @@ const Salaries: React.FC = () => {
         totalSalaryPaid: 0,
         totalPrimes: 0,
         totalContributions: 0,
-        totalGrossCost: 0,
-        totalJoursTravailles: 0
+        totalGrossCost: 0
       }
     }
     return employees.reduce((acc, employee) => ({
@@ -355,13 +345,11 @@ const Salaries: React.FC = () => {
       totalPrimes: acc.totalPrimes + (employee.totalPrimes || 0),
       totalContributions: acc.totalContributions + (employee.totalContributions || 0),
       totalGrossCost: acc.totalGrossCost + (employee.totalGrossCost || 0),
-      totalJoursTravailles: acc.totalJoursTravailles + ((employee as EmployeeWithJours).joursTravailles ?? 0)
     }), {
       totalSalaryPaid: 0,
       totalPrimes: 0,
       totalContributions: 0,
-      totalGrossCost: 0,
-      totalJoursTravailles: 0
+      totalGrossCost: 0
     })
   }, [employees])
 
@@ -822,17 +810,6 @@ const Salaries: React.FC = () => {
                   </th>
                   <th 
                     className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => handleSort('joursTravailles')}
-                  >
-                    <div className="flex items-center justify-end gap-2">
-                      Jours travaillés
-                      {sortColumn === 'joursTravailles' && (
-                        sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </th>
-                  <th 
-                    className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => handleSort('salaryPaid')}
                   >
                     <div className="flex items-center justify-end gap-2">
@@ -911,9 +888,6 @@ const Salaries: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                      {(employee as EmployeeWithJours).joursTravailles ?? '—'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
                       {formatCurrency(employee.salaryPaid || 0)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
@@ -936,9 +910,6 @@ const Salaries: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                     {/* Colonne équipe vide dans le footer */}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
-                    {filteredTotals.totalJoursTravailles > 0 ? filteredTotals.totalJoursTravailles : '—'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
                     {formatCurrency(totalSalaryPaid)}

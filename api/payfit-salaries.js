@@ -78,20 +78,6 @@ export default async function handler(req, res) {
       totalGrossCost = parseFloat(data.total_cost) || 0
       employeesSet = new Set(employees.map(emp => `${emp.employeeName}_${emp.contractId || 'unknown'}`))
       lastSyncDate = data.updated_at ? new Date(data.updated_at).toISOString() : null
-
-      // Enrichir avec les jours travaillés (payfit_meal_vouchers)
-      const mvResult = await client.query(
-        'SELECT collaborator_id, vouchers_count FROM payfit_meal_vouchers WHERE month = $1',
-        [month]
-      )
-      const joursByCollaborator = new Map()
-      ;(mvResult.rows || []).forEach((row) => {
-        joursByCollaborator.set(row.collaborator_id, row.vouchers_count ?? 0)
-      })
-      employees = employees.map((emp) => ({
-        ...emp,
-        joursTravailles: emp.collaboratorId ? (joursByCollaborator.get(emp.collaboratorId) ?? null) : null
-      }))
     } else if (year) {
       // Mode année : agréger les données de tous les mois de l'année
       if (!/^\d{4}$/.test(year)) {
@@ -147,7 +133,6 @@ export default async function handler(req, res) {
             employeesMap.set(key, {
               employeeName: emp.employeeName,
               contractId: emp.contractId,
-              collaboratorId: emp.collaboratorId || null,
               salaryPaid: 0,
               totalPrimes: 0,
               totalContributions: 0,
@@ -161,7 +146,6 @@ export default async function handler(req, res) {
           aggregated.totalPrimes += emp.totalPrimes || 0
           aggregated.totalContributions += emp.totalContributions || 0
           aggregated.totalGrossCost += emp.totalGrossCost || 0
-          if (emp.collaboratorId && !aggregated.collaboratorId) aggregated.collaboratorId = emp.collaboratorId
 
           // Fusionner les opérations
           if (emp.operations && Array.isArray(emp.operations)) {
@@ -179,23 +163,6 @@ export default async function handler(req, res) {
       employees = Array.from(employeesMap.values())
       totalPrimes = employees.reduce((sum, emp) => sum + (emp.totalPrimes || 0), 0)
       employeesSet = new Set(employees.map(emp => `${emp.employeeName}_${emp.contractId || 'unknown'}`))
-
-      // Jours travaillés sur l'année (somme des vouchers_count par collaborator_id)
-      const monthsInYear = result.rows.map((r) => r.month)
-      let joursByCollaborator = new Map()
-      if (monthsInYear.length > 0) {
-        const mvResult = await client.query(
-          'SELECT collaborator_id, SUM(vouchers_count) AS total FROM payfit_meal_vouchers WHERE month = ANY($1::text[]) GROUP BY collaborator_id',
-          [monthsInYear]
-        )
-        ;(mvResult.rows || []).forEach((row) => {
-          joursByCollaborator.set(row.collaborator_id, parseInt(row.total, 10) || 0)
-        })
-      }
-      employees = employees.map((emp) => ({
-        ...emp,
-        joursTravailles: emp.collaboratorId ? (joursByCollaborator.get(emp.collaboratorId) ?? null) : null
-      }))
     }
 
     client.release()
