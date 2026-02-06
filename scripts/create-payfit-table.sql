@@ -54,5 +54,5 @@ DROP TRIGGER IF EXISTS update_payfit_salaries_updated_at ON payfit_salaries;
 CREATE TRIGGER update_payfit_salaries_updated_at 
   BEFORE UPDATE ON payfit_salaries 
   FOR EACH ROW 
-  EXECUTE FUNCTION update_payfit_salaries_updated_at();
+  EXECUTE PROCEDURE update_payfit_salaries_updated_at();
 

@@ -27,4 +27,4 @@ DROP TRIGGER IF EXISTS update_payfit_meal_vouchers_updated_at ON payfit_meal_vou
 CREATE TRIGGER update_payfit_meal_vouchers_updated_at
   BEFORE UPDATE ON payfit_meal_vouchers
   FOR EACH ROW
-  EXECUTE FUNCTION update_payfit_meal_vouchers_updated_at();
+  EXECUTE PROCEDURE update_payfit_meal_vouchers_updated_at();

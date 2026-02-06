@@ -496,19 +496,23 @@ export default async function handler(req, res) {
       }
     }
 
-    // Enregistrer dans les logs
-    await client.query(`
-      INSERT INTO sync_logs (sync_type, status, message, months_synced, records_processed, api_calls_count, duration_ms)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `, [
-      'payfit_salaries',
-      errorCount === 0 ? 'success' : (successCount > 0 ? 'partial' : 'error'),
-      `Synchronisation Payfit: ${successCount} succès, ${errorCount} erreurs`,
-      monthsToSync.map(m => m.month),
-      successCount,
-      monthsToSync.length,
-      null // Durée non calculée pour l'instant
-    ])
+    // Enregistrer dans les logs (ne pas faire échouer la réponse si la table/colonnes manquent)
+    try {
+      await client.query(`
+        INSERT INTO sync_logs (sync_type, status, message, months_synced, records_processed, api_calls_count, duration_ms)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `, [
+        'payfit_salaries',
+        errorCount === 0 ? 'success' : (successCount > 0 ? 'partial' : 'error'),
+        `Synchronisation Payfit: ${successCount} succès, ${errorCount} erreurs`,
+        monthsToSync.map(m => m.month),
+        successCount,
+        monthsToSync.length,
+        null
+      ])
+    } catch (logErr) {
+      console.warn('⚠️ Écriture sync_logs ignorée (table ou colonnes manquantes ?):', logErr.message)
+    }
 
     client.release()
     await pool.end()
@@ -526,9 +530,13 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ Erreur dans la synchronisation Payfit:', error)
+    const msg = error.message || ''
+    const hint = /relation "payfit_|does not exist|table.*does not exist/i.test(msg)
+      ? ' Exécutez le script scripts/neon-payfit-migration.sql dans l’éditeur SQL Neon pour créer les tables.'
+      : ''
     res.status(500).json({
       error: 'Erreur lors de la synchronisation',
-      details: error.message,
+      details: error.message + hint,
       type: 'SYNC_PAYFIT_ERROR'
     })
   }
