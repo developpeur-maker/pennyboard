@@ -468,12 +468,28 @@ export default async function handler(req, res) {
           const mealVouchers = await fetchPayfitMealVouchers(companyId, dateFormatted)
           for (const row of mealVouchers) {
             await client.query(`
-              INSERT INTO payfit_meal_vouchers (month, collaborator_id, vouchers_count)
-              VALUES ($1, $2, $3)
+              INSERT INTO payfit_meal_vouchers (
+                month, collaborator_id, vouchers_count,
+                voucher_amount, day_off_eligibility,
+                voucher_company_part_amount, voucher_employee_part_amount
+              )
+              VALUES ($1, $2, $3, $4, $5, $6, $7)
               ON CONFLICT (month, collaborator_id) DO UPDATE SET
                 vouchers_count = EXCLUDED.vouchers_count,
+                voucher_amount = EXCLUDED.voucher_amount,
+                day_off_eligibility = EXCLUDED.day_off_eligibility,
+                voucher_company_part_amount = EXCLUDED.voucher_company_part_amount,
+                voucher_employee_part_amount = EXCLUDED.voucher_employee_part_amount,
                 updated_at = CURRENT_TIMESTAMP
-            `, [month, row.collaboratorId, row.vouchersCount ?? 0])
+            `, [
+              month,
+              row.collaboratorId,
+              row.vouchersCount ?? 0,
+              row.voucherAmount != null ? row.voucherAmount : null,
+              row.dayOffEligibility != null ? row.dayOffEligibility : null,
+              row.voucherCompanyPartAmount != null ? row.voucherCompanyPartAmount : null,
+              row.voucherEmployeePartAmount != null ? row.voucherEmployeePartAmount : null
+            ])
           }
           if (mealVouchers.length > 0) {
             console.log(`✅ ${month} meal vouchers: ${mealVouchers.length} collaborateurs`)

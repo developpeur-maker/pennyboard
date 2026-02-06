@@ -42,12 +42,16 @@ CREATE TRIGGER update_payfit_salaries_updated_at
   EXECUTE PROCEDURE update_payfit_salaries_updated_at();
 
 
--- ========== 2. Table payfit_meal_vouchers (jours travaillés) ==========
+-- ========== 2. Table payfit_meal_vouchers (meal vouchers API - tous les champs) ==========
 CREATE TABLE IF NOT EXISTS payfit_meal_vouchers (
   id SERIAL PRIMARY KEY,
   month VARCHAR(7) NOT NULL,
   collaborator_id VARCHAR(255) NOT NULL,
   vouchers_count INTEGER NOT NULL DEFAULT 0,
+  voucher_amount DECIMAL(10, 2),
+  day_off_eligibility BOOLEAN,
+  voucher_company_part_amount DECIMAL(10, 2),
+  voucher_employee_part_amount DECIMAL(10, 2),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(month, collaborator_id)
@@ -55,6 +59,23 @@ CREATE TABLE IF NOT EXISTS payfit_meal_vouchers (
 
 CREATE INDEX IF NOT EXISTS idx_payfit_meal_vouchers_month ON payfit_meal_vouchers(month);
 CREATE INDEX IF NOT EXISTS idx_payfit_meal_vouchers_collaborator ON payfit_meal_vouchers(collaborator_id);
+
+-- Colonnes supplémentaires si la table existait déjà avec l'ancien schéma
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'payfit_meal_vouchers' AND column_name = 'voucher_amount') THEN
+    ALTER TABLE payfit_meal_vouchers ADD COLUMN voucher_amount DECIMAL(10, 2);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'payfit_meal_vouchers' AND column_name = 'day_off_eligibility') THEN
+    ALTER TABLE payfit_meal_vouchers ADD COLUMN day_off_eligibility BOOLEAN;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'payfit_meal_vouchers' AND column_name = 'voucher_company_part_amount') THEN
+    ALTER TABLE payfit_meal_vouchers ADD COLUMN voucher_company_part_amount DECIMAL(10, 2);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'payfit_meal_vouchers' AND column_name = 'voucher_employee_part_amount') THEN
+    ALTER TABLE payfit_meal_vouchers ADD COLUMN voucher_employee_part_amount DECIMAL(10, 2);
+  END IF;
+END $$;
 
 CREATE OR REPLACE FUNCTION update_payfit_meal_vouchers_updated_at()
 RETURNS TRIGGER AS $$

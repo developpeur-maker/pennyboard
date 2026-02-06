@@ -1,12 +1,17 @@
--- Table pour stocker les jours travaillés (vouchersCount) par collaborateur et par mois
+-- Table pour stocker les données meal vouchers par collaborateur et par mois
 -- Source: API Payfit "List all Collaborators Meal Vouchers FR"
 -- Scope API requis: collaborators:meal-vouchers:read
+-- Champs alignés sur la réponse API (on utilise principalement vouchers_count = jours travaillés)
 
 CREATE TABLE IF NOT EXISTS payfit_meal_vouchers (
   id SERIAL PRIMARY KEY,
-  month VARCHAR(7) NOT NULL,           -- Format: 2025-01
+  month VARCHAR(7) NOT NULL,                    -- Format: 2025-01
   collaborator_id VARCHAR(255) NOT NULL,
-  vouchers_count INTEGER NOT NULL DEFAULT 0,
+  vouchers_count INTEGER NOT NULL DEFAULT 0,    -- Jours travaillés dans le mois (principal)
+  voucher_amount DECIMAL(10, 2),                -- Montant d'un titre-restaurant
+  day_off_eligibility BOOLEAN,                  -- Utilisable dimanche / jour férié
+  voucher_company_part_amount DECIMAL(10, 2),   -- Part employeur
+  voucher_employee_part_amount DECIMAL(10, 2), -- Part salarié
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(month, collaborator_id)
