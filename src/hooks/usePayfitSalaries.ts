@@ -15,7 +15,7 @@ interface PayfitAccountingOperation {
   }>
 }
 
-interface EmployeeSalaryData {
+export interface EmployeeSalaryData {
   employeeName: string
   contractId: string | null
   salaryPaid: number           // 421 + 425 (salaire réellement versé)
@@ -23,6 +23,8 @@ interface EmployeeSalaryData {
   totalContributions: number    // Tous les comptes de cotisations
   totalGrossCost: number        // Masse salariale (tous les comptes de charges)
   operations: PayfitAccountingOperation[]
+  /** Jours travaillés (vouchersCount Payfit) pour le mois ou l'année */
+  joursTravailles?: number | null
 }
 
 interface UsePayfitSalariesResult {

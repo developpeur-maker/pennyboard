@@ -27,6 +27,23 @@ const DIAGNOSTIQUEURS = [
   'Sébastien SOUYRIS', 'Fabrice STECIUK', 'Jérémie JOURNAUX', 'Ariles MERAD', 'Simon PACAUD'
 ].map(name => name.toUpperCase().trim())
 
+// 251 jours ouvrés − 9 formations − 25 congés payés = 217 jours max travaillés par an et par personne
+const JOURS_MAX_TRAVAILLES_ANNUEL = 217
+
+// Retourne les 12 mois se terminant au mois donné (format YYYY-MM)
+function get12MonthsEndingAt(endMonth: string): string[] {
+  const [y, m] = endMonth.split('-').map(Number)
+  const out: string[] = []
+  for (let i = 11; i >= 0; i--) {
+    let month = m - i
+    let year = y
+    while (month < 1) { month += 12; year -= 1 }
+    while (month > 12) { month -= 12; year += 1 }
+    out.push(`${year}-${String(month).padStart(2, '0')}`)
+  }
+  return out
+}
+
 // Fonction pour normaliser un nom
 const normalizeName = (name: string): string => {
   if (!name) return ''
@@ -70,6 +87,7 @@ interface BreakevenDataPoint {
   monthNumber: number
   diagnostiqueursCount: number
   charges: number | null
+  tauxJournalierMoyen: number | null
   breakeven: number | null
   ventes: number | null
   ventesParDiagnostiqueur: number | null
@@ -145,6 +163,7 @@ const Breakeven: React.FC = () => {
             monthNumber: 0,
             diagnostiqueursCount: result!.avgDiagnostiqueurs,
             charges: result!.totalCharges,
+            tauxJournalierMoyen: null,
             breakeven: result!.breakeven,
             ventes: result!.totalVentes,
             ventesParDiagnostiqueur: result!.ventesParDiagnostiqueur,
@@ -220,28 +239,47 @@ const Breakeven: React.FC = () => {
         })
 
         const results = await Promise.all(dataPromises)
+        const sortedResults = results.sort((a, b) => (a.month < b.month ? -1 : a.month > b.month ? 1 : 0))
 
-        // Transformer les données pour le graphique
+        // Jours travaillés des diagnostiqueurs par mois (pour taux journalier sur 12 mois glissants)
+        let daysByMonth: Record<string, number> = {}
+        if (allMonths.length > 0) {
+          try {
+            const daysRes = await fetch(`/api/payfit-diagnostician-days?months=${allMonths.join(',')}`)
+            if (daysRes.ok) {
+              const daysData = await daysRes.json()
+              if (daysData.success && daysData.byMonth) daysByMonth = daysData.byMonth
+            }
+          } catch (_) { /* ignore */ }
+        }
+        const monthToCharges: Record<string, number> = {}
+        sortedResults.forEach((r) => {
+          monthToCharges[r.month] = r.charges ?? 0
+        })
+
+        // Transformer les données pour le graphique + taux journalier (12 mois glissants)
         const monthAbbreviations = [
           'Jan.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin',
           'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'
         ]
 
-        chartDataPoints = results
-          .sort((a, b) => {
-            if (a.month < b.month) return -1
-            if (a.month > b.month) return 1
-            return 0
-          })
-          .map((point) => {
-            const [year, month] = point.month.split('-')
-            const monthIndex = parseInt(month) - 1
+        chartDataPoints = sortedResults.map((point) => {
+          const [year, month] = point.month.split('-')
+          const monthIndex = parseInt(month) - 1
+          const windowMonths = get12MonthsEndingAt(point.month)
+          const totalCharges12 = windowMonths.reduce((s, m) => s + (monthToCharges[m] ?? 0), 0)
+          const totalDays12 = windowMonths.reduce((s, m) => s + (daysByMonth[m] ?? 0), 0)
+          const nbMoyenDiagnostiqueurs = totalDays12 > 0 ? totalDays12 / JOURS_MAX_TRAVAILLES_ANNUEL : 0
+          const joursMoyensParEmploye = nbMoyenDiagnostiqueurs > 0 ? totalDays12 / nbMoyenDiagnostiqueurs : 0
+          const tauxJournalierMoyen =
+            joursMoyensParEmploye > 0 && totalCharges12 > 0 ? totalCharges12 / joursMoyensParEmploye : null
 
-            return {
-              ...point,
-              monthLabel: `${monthAbbreviations[monthIndex]} ${year}`
-            }
-          })
+          return {
+            ...point,
+            monthLabel: `${monthAbbreviations[monthIndex]} ${year}`,
+            tauxJournalierMoyen
+          }
+        })
       }
 
       setChartData(chartDataPoints)
@@ -604,6 +642,9 @@ const Breakeven: React.FC = () => {
                       Charges totales
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Taux journalier moyen
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Seuil de rentabilité
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -631,6 +672,9 @@ const Breakeven: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {formatCurrency(point.charges)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {point.tauxJournalierMoyen != null ? formatCurrency(point.tauxJournalierMoyen) : 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                           {formatCurrency(point.breakeven)}

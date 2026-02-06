@@ -6,7 +6,9 @@ const PAYFIT_CONFIG = {
   // Endpoints disponibles
   ENDPOINTS: {
     // Récupérer les collaborateurs d'une entreprise
-    COLLABORATORS: '/companies/{companyId}/collaborators'
+    COLLABORATORS: '/companies/{companyId}/collaborators',
+    // Titres-restaurant par mois (France) — scope requis: collaborators:meal-vouchers:read
+    MEAL_VOUCHERS: '/companies/{companyId}/collaborators/meal-vouchers'
   },
   
   // Paramètres par défaut pour les requêtes

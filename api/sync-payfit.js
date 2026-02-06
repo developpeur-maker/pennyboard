@@ -34,6 +34,90 @@ async function fetchPayfitAccounting(companyId, date) {
   }
 }
 
+// Récupère tous les meal vouchers du mois (vouchersCount = jours travaillés)
+// Pagination avec maxResults=50 et nextPageToken
+async function fetchPayfitMealVouchers(companyId, date) {
+  const basePath = PAYFIT_CONFIG.ENDPOINTS.MEAL_VOUCHERS.replace('{companyId}', companyId)
+  const allMealVouchers = []
+  let nextPageToken = null
+
+  do {
+    const params = new URLSearchParams({ date, maxResults: String(PAYFIT_CONFIG.LIMITS.MAX_RESULTS) })
+    if (nextPageToken) params.set('nextPageToken', nextPageToken)
+    const url = `${PAYFIT_CONFIG.BASE_URL}${basePath}?${params}`
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${process.env.PAYFIT_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`❌ Erreur API Payfit Meal Vouchers: ${response.status} - ${errorText}`)
+      throw new Error(`Erreur API Payfit Meal Vouchers: ${response.status} - ${errorText}`)
+    }
+
+    const data = await response.json()
+    const list = data.mealVouchers || []
+    allMealVouchers.push(...list)
+    nextPageToken = (data.meta && data.meta.nextPageToken) || null
+  } while (nextPageToken)
+
+  return allMealVouchers
+}
+
+// Normaliser un nom pour le matching (aligné avec le front)
+function normalizeName(name) {
+  if (!name || typeof name !== 'string') return ''
+  return name
+    .toUpperCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+}
+
+// Récupère la liste des collaborateurs Payfit (id + nom) pour faire le lien avec les meal vouchers
+async function fetchPayfitCollaborators(companyId) {
+  const basePath = PAYFIT_CONFIG.ENDPOINTS.COLLABORATORS.replace('{companyId}', companyId)
+  const all = []
+  let nextPageToken = null
+  do {
+    const params = new URLSearchParams({ maxResults: String(PAYFIT_CONFIG.LIMITS.MAX_RESULTS) })
+    if (nextPageToken) params.set('nextPageToken', nextPageToken)
+    const url = `${PAYFIT_CONFIG.BASE_URL}${basePath}?${params}`
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${process.env.PAYFIT_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+    if (!response.ok) {
+      const err = await response.text()
+      throw new Error(`Payfit Collaborators: ${response.status} - ${err}`)
+    }
+    const data = await response.json()
+    const list = data.data ?? data.collaborators ?? data.results ?? []
+    all.push(...(Array.isArray(list) ? list : []))
+    nextPageToken = data.meta?.nextPageToken ?? data.nextPageToken ?? null
+  } while (nextPageToken)
+  // Map normalized full name -> first matching collaborator id
+  const nameToId = new Map()
+  for (const c of all) {
+    const fullName = [c.firstName, c.lastName].filter(Boolean).join(' ').trim() || c.name || c.fullName || ''
+    if (!fullName || !c.id) continue
+    const key = normalizeName(fullName)
+    if (!nameToId.has(key)) nameToId.set(key, c.id)
+  }
+  return nameToId
+}
+
 // Fonction pour traiter les données et calculer les salaires/cotisations par collaborateur
 function processPayfitData(accountingData) {
   const employeesMap = new Map()
@@ -290,6 +374,15 @@ export default async function handler(req, res) {
 
     console.log(`🔄 Synchronisation de ${monthsToSync.length} mois pour Payfit`)
 
+    // Récupérer la liste des collaborateurs une fois (pour lier collaboratorId aux employés / meal vouchers)
+    let nameToCollaboratorId = new Map()
+    try {
+      nameToCollaboratorId = await fetchPayfitCollaborators(companyId)
+      console.log(`✅ Liste collaborateurs: ${nameToCollaboratorId.size} noms mappés`)
+    } catch (collabErr) {
+      console.warn('⚠️ Liste collaborateurs non récupérée (collaboratorId non renseigné):', collabErr.message)
+    }
+
     const results = []
     let successCount = 0
     let errorCount = 0
@@ -305,6 +398,10 @@ export default async function handler(req, res) {
         
         // Traiter les données
         const processedData = processPayfitData(accountingData)
+        // Enrichir chaque employé avec collaboratorId (pour taux journalier / jours diagnostiqueurs)
+        processedData.employees.forEach((emp) => {
+          emp.collaboratorId = nameToCollaboratorId.get(normalizeName(emp.employeeName)) || null
+        })
         
         // Déterminer si c'est le mois en cours
         const isCurrentMonth = year === currentYear && monthNumber === currentDate.getMonth() + 1
@@ -365,6 +462,25 @@ export default async function handler(req, res) {
           currentYear,
           previousYear
         ])
+
+        // Récupérer et stocker les jours travaillés (meal vouchers) pour ce mois
+        try {
+          const mealVouchers = await fetchPayfitMealVouchers(companyId, dateFormatted)
+          for (const row of mealVouchers) {
+            await client.query(`
+              INSERT INTO payfit_meal_vouchers (month, collaborator_id, vouchers_count)
+              VALUES ($1, $2, $3)
+              ON CONFLICT (month, collaborator_id) DO UPDATE SET
+                vouchers_count = EXCLUDED.vouchers_count,
+                updated_at = CURRENT_TIMESTAMP
+            `, [month, row.collaboratorId, row.vouchersCount ?? 0])
+          }
+          if (mealVouchers.length > 0) {
+            console.log(`✅ ${month} meal vouchers: ${mealVouchers.length} collaborateurs`)
+          }
+        } catch (mvErr) {
+          console.warn(`⚠️ Meal vouchers non récupérés pour ${month}:`, mvErr.message)
+        }
 
         successCount++
         results.push({ month, status: 'success' })
