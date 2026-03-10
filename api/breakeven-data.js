@@ -90,14 +90,12 @@ module.exports = async function handler(req, res) {
     let charges = 0
     let revenus_totaux = 0
     let insertions_6231 = 0
-    let masse_salariale = 0
 
     for (const row of rows.rows || []) {
       const kpis = row.kpis || {}
       ventes_706 += parseFloat(kpis.ventes_706) || 0
       charges += parseFloat(kpis.charges) || 0
       revenus_totaux += parseFloat(kpis.revenus_totaux) || 0
-      masse_salariale += parseFloat(kpis.charges_salariales) || 0
       const tb = row.trial_balance || {}
       const items = tb.items || []
       for (const item of items) {
@@ -112,11 +110,17 @@ module.exports = async function handler(req, res) {
 
     const autres_produits = revenus_totaux - ventes_706
 
-    // 2) ETP par service depuis Payfit (employés + opérations par mois)
+    // 2) Masse salariale N-1 = somme des 12 mois du module Salaires et cotisations (payfit_salaries.total_cost)
+    //    + ETP par service depuis Payfit (employés + opérations par mois)
     const payfitRows = await client.query(
-      `SELECT month, employees_data FROM payfit_salaries WHERE year = $1 ORDER BY month_number`,
+      `SELECT month, employees_data, total_cost FROM payfit_salaries WHERE year = $1 ORDER BY month_number`,
       [year]
     )
+
+    let masse_salariale = 0
+    for (const row of payfitRows.rows || []) {
+      masse_salariale += parseFloat(row.total_cost) || 0
+    }
 
     const joursByService = {}
     for (const row of payfitRows.rows || []) {

@@ -47,7 +47,7 @@ const Breakeven: React.FC = () => {
   const [tauxVariable2026, setTauxVariable2026] = useState(0.07)
   const [budgetInsertions2026, setBudgetInsertions2026] = useState(41_000)
   const [budgetLogiciels2026, setBudgetLogiciels2026] = useState(15_000)
-  const [masseSalariale2026, setMasseSalariale2026] = useState(2_820_720)
+  const [masseSalarialeBase, setMasseSalarialeBase] = useState<number | null>(null) // Masse sal. N-1 (module Salaires), base pour prorata ETP
   const [direction2026, setDirection2026] = useState(182_000)
   const [freelances2026, setFreelances2026] = useState(121_000)
   const [autresChargesFixes2026, setAutresChargesFixes2026] = useState(340_000)
@@ -77,7 +77,7 @@ const Breakeven: React.FC = () => {
             setEtpComm2025(comm)
             setEtpComm2026(comm)
           }
-          if (data.balance?.masse_salariale != null) setMasseSalariale2026(Math.round(data.balance.masse_salariale))
+          if (data.balance?.masse_salariale != null) setMasseSalarialeBase(Math.round(data.balance.masse_salariale))
         }
       })
       .catch((err) => {
@@ -102,6 +102,13 @@ const Breakeven: React.FC = () => {
   const tjmEntreprise2025 = joursOuverture > 0 ? ventes2025 / joursOuverture : 0
   const resultat2025 = ventes2025 * (1 - tauxVariable2025) + autresProduits2025 - insertions2025 - fixes2025
   const marge2025 = ventes2025 !== 0 ? resultat2025 / ventes2025 : 0
+
+  // Masse salariale 2026 = base N-1 au prorata des ETP (base pour etpDiag2025 + etpComm2025)
+  const baseEtp = etpDiag2025 + etpComm2025
+  const masseSalariale2026 =
+    masseSalarialeBase != null && baseEtp > 0
+      ? Math.round(masseSalarialeBase * (etpDiag2026 + etpComm2026) / baseEtp)
+      : (masseSalarialeBase ?? 0)
 
   const caTotal2026 = caCible2026 + (upsellAmiante ? etpDiag2026 * 12 * caAmianteParDiag : 0)
   const margeAmiante2026 = upsellAmiante ? etpDiag2026 * 12 * margeAmianteParDiag : 0
@@ -137,7 +144,7 @@ const Breakeven: React.FC = () => {
                 <div><label className={labelCls}>Jours/ETP diag</label><input type="number" value={joursDispoDiag2025} onChange={(e) => setJoursDispoDiag2025(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>ETP comm</label><input type="number" step="0.1" value={etpComm2025} onChange={(e) => setEtpComm2025(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Jours/ETP comm</label><input type="number" value={joursDispoComm2025} onChange={(e) => setJoursDispoComm2025(Number(e.target.value))} className={inputCls} /></div>
-                <div className="col-span-2"><label className={labelCls}>Taux variable v</label><input type="number" step="0.01" min="0" max="1" value={tauxVariable2025} onChange={(e) => setTauxVariable2025(Number(e.target.value))} className={inputCls} /></div>
+                <div className="col-span-2"><label className={labelCls}>Charges variable v</label><input type="number" step="0.01" min="0" max="1" value={tauxVariable2025} onChange={(e) => setTauxVariable2025(Number(e.target.value))} className={inputCls} /></div>
                 <div className="col-span-2"><label className={labelCls}>Autres produits (€/an)</label><input type="number" value={autresProduits2025} onChange={(e) => setAutresProduits2025(Number(e.target.value))} className={inputCls} /></div>
               </div>
             </section>
@@ -161,7 +168,7 @@ const Breakeven: React.FC = () => {
                     disabled
                     value={masseSalariale2026}
                     className={`${inputCls} bg-gray-100 text-gray-600 cursor-not-allowed`}
-                    title="Masse salariale globale année N-1 (lecture seule)"
+                    title="Base N-1 × (ETP diag + ETP comm) / (ETP diag N-1 + ETP comm N-1) — recalcul auto au prorata"
                   />
                 </div>
                 <div><label className={labelCls}>Direction (€/an)</label><input type="number" value={direction2026} onChange={(e) => setDirection2026(Number(e.target.value))} className={inputCls} /></div>
