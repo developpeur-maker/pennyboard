@@ -35,7 +35,9 @@ const Breakeven: React.FC = () => {
   const [etpDiag2025, setEtpDiag2025] = useState(35)
   const [etpComm2025, setEtpComm2025] = useState(13)
   const [etpBackOffice2025, setEtpBackOffice2025] = useState(12) // ETP back office N-1 (référence, hors diag + comm)
-  const [pctMsProduction, setPctMsProduction] = useState(0.8) // % masse salariale diag+comm (ex. 80 %)
+  const [pctMsDiag, setPctMsDiag] = useState(0.6) // % MS diagnostiqueurs (ex. 60 %)
+  const [pctMsComm, setPctMsComm] = useState(0.2) // % MS commerciaux (ex. 20 %)
+  const [pctMsBackOffice, setPctMsBackOffice] = useState(0.2) // % MS back office (ex. 20 %)
   const [joursDispoDiag2025, setJoursDispoDiag2025] = useState(JOURS_DIAG_DEFAULT)
   const [joursDispoComm2025, setJoursDispoComm2025] = useState(JOURS_COMM_DEFAULT)
   const [tauxVariable2025, setTauxVariable2025] = useState(0.06)
@@ -112,16 +114,16 @@ const Breakeven: React.FC = () => {
   const resultat2025 = ventes2025 * (1 - tauxVariable2025) + autresProduits2025 - insertions2025 - fixes2025
   const marge2025 = ventes2025 !== 0 ? resultat2025 / ventes2025 : 0
 
-  // Masse salariale 2026 = part production (diag+comm) au prorata + part back office au prorata (principe % MS)
-  const baseEtpProduction = etpDiag2025 + etpComm2025
-  const pctBackOffice = 1 - pctMsProduction
-  const partProduction = (masseSalarialeBase ?? 0) * pctMsProduction
-  const partBackOffice = (masseSalarialeBase ?? 0) * pctBackOffice
-  const masseProd2026 =
-    baseEtpProduction > 0 ? partProduction * (etpDiag2026 + etpComm2026) / baseEtpProduction : partProduction
-  const masseBackOffice2026 =
-    etpBackOffice2025 > 0 ? partBackOffice * etpBackOffice2026 / etpBackOffice2025 : partBackOffice
-  const masseSalariale2026 = Math.round(masseProd2026 + masseBackOffice2026)
+  // Masse salariale 2026 = prorata par poste : chaque poste a son % MS et son ETP de référence (poids / coût par ETP différent)
+  // Part 2026 = base × (% MS du poste) × (ETP 2026 / ETP N-1) pour diag, comm, back office
+  const base = masseSalarialeBase ?? 0
+  const partDiag2026 =
+    etpDiag2025 > 0 ? base * pctMsDiag * (etpDiag2026 / etpDiag2025) : 0
+  const partComm2026 =
+    etpComm2025 > 0 ? base * pctMsComm * (etpComm2026 / etpComm2025) : 0
+  const partBackOffice2026 =
+    etpBackOffice2025 > 0 ? base * pctMsBackOffice * (etpBackOffice2026 / etpBackOffice2025) : base * pctMsBackOffice
+  const masseSalariale2026 = Math.round(partDiag2026 + partComm2026 + partBackOffice2026)
 
   const caTotal2026 = caCible2026 + (upsellAmiante ? etpDiag2026 * 12 * caAmianteParDiag : 0)
   const margeAmiante2026 = upsellAmiante ? etpDiag2026 * 12 * margeAmianteParDiag : 0
@@ -158,7 +160,10 @@ const Breakeven: React.FC = () => {
                 <div><label className={labelCls}>ETP comm</label><input type="number" step="0.1" value={etpComm2025} onChange={(e) => setEtpComm2025(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Jours/ETP comm</label><input type="number" value={joursDispoComm2025} onChange={(e) => setJoursDispoComm2025(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>ETP back office</label><input type="number" step="0.1" value={etpBackOffice2025} onChange={(e) => setEtpBackOffice2025(Number(e.target.value))} className={inputCls} title="ETP hors diag + comm (référence N-1)" /></div>
-                <div><label className={labelCls}>% MS diag+comm</label><input type="number" step="0.01" min="0" max="1" value={pctMsProduction} onChange={(e) => setPctMsProduction(Number(e.target.value))} className={inputCls} title="Part de la masse sal. pour diag+comm (ex. 0,8 = 80 %)" /></div>
+                <div><label className={labelCls}>% MS diag</label><input type="number" step="0.01" min="0" max="1" value={pctMsDiag} onChange={(e) => setPctMsDiag(Number(e.target.value))} className={inputCls} title="Part masse sal. diagnostiqueurs (ex. 0,6 = 60 %)" /></div>
+                <div><label className={labelCls}>% MS comm</label><input type="number" step="0.01" min="0" max="1" value={pctMsComm} onChange={(e) => setPctMsComm(Number(e.target.value))} className={inputCls} title="Part masse sal. commerciaux (ex. 0,2 = 20 %)" /></div>
+                <div><label className={labelCls}>% MS back off.</label><input type="number" step="0.01" min="0" max="1" value={pctMsBackOffice} onChange={(e) => setPctMsBackOffice(Number(e.target.value))} className={inputCls} title="Part masse sal. back office (ex. 0,2 = 20 %)" /></div>
+                <div className="col-span-2 text-xs text-gray-500">Σ % MS = {formatPercent(pctMsDiag + pctMsComm + pctMsBackOffice)} (viser 100 %)</div>
                 <div className="col-span-2"><label className={labelCls}>Charges variable v</label><input type="number" step="0.01" min="0" max="1" value={tauxVariable2025} onChange={(e) => setTauxVariable2025(Number(e.target.value))} className={inputCls} /></div>
                 <div className="col-span-2"><label className={labelCls}>Autres produits (€/an)</label><input type="number" value={autresProduits2025} onChange={(e) => setAutresProduits2025(Number(e.target.value))} className={inputCls} /></div>
               </div>
