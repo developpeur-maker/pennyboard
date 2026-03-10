@@ -34,6 +34,8 @@ const Breakeven: React.FC = () => {
   const [joursOuverture, setJoursOuverture] = useState(JO_DEFAULT)
   const [etpDiag2025, setEtpDiag2025] = useState(35)
   const [etpComm2025, setEtpComm2025] = useState(13)
+  const [etpBackOffice2025, setEtpBackOffice2025] = useState(12) // ETP back office N-1 (référence, hors diag + comm)
+  const [pctMsProduction, setPctMsProduction] = useState(0.8) // % masse salariale diag+comm (ex. 80 %)
   const [joursDispoDiag2025, setJoursDispoDiag2025] = useState(JOURS_DIAG_DEFAULT)
   const [joursDispoComm2025, setJoursDispoComm2025] = useState(JOURS_COMM_DEFAULT)
   const [tauxVariable2025, setTauxVariable2025] = useState(0.06)
@@ -41,6 +43,7 @@ const Breakeven: React.FC = () => {
 
   const [etpDiag2026, setEtpDiag2026] = useState(35)
   const [etpComm2026, setEtpComm2026] = useState(13)
+  const [etpBackOffice2026, setEtpBackOffice2026] = useState(12)
   const [joursDispoDiag2026, setJoursDispoDiag2026] = useState(213)
   const [joursDispoComm2026, setJoursDispoComm2026] = useState(JOURS_COMM_DEFAULT)
   const [caCible2026, setCaCible2026] = useState(5_520_000)
@@ -71,11 +74,17 @@ const Breakeven: React.FC = () => {
         if (data.success) {
           setBalance2025(data.balance || null)
           setEtpByService2025(data.etpByService || {})
-          if (data.etpByService?.Diagnostiqueurs != null) setEtpDiag2025(Math.round(data.etpByService.Diagnostiqueurs * 10) / 10)
-          if (data.etpByService?.Commerciaux != null) {
-            const comm = Math.round(data.etpByService.Commerciaux * 10) / 10
+          const etp = data.etpByService || {}
+          if (etp.Diagnostiqueurs != null) setEtpDiag2025(Math.round(etp.Diagnostiqueurs * 10) / 10)
+          if (etp.Commerciaux != null) {
+            const comm = Math.round(etp.Commerciaux * 10) / 10
             setEtpComm2025(comm)
             setEtpComm2026(comm)
+          }
+          const backOffice = Object.entries(etp).reduce((sum, [k, v]) => (k === 'Diagnostiqueurs' || k === 'Commerciaux' ? sum : sum + (Number(v) || 0)), 0)
+          if (backOffice > 0) {
+            setEtpBackOffice2025(Math.round(backOffice * 10) / 10)
+            setEtpBackOffice2026(Math.round(backOffice * 10) / 10)
           }
           if (data.balance?.masse_salariale != null) setMasseSalarialeBase(Math.round(data.balance.masse_salariale))
         }
@@ -103,12 +112,16 @@ const Breakeven: React.FC = () => {
   const resultat2025 = ventes2025 * (1 - tauxVariable2025) + autresProduits2025 - insertions2025 - fixes2025
   const marge2025 = ventes2025 !== 0 ? resultat2025 / ventes2025 : 0
 
-  // Masse salariale 2026 = base N-1 au prorata des ETP (base pour etpDiag2025 + etpComm2025)
-  const baseEtp = etpDiag2025 + etpComm2025
-  const masseSalariale2026 =
-    masseSalarialeBase != null && baseEtp > 0
-      ? Math.round(masseSalarialeBase * (etpDiag2026 + etpComm2026) / baseEtp)
-      : (masseSalarialeBase ?? 0)
+  // Masse salariale 2026 = part production (diag+comm) au prorata + part back office au prorata (principe % MS)
+  const baseEtpProduction = etpDiag2025 + etpComm2025
+  const pctBackOffice = 1 - pctMsProduction
+  const partProduction = (masseSalarialeBase ?? 0) * pctMsProduction
+  const partBackOffice = (masseSalarialeBase ?? 0) * pctBackOffice
+  const masseProd2026 =
+    baseEtpProduction > 0 ? partProduction * (etpDiag2026 + etpComm2026) / baseEtpProduction : partProduction
+  const masseBackOffice2026 =
+    etpBackOffice2025 > 0 ? partBackOffice * etpBackOffice2026 / etpBackOffice2025 : partBackOffice
+  const masseSalariale2026 = Math.round(masseProd2026 + masseBackOffice2026)
 
   const caTotal2026 = caCible2026 + (upsellAmiante ? etpDiag2026 * 12 * caAmianteParDiag : 0)
   const margeAmiante2026 = upsellAmiante ? etpDiag2026 * 12 * margeAmianteParDiag : 0
@@ -144,6 +157,8 @@ const Breakeven: React.FC = () => {
                 <div><label className={labelCls}>Jours/ETP diag</label><input type="number" value={joursDispoDiag2025} onChange={(e) => setJoursDispoDiag2025(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>ETP comm</label><input type="number" step="0.1" value={etpComm2025} onChange={(e) => setEtpComm2025(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Jours/ETP comm</label><input type="number" value={joursDispoComm2025} onChange={(e) => setJoursDispoComm2025(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>ETP back office</label><input type="number" step="0.1" value={etpBackOffice2025} onChange={(e) => setEtpBackOffice2025(Number(e.target.value))} className={inputCls} title="ETP hors diag + comm (référence N-1)" /></div>
+                <div><label className={labelCls}>% MS diag+comm</label><input type="number" step="0.01" min="0" max="1" value={pctMsProduction} onChange={(e) => setPctMsProduction(Number(e.target.value))} className={inputCls} title="Part de la masse sal. pour diag+comm (ex. 0,8 = 80 %)" /></div>
                 <div className="col-span-2"><label className={labelCls}>Charges variable v</label><input type="number" step="0.01" min="0" max="1" value={tauxVariable2025} onChange={(e) => setTauxVariable2025(Number(e.target.value))} className={inputCls} /></div>
                 <div className="col-span-2"><label className={labelCls}>Autres produits (€/an)</label><input type="number" value={autresProduits2025} onChange={(e) => setAutresProduits2025(Number(e.target.value))} className={inputCls} /></div>
               </div>
@@ -154,6 +169,7 @@ const Breakeven: React.FC = () => {
               <div className="grid grid-cols-2 gap-2">
                 <div><label className={labelCls}>ETP diag</label><input type="number" step="0.1" value={etpDiag2026} onChange={(e) => setEtpDiag2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>ETP comm</label><input type="number" step="0.1" value={etpComm2026} onChange={(e) => setEtpComm2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>ETP back office</label><input type="number" step="0.1" value={etpBackOffice2026} onChange={(e) => setEtpBackOffice2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Jours/ETP diag</label><input type="number" value={joursDispoDiag2026} onChange={(e) => setJoursDispoDiag2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Jours/ETP comm</label><input type="number" value={joursDispoComm2026} onChange={(e) => setJoursDispoComm2026(Number(e.target.value))} className={inputCls} /></div>
                 <div className="col-span-2"><label className={labelCls}>CA cible CORE (€/an)</label><input type="number" value={caCible2026} onChange={(e) => setCaCible2026(Number(e.target.value))} className={inputCls} /></div>
@@ -168,7 +184,7 @@ const Breakeven: React.FC = () => {
                     disabled
                     value={masseSalariale2026}
                     className={`${inputCls} bg-gray-100 text-gray-600 cursor-not-allowed`}
-                    title="Base N-1 × (ETP diag + ETP comm) / (ETP diag N-1 + ETP comm N-1) — recalcul auto au prorata"
+                    title="Part production (diag+comm) au prorata + part back office au prorata ETP — recalcul auto"
                   />
                 </div>
                 <div><label className={labelCls}>Direction (€/an)</label><input type="number" value={direction2026} onChange={(e) => setDirection2026(Number(e.target.value))} className={inputCls} /></div>
