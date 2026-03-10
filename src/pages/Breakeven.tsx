@@ -9,6 +9,10 @@ const formatCurrency = (value: number | null | undefined) => {
   if (value == null || Number.isNaN(value)) return '—'
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value)
 }
+const formatCurrency2 = (value: number | null | undefined) => {
+  if (value == null || Number.isNaN(value)) return '—'
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+}
 
 const formatPercent = (value: number) => {
   return new Intl.NumberFormat('fr-FR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value)
@@ -28,7 +32,9 @@ const Breakeven: React.FC = () => {
   // Inputs modifiables (hypothèses globales + 2025 + 2026)
   const [joursOuverture, setJoursOuverture] = useState(JO_DEFAULT)
   const [etpDiag2025, setEtpDiag2025] = useState(35)
+  const [etpComm2025, setEtpComm2025] = useState(13)
   const [joursDispoDiag2025, setJoursDispoDiag2025] = useState(JOURS_DIAG_DEFAULT)
+  const [joursDispoComm2025, setJoursDispoComm2025] = useState(JOURS_COMM_DEFAULT)
   const [tauxVariable2025, setTauxVariable2025] = useState(0.06)
   const [autresProduits2025, setAutresProduits2025] = useState(0)
 
@@ -65,7 +71,11 @@ const Breakeven: React.FC = () => {
           setBalance2025(data.balance || null)
           setEtpByService2025(data.etpByService || {})
           if (data.etpByService?.Diagnostiqueurs != null) setEtpDiag2025(Math.round(data.etpByService.Diagnostiqueurs * 10) / 10)
-          if (data.etpByService?.Commerciaux != null) setEtpComm2026(Math.round(data.etpByService.Commerciaux * 10) / 10)
+          if (data.etpByService?.Commerciaux != null) {
+            const comm = Math.round(data.etpByService.Commerciaux * 10) / 10
+            setEtpComm2025(comm)
+            setEtpComm2026(comm)
+          }
         }
       })
       .catch((err) => {
@@ -85,6 +95,7 @@ const Breakeven: React.FC = () => {
   const fixes2025 = charges2025 - insertions2025 - variables2025
 
   const joursDiagVendables2025 = etpDiag2025 * joursDispoDiag2025
+  const joursComm2025 = etpComm2025 * joursDispoComm2025
   const tjmDiagRealise2025 = joursDiagVendables2025 > 0 ? ventes2025 / joursDiagVendables2025 : 0
   const tjmEntreprise2025 = joursOuverture > 0 ? ventes2025 / joursOuverture : 0
   const resultat2025 = ventes2025 * (1 - tauxVariable2025) + autresProduits2025 - insertions2025 - fixes2025
@@ -122,6 +133,8 @@ const Breakeven: React.FC = () => {
               <div className="grid grid-cols-2 gap-2">
                 <div><label className={labelCls}>ETP diag</label><input type="number" step="0.1" value={etpDiag2025} onChange={(e) => setEtpDiag2025(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Jours/ETP diag</label><input type="number" value={joursDispoDiag2025} onChange={(e) => setJoursDispoDiag2025(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>ETP comm</label><input type="number" step="0.1" value={etpComm2025} onChange={(e) => setEtpComm2025(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Jours/ETP comm</label><input type="number" value={joursDispoComm2025} onChange={(e) => setJoursDispoComm2025(Number(e.target.value))} className={inputCls} /></div>
                 <div className="col-span-2"><label className={labelCls}>Taux variable v</label><input type="number" step="0.01" min="0" max="1" value={tauxVariable2025} onChange={(e) => setTauxVariable2025(Number(e.target.value))} className={inputCls} /></div>
                 <div className="col-span-2"><label className={labelCls}>Autres produits (€/an)</label><input type="number" value={autresProduits2025} onChange={(e) => setAutresProduits2025(Number(e.target.value))} className={inputCls} /></div>
               </div>
@@ -206,12 +219,30 @@ const Breakeven: React.FC = () => {
               <section className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 overflow-x-auto">
                 <h2 className="text-sm font-semibold text-gray-900 mb-2">Seuils {yearRef}</h2>
                 <table className="min-w-full text-xs">
-                  <thead className="bg-gray-50"><tr><th className="px-2 py-1.5 text-left text-gray-500">Marge</th><th className="px-2 py-1.5 text-right text-gray-500">CA requis</th><th className="px-2 py-1.5 text-right text-gray-500">TJM diag</th></tr></thead>
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left text-gray-500">Marge</th>
+                      <th className="px-2 py-1.5 text-right text-gray-500">CA requis</th>
+                      <th className="px-2 py-1.5 text-right text-gray-500">TJM diag</th>
+                      <th className="px-2 py-1.5 text-right text-gray-500">CA/jour comm.</th>
+                      <th className="px-2 py-1.5 text-right text-gray-500">TJM entreprise</th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-gray-100">
                     {MARGES_CIBLES.map((m) => {
                       const caRequis = (fixes2025 + insertions2025 - autresProduits2025) / (1 - tauxVariable2025 - m)
                       const tjmDiagRequis = joursDiagVendables2025 > 0 ? caRequis / joursDiagVendables2025 : 0
-                      return (<tr key={m}><td className="px-2 py-1">{formatPercent(m)}</td><td className="px-2 py-1 text-right">{formatCurrency(caRequis)}</td><td className="px-2 py-1 text-right">{formatCurrency(tjmDiagRequis)}</td></tr>)
+                      const caParJourComm = joursComm2025 > 0 ? caRequis / joursComm2025 : null
+                      const tjmEntRequis = joursOuverture > 0 ? caRequis / joursOuverture : 0
+                      return (
+                        <tr key={m}>
+                          <td className="px-2 py-1">{formatPercent(m)}</td>
+                          <td className="px-2 py-1 text-right">{formatCurrency(caRequis)}</td>
+                          <td className="px-2 py-1 text-right">{formatCurrency(tjmDiagRequis)}</td>
+                          <td className="px-2 py-1 text-right">{caParJourComm != null ? formatCurrency2(caParJourComm) : '—'}</td>
+                          <td className="px-2 py-1 text-right">{formatCurrency2(tjmEntRequis)}</td>
+                        </tr>
+                      )
                     })}
                   </tbody>
                 </table>
@@ -219,13 +250,31 @@ const Breakeven: React.FC = () => {
               <section className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 overflow-x-auto">
                 <h2 className="text-sm font-semibold text-gray-900 mb-2">Seuils {currentYear}</h2>
                 <table className="min-w-full text-xs">
-                  <thead className="bg-gray-50"><tr><th className="px-2 py-1.5 text-left text-gray-500">Marge</th><th className="px-2 py-1.5 text-right text-gray-500">CA requis</th><th className="px-2 py-1.5 text-right text-gray-500">TJM diag</th></tr></thead>
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left text-gray-500">Marge</th>
+                      <th className="px-2 py-1.5 text-right text-gray-500">CA requis</th>
+                      <th className="px-2 py-1.5 text-right text-gray-500">TJM diag</th>
+                      <th className="px-2 py-1.5 text-right text-gray-500">CA/jour comm.</th>
+                      <th className="px-2 py-1.5 text-right text-gray-500">TJM entreprise</th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-gray-100">
                     {MARGES_CIBLES.map((m) => {
                       const chargesFixes = masseSalariale2026 + direction2026 + freelances2026 + autresChargesFixes2026 + budgetLogiciels2026 * 12 + budgetInsertions2026 * 12
                       const caRequis = (chargesFixes - autresProduits2026 - margeAmiante2026) / (1 - tauxVariable2026 - m)
                       const tjmDiagRequis = joursDiag2026 > 0 ? caRequis / joursDiag2026 : 0
-                      return (<tr key={m}><td className="px-2 py-1">{formatPercent(m)}</td><td className="px-2 py-1 text-right">{formatCurrency(caRequis)}</td><td className="px-2 py-1 text-right">{formatCurrency(tjmDiagRequis)}</td></tr>)
+                      const caParJourComm = joursComm2026 > 0 ? caRequis / joursComm2026 : null
+                      const tjmEntRequis = joursOuverture > 0 ? caRequis / joursOuverture : 0
+                      return (
+                        <tr key={m}>
+                          <td className="px-2 py-1">{formatPercent(m)}</td>
+                          <td className="px-2 py-1 text-right">{formatCurrency(caRequis)}</td>
+                          <td className="px-2 py-1 text-right">{formatCurrency(tjmDiagRequis)}</td>
+                          <td className="px-2 py-1 text-right">{caParJourComm != null ? formatCurrency2(caParJourComm) : '—'}</td>
+                          <td className="px-2 py-1 text-right">{formatCurrency2(tjmEntRequis)}</td>
+                        </tr>
+                      )
                     })}
                   </tbody>
                 </table>
