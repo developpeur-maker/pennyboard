@@ -1,0 +1,552 @@
+# Structure Excel: _FINAL_JOHN_TABLEAU_EXCEL.xlsx
+# Généré par extract-excel-formulas.js
+
+
+========== FEUILLE: Inputs ==========
+Plage: A1:G35
+
+--- Ligne 1 ---
+A1: [VALEUR] DIMO DIAGNOSTIC — Modèle TJM & Seuil de rentabilité (2025 + projection 2026)
+
+--- Ligne 3 ---
+A3: [VALEUR] Hypothèses globales
+
+--- Ligne 4 ---
+A4: [VALEUR] Jours d'ouverture société (JO)
+B4: [VALEUR] 251
+E4: [VALEUR] modifiable
+
+--- Ligne 5 ---
+A5: [VALEUR] Objectifs de marge (liste, en %)
+B5: [VALEUR] 0%;3%;6%;9%;12%;15%;20%
+
+--- Ligne 7 ---
+A7: [VALEUR] Feedback 2025
+
+--- Ligne 8 ---
+A8: [VALEUR] ETP diagnostiqueurs (terrain) 2025
+B8: [VALEUR] 35
+E8: [VALEUR] ignorer
+
+--- Ligne 9 ---
+A9: [VALEUR] Jours disponibles / ETP diag 2025
+B9: [VALEUR] 216
+E9: [VALEUR] ignorer
+
+--- Ligne 10 ---
+A10: [VALEUR] Taux variable v 2025 (hors insertions) — modifiable
+B10: [VALEUR] 0.0601294966184953
+E10: [VALEUR] ignorer
+
+--- Ligne 11 ---
+A11: [VALEUR] Autres produits retenus 2025 (€/an) — modifiable
+B11: [VALEUR] 0
+
+--- Ligne 15 ---
+A15: [VALEUR] Hypothèses 2026
+
+--- Ligne 16 ---
+A16: [VALEUR] ETP diagnostiqueurs
+B16: [VALEUR] 35
+E16: [VALEUR] récupérer le A/B (tech)
+
+--- Ligne 17 ---
+A17: [VALEUR] ETP commerciaux
+B17: [VALEUR] 13
+E17: [VALEUR] récupérer le D/E (commercial)
+
+--- Ligne 18 ---
+A18: [VALEUR] Jours dispo / ETP diagnostiqueur
+B18: [VALEUR] 213
+E18: [VALEUR] modifiable
+
+--- Ligne 19 ---
+A19: [VALEUR] Jours dispo / ETP commercial
+B19: [VALEUR] 216
+E19: [VALEUR] modifiable
+
+--- Ligne 20 ---
+A20: [VALEUR] CA cible 2026 (CORE, hors amiante) (€/an) — modifiable
+B20: [VALEUR] 5520000
+E20: [VALEUR] modifiable
+
+--- Ligne 21 ---
+A21: [VALEUR] Taux variable v 2026 (hors insertions) — modifiable
+B21: [VALEUR] 0.0701294966184953
+E21: [VALEUR] modifiable
+
+--- Ligne 22 ---
+A22: [VALEUR] Budget insertions 2026 (€/mois) — modifiable
+B22: [VALEUR] 41000
+E22: [VALEUR] modifiable
+
+--- Ligne 23 ---
+A23: [VALEUR] Budget logiciels 2026 (€/mois) — modifiable
+B23: [VALEUR] 15000
+E23: [VALEUR] modifiable
+
+--- Ligne 24 ---
+A24: [VALEUR] Masse salariale 2026 hors direction & freelance (€/mois)
+B24: [FORMULE] Payroll_Model!B28  →  (valeur: 235060)
+E24: [VALEUR] modifiable
+
+--- Ligne 25 ---
+A25: [VALEUR] Direction (gérants) 2026 (€/an) — à valider
+B25: [VALEUR] 182000
+E25: [VALEUR] modifiable
+
+--- Ligne 26 ---
+A26: [VALEUR] Freelances 2026 (DAF ext + dev) (€/an) — à renseigner
+B26: [VALEUR] 121000
+E26: [VALEUR] modifiable
+
+--- Ligne 27 ---
+A27: [VALEUR] Autres charges fixes 2026 (€/an) — modifiable
+B27: [VALEUR] 340000
+E27: [VALEUR] modifiable
+
+--- Ligne 28 ---
+A28: [VALEUR] Autres produits retenus 2026 (€/an) — modifiable
+B28: [VALEUR] 60000
+E28: [VALEUR] modifiable
+
+--- Ligne 30 ---
+A30: [VALEUR] Upsell prélèvement amiante (optionnel)
+
+--- Ligne 31 ---
+A31: [VALEUR] Activer upsell amiante (0=non, 1=oui)
+B31: [VALEUR] 0
+E31: [VALEUR] Oui / non
+
+--- Ligne 32 ---
+A32: [VALEUR] CA amiante / diag / mois (HT)
+B32: [VALEUR] 245
+E32: [VALEUR] variable
+G32: [VALEUR] 49 HT prix de vente
+
+--- Ligne 33 ---
+A33: [VALEUR] Marge amiante / diag / mois (HT)
+B33: [VALEUR] 120
+E33: [VALEUR] variable
+
+--- Ligne 35 ---
+A35: [VALEUR] Note : les cellules en bleu sont des inputs. Les seuils utilisent (1 − v) pour intégrer le taux variable dans le TJM.
+
+
+========== FEUILLE: Payroll_Model ==========
+Plage: A1:M28
+
+--- Ligne 1 ---
+A1: [VALEUR] DIMO — Modèle masse salariale (base 2025) pour projection 2026
+
+--- Ligne 2 ---
+M2: [VALEUR] PAYFIT
+
+--- Ligne 3 ---
+A3: [VALEUR] Inputs (modifiables)
+M3: [VALEUR] TECH
+
+--- Ligne 4 ---
+A4: [VALEUR] MS totale 2025 (hors direction & freelance) — base (€/an)
+B4: [VALEUR] 2898000
+M4: [VALEUR] Prendre indemnités et avantage en nature "9,9" / repas
+
+--- Ligne 5 ---
+A5: [VALEUR] Coefficient évolution salaires (2026 vs 2025) — ex: 1,03
+B5: [VALEUR] 1
+L5: [VALEUR] X (A)
+M5: [VALEUR] Montant total indemnités et avantage en nature mois X
+
+--- Ligne 6 ---
+L6: [VALEUR] 9,9 (B)
+M6: [VALEUR] Montant panier repas
+
+--- Ligne 7 ---
+A7: [VALEUR] Base 2025 (référence) — ETP & % MS
+L7: [VALEUR] (A/B)
+M7: [VALEUR] Total panier repas / montant panier repas = TOTAL JO DIAGNOSTIQUEUR / mois
+
+--- Ligne 8 ---
+A8: [VALEUR] Service
+B8: [VALEUR] ETP 2025
+C8: [VALEUR] % MS 2025
+D8: [VALEUR] Coût / ETP 2025 (€/an)
+M8: [VALEUR] OFFICE
+
+--- Ligne 9 ---
+A9: [VALEUR] Diagnostiqueurs
+B9: [VALEUR] 35
+C9: [VALEUR] 0.6
+D9: [FORMULE] $B$4*C9/B9  →  (valeur: 49680)
+L9: [VALEUR] X (D)
+M9: [VALEUR] Titres-restaurant - charges salariales
+
+--- Ligne 10 ---
+A10: [VALEUR] Commerciaux
+B10: [VALEUR] 15
+C10: [VALEUR] 0.2
+D10: [FORMULE] $B$4*C10/B10  →  (valeur: 38640)
+L10: [VALEUR] 3,2 (E)
+M10: [VALEUR] Participation salarial titre restaurant 40% (MONTANT d'UN TITRE
+
+--- Ligne 11 ---
+A11: [VALEUR] HR
+B11: [VALEUR] 2
+C11: [VALEUR] 0.035
+D11: [FORMULE] $B$4*C11/B11  →  (valeur: 50715.00000000001)
+L11: [VALEUR] (D/E)
+M11: [VALEUR] total titre restaurant / participation salarial = TOTAL JO commercial / mois
+
+--- Ligne 12 ---
+A12: [VALEUR] Comptable
+B12: [VALEUR] 1
+C12: [VALEUR] 0.015
+D12: [FORMULE] $B$4*C12/B12  →  (valeur: 43470)
+
+--- Ligne 13 ---
+A13: [VALEUR] Support technique
+B13: [VALEUR] 3
+C13: [VALEUR] 0.05
+D13: [FORMULE] $B$4*C13/B13  →  (valeur: 48300)
+
+--- Ligne 14 ---
+A14: [VALEUR] Support client & planification
+B14: [VALEUR] 4
+C14: [VALEUR] 0.05
+D14: [FORMULE] $B$4*C14/B14  →  (valeur: 36225)
+
+--- Ligne 15 ---
+A15: [VALEUR] Dev & Market
+B15: [VALEUR] 2
+C15: [VALEUR] 0.05
+D15: [FORMULE] $B$4*C15/B15  →  (valeur: 72450)
+
+--- Ligne 17 ---
+A17: [VALEUR] ETP 2026 par service (modifiables)
+
+--- Ligne 18 ---
+A18: [VALEUR] Service
+B18: [VALEUR] ETP 2026
+C18: [VALEUR] MS 2026 (€/an)
+
+--- Ligne 19 ---
+A19: [VALEUR] Diagnostiqueurs
+B19: [FORMULE] Inputs!B16  →  (valeur: 35)
+C19: [FORMULE] D9*B19*$B$5  →  (valeur: 1738800)
+
+--- Ligne 20 ---
+A20: [VALEUR] Commerciaux
+B20: [FORMULE] Inputs!B17  →  (valeur: 13)
+C20: [FORMULE] D10*B20*$B$5  →  (valeur: 502320)
+
+--- Ligne 21 ---
+A21: [VALEUR] HR
+B21: [VALEUR] 2
+C21: [FORMULE] D11*B21*$B$5  →  (valeur: 101430.00000000001)
+
+--- Ligne 22 ---
+A22: [VALEUR] Comptable
+B22: [VALEUR] 1
+C22: [FORMULE] D12*B22*$B$5  →  (valeur: 43470)
+
+--- Ligne 23 ---
+A23: [VALEUR] Support technique
+B23: [VALEUR] 3
+C23: [FORMULE] D13*B23*$B$5  →  (valeur: 144900)
+
+--- Ligne 24 ---
+A24: [VALEUR] Support client & planification
+B24: [VALEUR] 4
+C24: [FORMULE] D14*B24*$B$5  →  (valeur: 144900)
+
+--- Ligne 25 ---
+A25: [VALEUR] Dev & Market
+B25: [VALEUR] 2
+C25: [FORMULE] D15*B25*$B$5  →  (valeur: 144900)
+
+--- Ligne 27 ---
+A27: [VALEUR] MS 2026 totale calculée (€/an)
+B27: [FORMULE] SUM(C19:C25)  →  (valeur: 2820720)
+
+--- Ligne 28 ---
+A28: [VALEUR] MS 2026 totale calculée (€/mois)
+B28: [FORMULE] B27/12  →  (valeur: 235060)
+
+
+========== FEUILLE: 2025_Seuil ==========
+Plage: A1:F29
+
+--- Ligne 1 ---
+A1: [VALEUR] 2025 — Seuil de rentabilité & TJM (balance analytique 2025)
+
+--- Ligne 3 ---
+A3: [VALEUR] Données 2025 (extraites de la balance analytique)
+
+--- Ligne 4 ---
+A4: [VALEUR] Ventes (706) 2025
+B4: [VALEUR] 5096285.97
+
+--- Ligne 5 ---
+A5: [VALEUR] Autres produits 2025 (total - ventes)
+B5: [VALEUR] 264609.0499999989
+
+--- Ligne 6 ---
+A6: [VALEUR] Charges totales 2025
+B6: [VALEUR] 5157528.61
+
+--- Ligne 7 ---
+A7: [VALEUR] Insertions (6231) 2025
+B7: [VALEUR] 527002.59
+
+--- Ligne 8 ---
+A8: [VALEUR] Variables hors insertions (base modèle)
+B8: [VALEUR] 306437.11
+
+--- Ligne 9 ---
+A9: [VALEUR] Fixes (reste des charges, hors insertions & variables)
+B9: [VALEUR] 4324088.91
+
+--- Ligne 12 ---
+A12: [VALEUR] KPIs 2025 (avec inputs modifiables)
+
+--- Ligne 13 ---
+A13: [VALEUR] Jours diag vendables (ETP * jours/ETP)
+B13: [FORMULE] Inputs!B8*Inputs!B9  →  (valeur: 7560)
+
+--- Ligne 14 ---
+A14: [VALEUR] TJM diag réalisé (ventes / jours diag)
+B14: [FORMULE] B4/B13  →  (valeur: 674.1119007936508)
+
+--- Ligne 15 ---
+A15: [VALEUR] TJM entreprise (ventes / JO ouverture)
+B15: [FORMULE] B4/Inputs!B4  →  (valeur: 20303.928167330676)
+
+--- Ligne 16 ---
+A16: [VALEUR] Résultat (ventes + autres produits retenus - charges, selon v input)
+B16: [FORMULE] B4*(1-Inputs!B10)+Inputs!B11-B7-B9  →  (valeur: -61242.640000000596)
+
+--- Ligne 17 ---
+A17: [VALEUR] Marge (résultat / ventes)
+B17: [FORMULE] IFERROR(B16/B4,0)  →  (valeur: -0.012017112140196599)
+
+--- Ligne 20 ---
+A20: [VALEUR] Seuils 2025 — CA & TJM requis par niveau de marge
+
+--- Ligne 21 ---
+A21: [VALEUR] Marge cible
+B21: [VALEUR] CA ventes requis
+C21: [VALEUR] TJM diag requis
+D21: [VALEUR] TJM entreprise / jour ouvert
+
+--- Ligne 22 ---
+A22: [VALEUR] 0
+B22: [FORMULE] ($B$9+$B$7-Inputs!B11)/(1-Inputs!B10-A22)  →  (valeur: 5161446.691375614)
+C22: [FORMULE] B22/$B$13  →  (valeur: 682.7310438327532)
+D22: [FORMULE] B22/Inputs!B4  →  (valeur: 20563.532634962605)
+
+--- Ligne 23 ---
+A23: [VALEUR] 0.03
+B23: [FORMULE] ($B$9+$B$7-Inputs!B11)/(1-Inputs!B10-A23)  →  (valeur: 5331628.492154733)
+C23: [FORMULE] B23/$B$13  →  (valeur: 705.2418640416314)
+D23: [FORMULE] B23/Inputs!B4  →  (valeur: 21241.5477775089)
+
+--- Ligne 24 ---
+A24: [VALEUR] 0.06
+B24: [FORMULE] ($B$9+$B$7-Inputs!B11)/(1-Inputs!B10-A24)  →  (valeur: 5513415.305270901)
+C24: [FORMULE] B24/$B$13  →  (valeur: 729.2877387924473)
+D24: [FORMULE] B24/Inputs!B4  →  (valeur: 21965.798028967733)
+
+--- Ligne 25 ---
+A25: [VALEUR] 0.09
+B25: [FORMULE] ($B$9+$B$7-Inputs!B11)/(1-Inputs!B10-A25)  →  (valeur: 5708036.083966027)
+C25: [FORMULE] B25/$B$13  →  (valeur: 755.0312280378342)
+D25: [FORMULE] B25/Inputs!B4  →  (valeur: 22741.17961739453)
+
+--- Ligne 26 ---
+A26: [VALEUR] 0.12
+B26: [FORMULE] ($B$9+$B$7-Inputs!B11)/(1-Inputs!B10-A26)  →  (valeur: 5916899.656704292)
+C26: [FORMULE] B26/$B$13  →  (valeur: 782.6586847492449)
+D26: [FORMULE] B26/Inputs!B4  →  (valeur: 23573.30540519638)
+
+--- Ligne 27 ---
+A27: [VALEUR] 0.15
+B27: [FORMULE] ($B$9+$B$7-Inputs!B11)/(1-Inputs!B10-A27)  →  (valeur: 6141628.88629472)
+C27: [FORMULE] B27/$B$13  →  (valeur: 812.3847733194074)
+D27: [FORMULE] B27/Inputs!B4  →  (valeur: 24468.640981253862)
+
+--- Ligne 28 ---
+A28: [VALEUR] 0.2
+B28: [FORMULE] ($B$9+$B$7-Inputs!B11)/(1-Inputs!B10-A28)  →  (valeur: 6556676.442470091)
+C28: [FORMULE] B28/$B$13  →  (valeur: 867.2852437129751)
+D28: [FORMULE] B28/Inputs!B4  →  (valeur: 26122.21690227128)
+
+
+========== FEUILLE: 2026_Proj ==========
+Plage: A1:F41
+
+--- Ligne 1 ---
+A1: [VALEUR] 2026 — Projection TJM & seuils (inputs modulables)
+
+--- Ligne 3 ---
+A3: [VALEUR] Hypothèses 2026 (liées à l'onglet Inputs)
+
+--- Ligne 4 ---
+A4: [VALEUR] CA CORE (hors amiante) — input
+B4: [FORMULE] Inputs!B20  →  (valeur: 5520000)
+
+--- Ligne 5 ---
+A5: [VALEUR] Upsell amiante activé (0/1)
+B5: [FORMULE] Inputs!B31  →  (valeur: 0)
+
+--- Ligne 6 ---
+A6: [VALEUR] CA amiante annuel (si activé)
+B6: [FORMULE] Inputs!B8*12*Inputs!B32*Inputs!B31  →  (valeur: 0)
+
+--- Ligne 7 ---
+A7: [VALEUR] Marge amiante annuelle (si activé)
+B7: [FORMULE] Inputs!B8*12*Inputs!B33*Inputs!B31  →  (valeur: 0)
+
+--- Ligne 8 ---
+A8: [VALEUR] CA total (core + amiante)
+B8: [FORMULE] B4+B6  →  (valeur: 5520000)
+
+--- Ligne 9 ---
+A9: [VALEUR] Taux variable v (hors insertions)
+B9: [FORMULE] Inputs!B21  →  (valeur: 0.0701294966184953)
+
+--- Ligne 10 ---
+A10: [VALEUR] Insertions annuelles (budget)
+B10: [FORMULE] Inputs!B22*12  →  (valeur: 492000)
+
+--- Ligne 11 ---
+A11: [VALEUR] Logiciels annuels (budget)
+B11: [FORMULE] Inputs!B23*12  →  (valeur: 180000)
+
+--- Ligne 12 ---
+A12: [VALEUR] Paie hors direction & freelance (annuel)
+B12: [FORMULE] Inputs!B24*12  →  (valeur: 2820720)
+
+--- Ligne 13 ---
+A13: [VALEUR] Direction (annuel)
+B13: [FORMULE] Inputs!B25  →  (valeur: 182000)
+
+--- Ligne 14 ---
+A14: [VALEUR] Freelances (annuel)
+B14: [FORMULE] Inputs!B26  →  (valeur: 121000)
+
+--- Ligne 15 ---
+A15: [VALEUR] Autres charges fixes (annuel)
+B15: [FORMULE] Inputs!B27  →  (valeur: 340000)
+
+--- Ligne 16 ---
+A16: [VALEUR] Autres produits retenus 2026
+B16: [FORMULE] Inputs!B28  →  (valeur: 60000)
+
+--- Ligne 17 ---
+A17: [VALEUR] Charges fixes totales 
+B17: [FORMULE] B11+B12+B13+B14+B15+B10  →  (valeur: 4135720)
+
+--- Ligne 20 ---
+A20: [VALEUR] KPIs 2026 au CA cible (inclut v et amiante)
+
+--- Ligne 21 ---
+A21: [VALEUR] Jours diag vendables 2026
+B21: [FORMULE] Inputs!B8*Inputs!B18  →  (valeur: 7455)
+
+--- Ligne 22 ---
+A22: [VALEUR] Jours commerciaux 2026
+B22: [FORMULE] Inputs!B17*Inputs!B19  →  (valeur: 2808)
+
+--- Ligne 23 ---
+A23: [VALEUR] TJM diag (CA total / jours diag)
+B23: [FORMULE] B8/B21  →  (valeur: 740.4426559356136)
+
+--- Ligne 24 ---
+A24: [VALEUR] CA / jour commercial (CA total / jours commerciaux)
+B24: [FORMULE] B8/B22  →  (valeur: 1965.8119658119658)
+
+--- Ligne 25 ---
+A25: [VALEUR] TJM entreprise (CA total / JO ouverture)
+B25: [FORMULE] B8/Inputs!B4  →  (valeur: 21992.03187250996)
+
+--- Ligne 26 ---
+A26: [VALEUR] Résultat (profit) au CA cible
+B26: [FORMULE] B4*(1-B9)+B7+B16-B10-B17  →  (valeur: 565165.1786659062)
+
+--- Ligne 27 ---
+A27: [VALEUR] Marge (profit / CA total)
+B27: [FORMULE] IFERROR(B26/B8,0)  →  (valeur: 0.10238499613512793)
+
+--- Ligne 28 ---
+A28: [VALEUR] v total implicite (inclut insertions)
+B28: [FORMULE] IFERROR((B10+B4*B9)/B8,0)  →  (valeur: 0.159259931401104)
+
+--- Ligne 31 ---
+A31: [VALEUR] Seuils 2026 — CA & TJM requis par niveau de marge
+
+--- Ligne 32 ---
+A32: [VALEUR] Marge cible
+B32: [VALEUR] CA CORE requis
+C32: [VALEUR] CA total requis
+D32: [VALEUR] TJM diag requis
+E32: [VALEUR] CA / jour commercial requis
+F32: [VALEUR] TJM entreprise / jour ouvert
+
+--- Ligne 33 ---
+A33: [VALEUR] 0
+B33: [FORMULE] ($B$17+$B$10-$B$16-$B$7 + A33*$B$6)/(1-$B$9-A33)  →  (valeur: 4912210.876019118)
+C33: [FORMULE] B33+$B$6  →  (valeur: 4912210.876019118)
+D33: [FORMULE] C33/$B$21  →  (valeur: 658.9149397745297)
+E33: [FORMULE] C33/$B$22  →  (valeur: 1749.362847585156)
+F33: [FORMULE] C33/Inputs!B4  →  (valeur: 19570.56125904031)
+
+--- Ligne 34 ---
+A34: [VALEUR] 0.03
+B34: [FORMULE] ($B$17+$B$10-$B$16-$B$7 + A34*$B$6)/(1-$B$9-A34)  →  (valeur: 5075974.801747104)
+C34: [FORMULE] B34+$B$6  →  (valeur: 5075974.801747104)
+D34: [FORMULE] C34/$B$21  →  (valeur: 680.8819318238906)
+E34: [FORMULE] C34/$B$22  →  (valeur: 1807.6833339555214)
+F34: [FORMULE] C34/Inputs!B4  →  (valeur: 20223.007178275315)
+
+--- Ligne 35 ---
+A35: [VALEUR] 0.06
+B35: [FORMULE] ($B$17+$B$10-$B$16-$B$7 + A35*$B$6)/(1-$B$9-A35)  →  (valeur: 5251034.472652657)
+C35: [FORMULE] B35+$B$6  →  (valeur: 5251034.472652657)
+D35: [FORMULE] C35/$B$21  →  (valeur: 704.3641143732605)
+E35: [FORMULE] C35/$B$22  →  (valeur: 1870.026521599949)
+F35: [FORMULE] C35/Inputs!B4  →  (valeur: 20920.456066345247)
+
+--- Ligne 36 ---
+A36: [VALEUR] 0.09
+B36: [FORMULE] ($B$17+$B$10-$B$16-$B$7 + A36*$B$6)/(1-$B$9-A36)  →  (valeur: 5438600.333753058)
+C36: [FORMULE] B36+$B$6  →  (valeur: 5438600.333753058)
+D36: [FORMULE] C36/$B$21  →  (valeur: 729.5238542928314)
+E36: [FORMULE] C36/$B$22  →  (valeur: 1936.8234806812884)
+F36: [FORMULE] C36/Inputs!B4  →  (valeur: 21667.730413358797)
+
+--- Ligne 37 ---
+A37: [VALEUR] 0.12
+B37: [FORMULE] ($B$17+$B$10-$B$16-$B$7 + A37*$B$6)/(1-$B$9-A37)  →  (valeur: 5640062.183927064)
+C37: [FORMULE] B37+$B$6  →  (valeur: 5640062.183927064)
+D37: [FORMULE] C37/$B$21  →  (valeur: 756.5475766501762)
+E37: [FORMULE] C37/$B$22  →  (valeur: 2008.5691538201795)
+F37: [FORMULE] C37/Inputs!B4  →  (valeur: 22470.36726664169)
+
+--- Ligne 38 ---
+A38: [VALEUR] 0.15
+B38: [FORMULE] ($B$17+$B$10-$B$16-$B$7 + A38*$B$6)/(1-$B$9-A38)  →  (valeur: 5857023.672769321)
+C38: [FORMULE] B38+$B$6  →  (valeur: 5857023.672769321)
+D38: [FORMULE] C38/$B$21  →  (valeur: 785.6503920549056)
+E38: [FORMULE] C38/$B$22  →  (valeur: 2085.8346412996157)
+F38: [FORMULE] C38/Inputs!B4  →  (valeur: 23334.755668403668)
+
+--- Ligne 39 ---
+A39: [VALEUR] 0.2
+B39: [FORMULE] ($B$17+$B$10-$B$16-$B$7 + A39*$B$6)/(1-$B$9-A39)  →  (valeur: 6258260.85427163)
+C39: [FORMULE] B39+$B$6  →  (valeur: 6258260.85427163)
+D39: [FORMULE] C39/$B$21  →  (valeur: 839.4716102309362)
+E39: [FORMULE] C39/$B$22  →  (valeur: 2228.7253754528597)
+F39: [FORMULE] C39/Inputs!B4  →  (valeur: 24933.310176380994)
+
+--- Ligne 41 ---
+A41: [VALEUR] Astuce: ajuste v, insertions, logiciels, paie, autres fixes, et autres produits dans l'onglet Inputs.

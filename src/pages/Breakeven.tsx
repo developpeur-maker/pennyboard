@@ -1,656 +1,357 @@
 import React, { useState, useEffect } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { getAllDataFromDatabase } from '../services/databaseApi'
 
-// Listes hardcodées des diagnostiqueurs (pour les années avant 2026)
-const DIAGNOSTIQUEURS = [
-  'BENJAMIN BERNARD', 'CAROLE TOULORGE', 'JEAN-LAURENT GUELTON', 'Sarah Hecketsweiler', 'Alexandre Ellul-Renuy', 
-  'Servane GENTILHOMME', 'Jules Freulard', 'Jacques de Castelnau', 'Grégoire DE RICARD', 'Brice Gretha', 
-  'Sylvain COHERGNE', 'Fabien BETEILLE', 'Ilan TEICHNER', 'Christophe Metzger', 'Elie Dahan', 'Simon ZERBIB', 
-  'Yanis Lacroix', 'Jonathan Pichon', 'Robin Zeni', 'José GARCIA CUERDA', 'Cyril Cedileau', 'Julien Colinet', 
-  'Arnaud Larregain', 'Alexandre SIMONOT', 'Theo Termessant', 'Pierre-Louis VILLA', 'Antoine Fauvet', 
-  'Laurent Marty', 'Yannick MBOMA', 'Nassim Bidouche', 'Mickael ERB', 'KEVIN COURTEAUX', 'Nicolas MAGERE', 
-  'Yanisse Chekireb', 'Louca ANTONIOLLI', 'Pascal ALLAMELOU', 'Léo PAYAN', 'Mohamed Berete', 'Simon Benezra Simon', 
-  'Rémi NAUDET', 'Sylvain Gomes', 'Nicolas Fabre', 'Armend Letaj', 'Sabry Ouadada', 'Brice GRETHA', 
-  'Guillaume FATOUX', 'Amel TOUATI PINSOLLE', 'Christophe MARCHAL', 'Anis Fekih', 'Martial Macari', 
-  'Faycal Zerizer', 'Morgan Lorrain', 'Nathan Jurado', 'Corentin BANIA', 'Samir BONHUR', 'Eric Loviny', 
-  'Clément BUISINE', 'Steeve JEAN-PHILIPPE', 'Guillaume Lavigne', 'Stéphane MABIALA', 'Laurent Belchi', 
-  'Nicolas FABRE', 'Lucas MEZERETTE', 'Khalil BOUKLOUCHE', 'Grégory LAMBING', 'Radwane FARADJI', 
-  'John RAKOTONDRABAO', 'Olivier MIRAT', 'Fabien PRÉVOT', 'Onur SONMEZ', 'Jérôme BENHAMOU', 'Pierre SIONG', 
-  'Océane DIOT', 'Mickael FIGUIERES', 'Romain CINIER', 'Arnaud BOUSSIDAN', 'Lydiane CAND', 'Enzo SAYIN', 
-  'Mathieu TABOULOT', 'Léo MOLITES', 'Yves GRANVILLE', 'BAPTISTE BAUET', 'Mounir MAROUANE', 'François LASRET', 
-  'Osman KIZILKAYA', 'Abdeltife GARTI', 'Maxime LE BRIS', 'Christopher PITA', 'David EPINEAUX', 
-  'Olivier Corsin', 'Jaouad NELSON', 'Lionel THOMASSET', 'Florian VIVES', 'Maxime LEROY', 'Maxime PELLIER', 
-  'Idriss TCHINI', 'Danny FIDANZA', 'Lucille GRIFFAY', 'Sofiane ZEKRI', 'Sofiane KHELFAOUI', 'Romain GUEHO', 
-  'Jérôme SAUVAGE', 'Yohann LAILLIER-JARDÉ', 'Pascal CABELEIRA', 'Aziz AOURAGH', 'Téo DOUBLIER', 
-  'Sébastien SOUYRIS', 'Fabrice STECIUK', 'Jérémie JOURNAUX', 'Ariles MERAD', 'Simon PACAUD'
-].map(name => name.toUpperCase().trim())
+const JO_DEFAULT = 251
+const JOURS_DIAG_DEFAULT = 216
+const JOURS_COMM_DEFAULT = 216
+const MARGES_CIBLES = [0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.2]
 
-// Fonction pour normaliser un nom
-const normalizeName = (name: string): string => {
-  if (!name) return ''
-  return name
-    .toUpperCase()
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
+const formatCurrency = (value: number | null | undefined) => {
+  if (value == null || Number.isNaN(value)) return '—'
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value)
 }
 
-// Fonction pour déterminer si un employé est diagnostiqueur
-// Utilise les tags analyticCodes si disponibles (années >= 2026), sinon les listes hardcodées
-const isDiagnostiqueur = (employeeName: string, operations: any[], year: number): boolean => {
-  const normalizedName = normalizeName(employeeName)
-  
-  // Pour les années >= 2026, utiliser les tags analyticCodes
-  if (year >= 2026 && operations && Array.isArray(operations)) {
-    for (const op of operations) {
-      if (op.analyticCodes && Array.isArray(op.analyticCodes)) {
-        for (const code of op.analyticCodes) {
-          if (code.type === 'Équipe' || code.type === 'equipe' || code.type === 'Equipe' || code.type === 'Team') {
-            const value = (code.value || '').toUpperCase().trim()
-            if (value === 'DIAGNOSTIQUEUR' || value === 'DIAGNOSTIQUEURS') {
-              return true
-            }
-          }
-        }
-      }
-    }
-  }
-  
-  // Pour les années < 2026 ou si pas de tags, utiliser les listes hardcodées
-  return DIAGNOSTIQUEURS.some(name => normalizeName(name) === normalizedName)
-}
-
-interface BreakevenDataPoint {
-  month: string
-  monthLabel: string
-  year: number
-  monthNumber: number
-  diagnostiqueursCount: number
-  charges: number | null
-  breakeven: number | null
-  ventes: number | null
-  ventesParDiagnostiqueur: number | null
-  hasData: boolean
+const formatPercent = (value: number) => {
+  return new Intl.NumberFormat('fr-FR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value)
 }
 
 const Breakeven: React.FC = () => {
-  const [viewMode, setViewMode] = useState<'month' | 'year'>('month')
-  const [monthOffset, setMonthOffset] = useState(0) // Offset pour la pagination (0 = 6 derniers mois)
-  const [chartData, setChartData] = useState<BreakevenDataPoint[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [balance2025, setBalance2025] = useState<{
+    ventes_706: number
+    charges: number
+    autres_produits: number
+    insertions_6231: number
+  } | null>(null)
+  const [etpByService2025, setEtpByService2025] = useState<Record<string, number>>({})
 
-  // Fonction pour générer tous les mois disponibles depuis 2024
-  // (les données Payfit sont incomplètes/inexistantes pour 2023 et antérieures)
-  const generateAllMonths = () => {
-    const months: string[] = []
-    const currentDate = new Date()
-    const currentYear = currentDate.getFullYear()
-    const currentMonth = currentDate.getMonth() + 1
-    const startYear = 2024 // Exclure 2023 et antérieures (données Payfit incomplètes)
+  // Inputs modifiables (hypothèses globales + 2025 + 2026)
+  const [joursOuverture, setJoursOuverture] = useState(JO_DEFAULT)
+  const [etpDiag2025, setEtpDiag2025] = useState(35)
+  const [joursDispoDiag2025, setJoursDispoDiag2025] = useState(JOURS_DIAG_DEFAULT)
+  const [tauxVariable2025, setTauxVariable2025] = useState(0.06)
+  const [autresProduits2025, setAutresProduits2025] = useState(0)
 
-    for (let year = startYear; year <= currentYear; year++) {
-      const maxMonth = year === currentYear ? currentMonth : 12
-      for (let month = 1; month <= maxMonth; month++) {
-        const monthFormatted = month.toString().padStart(2, '0')
-        months.push(`${year}-${monthFormatted}`)
-      }
-    }
+  const [etpDiag2026, setEtpDiag2026] = useState(35)
+  const [etpComm2026, setEtpComm2026] = useState(13)
+  const [joursDispoDiag2026, setJoursDispoDiag2026] = useState(213)
+  const [joursDispoComm2026, setJoursDispoComm2026] = useState(JOURS_COMM_DEFAULT)
+  const [caCible2026, setCaCible2026] = useState(5_520_000)
+  const [tauxVariable2026, setTauxVariable2026] = useState(0.07)
+  const [budgetInsertions2026, setBudgetInsertions2026] = useState(41_000)
+  const [budgetLogiciels2026, setBudgetLogiciels2026] = useState(15_000)
+  const [masseSalariale2026, setMasseSalariale2026] = useState(2_820_720)
+  const [direction2026, setDirection2026] = useState(182_000)
+  const [freelances2026, setFreelances2026] = useState(121_000)
+  const [autresChargesFixes2026, setAutresChargesFixes2026] = useState(340_000)
+  const [autresProduits2026, setAutresProduits2026] = useState(60_000)
 
-    return months
-  }
+  const [upsellAmiante, setUpsellAmiante] = useState(0)
+  const [caAmianteParDiag, setCaAmianteParDiag] = useState(245)
+  const [margeAmianteParDiag, setMargeAmianteParDiag] = useState(120)
 
-  // Fonction pour formater les montants en devise
-  const formatCurrency = (value: number | null) => {
-    if (value === null || value === undefined) return 'N/A'
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value)
-  }
+  const currentYear = new Date().getFullYear()
+  const yearRef = currentYear - 1
 
-  // Fonction pour récupérer les données historiques
-  const fetchBreakevenData = async () => {
+  useEffect(() => {
+    let cancelled = false
     setLoading(true)
     setError(null)
-
-    try {
-      let chartDataPoints: BreakevenDataPoint[] = []
-
-      if (viewMode === 'year') {
-        // Mode année : récupérer toutes les années disponibles (2024 → année actuelle)
-        // (les données Payfit sont incomplètes/inexistantes pour 2023 et antérieures)
-        const currentDate = new Date()
-        const currentYear = currentDate.getFullYear()
-        const startYear = 2024 // Exclure 2023 et antérieures (données Payfit incomplètes)
-        
-        // Récupérer les données de toutes les années
-        const yearPromises = []
-        for (let year = startYear; year <= currentYear; year++) {
-          yearPromises.push(fetchYearData(year.toString()))
-        }
-        
-        const yearResults = await Promise.all(yearPromises)
-        chartDataPoints = yearResults
-          .filter(r => r !== null)
-          .map((result) => ({
-            month: result!.year.toString(),
-            monthLabel: result!.year.toString(),
-            year: result!.year,
-            monthNumber: 0,
-            diagnostiqueursCount: result!.avgDiagnostiqueurs,
-            charges: result!.totalCharges,
-            breakeven: result!.breakeven,
-            ventes: result!.totalVentes,
-            ventesParDiagnostiqueur: result!.ventesParDiagnostiqueur,
-            hasData: result!.hasData
-          }))
-      } else {
-        // Mode mois : récupérer tous les mois disponibles
-        const allMonths = generateAllMonths()
-        
-        // Récupérer les données de tous les mois en parallèle
-        const dataPromises = allMonths.map(async (month) => {
-          const [year, monthNum] = month.split('-')
-          const yearNum = parseInt(year, 10)
-
-          // Récupérer les données Payfit depuis la BDD
-          const payfitResponse = await fetch(`/api/payfit-salaries?month=${month}`)
-          let employees: any[] = []
-          
-          if (payfitResponse.ok) {
-            const payfitResponseData = await payfitResponse.json()
-            if (payfitResponseData.success && payfitResponseData.employees) {
-              employees = payfitResponseData.employees
-            }
-          }
-
-          // Récupérer les charges et ventes depuis la base de données
-          const kpiResponse = await getAllDataFromDatabase(month)
-          let charges: number | null = null
-          let ventes: number | null = null
-          
-          if (kpiResponse.success && kpiResponse.data?.kpis) {
-            charges = kpiResponse.data.kpis.charges || null
-            ventes = kpiResponse.data.kpis.ventes_706 || null
-          }
-
-          // Compter le nombre de diagnostiqueurs uniques (salaire > 1000€)
-          const diagnostiqueursSet = new Set()
-          employees.forEach((emp) => {
-            if (isDiagnostiqueur(emp.employeeName, emp.operations || [], yearNum)) {
-              // Ne compter que les diagnostiqueurs avec un salaire supérieur à 1000€ pour ce mois
-              const salaryPaid = emp.salaryPaid || 0
-              if (salaryPaid > 1000) {
-                const key = `${emp.employeeName}_${emp.contractId || 'unknown'}`
-                diagnostiqueursSet.add(key)
-              }
-            }
-          })
-          const diagnostiqueursCount = diagnostiqueursSet.size
-
-          // Calculer le seuil de rentabilité et les ventes par diagnostiqueur
-          let breakeven: number | null = null
-          let ventesParDiagnostiqueur: number | null = null
-          if (diagnostiqueursCount > 0) {
-            if (charges !== null) {
-              breakeven = charges / diagnostiqueursCount
-            }
-            if (ventes !== null) {
-              ventesParDiagnostiqueur = ventes / diagnostiqueursCount
-            }
-          }
-
-          return {
-            month,
-            year: yearNum,
-            monthNumber: parseInt(monthNum, 10),
-            diagnostiqueursCount,
-            charges,
-            breakeven,
-            ventes,
-            ventesParDiagnostiqueur,
-            hasData: employees.length > 0 || charges !== null || ventes !== null
-          }
-        })
-
-        const results = await Promise.all(dataPromises)
-
-        // Transformer les données pour le graphique
-        const monthAbbreviations = [
-          'Jan.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin',
-          'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'
-        ]
-
-        chartDataPoints = results
-          .sort((a, b) => (a.month < b.month ? -1 : a.month > b.month ? 1 : 0))
-          .map((point) => {
-            const [year, month] = point.month.split('-')
-            const monthIndex = parseInt(month) - 1
-            return {
-              ...point,
-              monthLabel: `${monthAbbreviations[monthIndex]} ${year}`
-            }
-          })
-      }
-
-      setChartData(chartDataPoints)
-    } catch (err) {
-      console.error('❌ Erreur lors de la récupération des données:', err)
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
-      setChartData([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Fonction pour récupérer les données cumulées d'une année
-  const fetchYearData = async (year: string): Promise<{
-    year: number
-    totalCharges: number
-    totalVentes: number
-    avgDiagnostiqueurs: number
-    breakeven: number | null
-    ventesParDiagnostiqueur: number | null
-    hasData: boolean
-  } | null> => {
-    try {
-      const monthsToFetch: string[] = []
-      for (let month = 1; month <= 12; month++) {
-        const monthFormatted = month.toString().padStart(2, '0')
-        monthsToFetch.push(`${year}-${monthFormatted}`)
-      }
-
-      // Récupérer les données de tous les mois de l'année
-      const dataPromises = monthsToFetch.map(async (month) => {
-        const [yearStr] = month.split('-')
-        const yearNum = parseInt(yearStr, 10)
-
-        // Récupérer les données Payfit
-        const payfitResponse = await fetch(`/api/payfit-salaries?month=${month}`)
-        let employees: any[] = []
-        
-        if (payfitResponse.ok) {
-          const payfitResponseData = await payfitResponse.json()
-          if (payfitResponseData.success && payfitResponseData.employees) {
-            employees = payfitResponseData.employees
-          }
-        }
-
-        // Récupérer les charges et ventes
-        const kpiResponse = await getAllDataFromDatabase(month)
-        let charges: number | null = null
-        let ventes: number | null = null
-        
-        if (kpiResponse.success && kpiResponse.data?.kpis) {
-          charges = kpiResponse.data.kpis.charges || null
-          ventes = kpiResponse.data.kpis.ventes_706 || null
-        }
-
-        // Compter les diagnostiqueurs (salaire > 1000€)
-        const diagnostiqueursSet = new Set()
-        employees.forEach((emp) => {
-          if (isDiagnostiqueur(emp.employeeName, emp.operations || [], yearNum)) {
-            // Ne compter que les diagnostiqueurs avec un salaire supérieur à 1000€ pour ce mois
-            const salaryPaid = emp.salaryPaid || 0
-            if (salaryPaid > 1000) {
-              const key = `${emp.employeeName}_${emp.contractId || 'unknown'}`
-              diagnostiqueursSet.add(key)
-            }
-          }
-        })
-
-        return {
-          month,
-          charges,
-          ventes,
-          diagnostiqueursCount: diagnostiqueursSet.size
+    fetch(`/api/breakeven-data?year=${yearRef}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return
+        if (data.success) {
+          setBalance2025(data.balance || null)
+          setEtpByService2025(data.etpByService || {})
+          if (data.etpByService?.Diagnostiqueurs != null) setEtpDiag2025(Math.round(data.etpByService.Diagnostiqueurs * 10) / 10)
+          if (data.etpByService?.Commerciaux != null) setEtpComm2026(Math.round(data.etpByService.Commerciaux * 10) / 10)
         }
       })
-
-      const results = await Promise.all(dataPromises)
-      const validResults = results.filter(r => r.charges !== null || r.ventes !== null || r.diagnostiqueursCount > 0)
-
-      if (validResults.length === 0) {
-        return null
-      }
-
-      // Calculer les totaux cumulés pour l'année
-      let totalCharges = 0
-      let totalVentes = 0
-      let totalDiagnostiqueurs = 0
-      let monthsCount = 0
-
-      validResults.forEach((data: any) => {
-        if (data.charges !== null) totalCharges += data.charges
-        if (data.ventes !== null) totalVentes += data.ventes
-        totalDiagnostiqueurs += data.diagnostiqueursCount
-        monthsCount += 1
+      .catch((err) => {
+        if (!cancelled) setError(err.message || 'Erreur chargement')
       })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [yearRef])
 
-      const avgDiagnostiqueurs = monthsCount > 0 ? totalDiagnostiqueurs / monthsCount : 0
-      const breakeven = avgDiagnostiqueurs > 0 ? totalCharges / avgDiagnostiqueurs : null
-      const ventesParDiagnostiqueur = avgDiagnostiqueurs > 0 ? totalVentes / avgDiagnostiqueurs : null
+  const ventes2025 = balance2025?.ventes_706 ?? 0
+  const charges2025 = balance2025?.charges ?? 0
+  const insertions2025 = balance2025?.insertions_6231 ?? 0
+  const autresProd2025 = balance2025?.autres_produits ?? 0
+  const variables2025 = ventes2025 * tauxVariable2025
+  const fixes2025 = charges2025 - insertions2025 - variables2025
 
-      return {
-        year: parseInt(year, 10),
-        totalCharges,
-        totalVentes,
-        avgDiagnostiqueurs: Math.round(avgDiagnostiqueurs * 10) / 10,
-        breakeven,
-        ventesParDiagnostiqueur,
-        hasData: validResults.length > 0
-      }
-    } catch (err) {
-      console.error(`❌ Erreur lors de la récupération des données pour l'année ${year}:`, err)
-      return null
-    }
-  }
+  const joursDiagVendables2025 = etpDiag2025 * joursDispoDiag2025
+  const tjmDiagRealise2025 = joursDiagVendables2025 > 0 ? ventes2025 / joursDiagVendables2025 : 0
+  const tjmEntreprise2025 = joursOuverture > 0 ? ventes2025 / joursOuverture : 0
+  const resultat2025 = ventes2025 * (1 - tauxVariable2025) + autresProduits2025 - insertions2025 - fixes2025
+  const marge2025 = ventes2025 !== 0 ? resultat2025 / ventes2025 : 0
 
-  // Charger les données au montage et quand le mode de vue change
-  useEffect(() => {
-    fetchBreakevenData()
-  }, [viewMode])
-
-  // Réinitialiser l'offset quand on change de mode
-  useEffect(() => {
-    setMonthOffset(0)
-  }, [viewMode])
-
-  // Fonction pour obtenir les données à afficher (pagination pour le mode mois)
-  const getDisplayedData = () => {
-    if (viewMode === 'year') {
-      return chartData
-    } else {
-      // Mode mois : afficher 6 mois à la fois selon l'offset
-      const startIndex = Math.max(0, chartData.length - 6 - monthOffset)
-      const endIndex = startIndex + 6
-      return chartData.slice(startIndex, endIndex)
-    }
-  }
-
-  // Fonction pour vérifier si on peut naviguer vers la gauche (mois plus récents)
-  const canNavigateLeft = () => {
-    if (viewMode === 'year') return false
-    return monthOffset < chartData.length - 6
-  }
-
-  // Fonction pour vérifier si on peut naviguer vers la droite (mois plus anciens)
-  const canNavigateRight = () => {
-    if (viewMode === 'year') return false
-    return monthOffset > 0
-  }
-
-  // Fonction pour formater la période affichée
-  const formatPeriod = () => {
-    if (viewMode === 'year') {
-      return 'Toutes les années'
-    } else {
-      const displayed = getDisplayedData()
-      if (displayed.length === 0) return 'Aucune donnée'
-      const firstMonth = displayed[0].monthLabel
-      const lastMonth = displayed[displayed.length - 1].monthLabel
-      return `${firstMonth} - ${lastMonth}`
-    }
-  }
-
-  // Fonction pour obtenir les données du graphique
-  const getChartData = () => {
-    return getDisplayedData().filter(point => point.hasData)
-  }
+  const caTotal2026 = caCible2026 + (upsellAmiante ? etpDiag2026 * 12 * caAmianteParDiag : 0)
+  const margeAmiante2026 = upsellAmiante ? etpDiag2026 * 12 * margeAmianteParDiag : 0
+  const joursDiag2026 = etpDiag2026 * joursDispoDiag2026
+  const joursComm2026 = etpComm2026 * joursDispoComm2026
+  const tjmDiag2026 = joursDiag2026 > 0 ? caTotal2026 / joursDiag2026 : 0
+  const resultat2026Simpl = caTotal2026 * (1 - tauxVariable2026) + margeAmiante2026 + autresProduits2026 - budgetInsertions2026 * 12 - (masseSalariale2026 + direction2026 + freelances2026 + autresChargesFixes2026 + budgetLogiciels2026 * 12)
+  const marge2026 = caTotal2026 !== 0 ? resultat2026Simpl / caTotal2026 : 0
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Filtres */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Seuil de rentabilité & TJM</h1>
+        <p className="text-gray-600 mb-8">Modèle TJM et projection annuelle (données BDD + hypothèses modifiables).</p>
+
+        {loading && <p className="text-gray-500">Chargement des données {yearRef}…</p>}
+        {error && <p className="text-red-600 mb-4">Erreur : {error}</p>}
+
+        {/* ——— Inputs ——— */}
+        <section className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Hypothèses globales</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h1 className="text-4xl font-bold font-poppins text-gray-900">
-                Seuil de rentabilité
-              </h1>
-              <p className="text-gray-600 font-inter mt-2 text-lg">
-                Calcul du seuil de rentabilité par technicien et comparaison avec les ventes
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Toggle entre vue année et vue mensuelle */}
-              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => {
-                    setViewMode('year')
-                    setMonthOffset(0)
-                  }}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    viewMode === 'year'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Année
-                </button>
-                <button
-                  onClick={() => {
-                    setViewMode('month')
-                    setMonthOffset(0)
-                  }}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    viewMode === 'month'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Mois
-                </button>
-              </div>
+              <label className="block text-sm font-medium text-gray-700">Jours d'ouverture société (JO)</label>
+              <input
+                type="number"
+                value={joursOuverture}
+                onChange={(e) => setJoursOuverture(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              />
             </div>
           </div>
-        </div>
 
-        {/* Graphique */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Évolution du seuil de rentabilité - {formatPeriod()}
-          </h2>
-          {/* Navigation avec flèches (uniquement en mode mois) */}
-          {viewMode === 'month' && chartData.length > 6 && (
-            <div className="flex justify-between items-center mb-4">
-              <button
-                onClick={() => {
-                  if (canNavigateLeft()) {
-                    setMonthOffset(prev => Math.min(prev + 1, chartData.length - 6))
-                  }
-                }}
-                disabled={!canNavigateLeft()}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  canNavigateLeft()
-                    ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Précédent
-              </button>
-              <span className="text-sm text-gray-600 font-medium">
-                {formatPeriod()}
-              </span>
-              <button
-                onClick={() => {
-                  if (canNavigateRight()) {
-                    setMonthOffset(prev => Math.max(prev - 1, 0))
-                  }
-                }}
-                disabled={!canNavigateRight()}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  canNavigateRight()
-                    ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                Suivant
-                <ChevronRight className="w-4 h-4" />
-              </button>
+          <h2 className="text-lg font-semibold text-gray-900 mt-8 mb-4">Feedback {yearRef}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">ETP diagnostiqueurs {yearRef}</label>
+              <input
+                type="number"
+                step="0.1"
+                value={etpDiag2025}
+                onChange={(e) => setEtpDiag2025(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              />
             </div>
-          )}
-          {loading ? (
-            <div className="flex items-center justify-center h-96">
-              <div className="text-center">
-                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-gray-600">Chargement des données...</p>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Jours disponibles / ETP diag {yearRef}</label>
+              <input
+                type="number"
+                value={joursDispoDiag2025}
+                onChange={(e) => setJoursDispoDiag2025(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              />
             </div>
-          ) : error ? (
-            <div className="flex items-center justify-center h-96">
-              <div className="text-center">
-                <p className="text-red-600 text-lg font-semibold mb-2">Erreur</p>
-                <p className="text-gray-600">{error}</p>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Taux variable v {yearRef} (hors insertions)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={tauxVariable2025}
+                onChange={(e) => setTauxVariable2025(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              />
             </div>
-          ) : chartData.length === 0 ? (
-            <div className="flex items-center justify-center h-96">
-              <p className="text-gray-600 text-lg">Aucune donnée disponible pour cette période</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Autres produits {yearRef} (€/an)</label>
+              <input
+                type="number"
+                value={autresProduits2025}
+                onChange={(e) => setAutresProduits2025(Number(e.target.value))}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              />
             </div>
-          ) : (
-            <div className="transition-opacity duration-300 ease-in-out">
-              <ResponsiveContainer width="100%" height={500}>
-                <BarChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis 
-                    dataKey="monthLabel" 
-                    angle={0}
-                    textAnchor="middle"
-                    height={40}
-                    tick={{ fontSize: 12, fontWeight: 'bold' }}
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 12, fontWeight: 'bold' }}
-                    tickFormatter={(value) => {
-                      if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M€`
-                      if (value >= 1000) return `${(value / 1000).toFixed(0)}k€`
-                      return `${value}€`
-                    }}
-                  />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      padding: '8px'
-                    }}
-                  />
-                  <Legend />
-                  <Bar 
-                    dataKey="breakeven" 
-                    fill="#ef4444"
-                    name="Seuil de rentabilité (€)"
-                  />
-                  <Bar 
-                    dataKey="ventesParDiagnostiqueur" 
-                    fill="#10b981"
-                    name="Ventes moyennes par diagnostiqueur (€)"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
+          </div>
 
-        {/* Tableau */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Détails par période - {formatPeriod()}
-          </h2>
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-gray-600">Chargement des données...</p>
-              </div>
+          <h2 className="text-lg font-semibold text-gray-900 mt-8 mb-4">Hypothèses {currentYear}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">ETP diagnostiqueurs</label>
+              <input type="number" step="0.1" value={etpDiag2026} onChange={(e) => setEtpDiag2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
             </div>
-          ) : error ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <p className="text-red-600 text-lg font-semibold mb-2">Erreur</p>
-                <p className="text-gray-600">{error}</p>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">ETP commerciaux</label>
+              <input type="number" step="0.1" value={etpComm2026} onChange={(e) => setEtpComm2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
             </div>
-          ) : chartData.length === 0 ? (
-            <div className="flex items-center justify-center h-64">
-              <p className="text-gray-600 text-lg">Aucune donnée disponible pour cette période</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Jours dispo / ETP diag</label>
+              <input type="number" value={joursDispoDiag2026} onChange={(e) => setJoursDispoDiag2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Période
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nombre de diagnostiqueurs
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Charges totales
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Seuil de rentabilité
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ventes moyennes par diagnostiqueur
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Écart
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {getDisplayedData().map((point) => {
-                    const ecart = point.breakeven !== null && point.ventesParDiagnostiqueur !== null
-                      ? point.ventesParDiagnostiqueur - point.breakeven
-                      : null
-                    const isPositive = ecart !== null && ecart > 0
-                    
-                    return (
-                      <tr key={point.month} className={point.hasData ? '' : 'opacity-50'}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {point.monthLabel}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {point.diagnostiqueursCount}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatCurrency(point.charges)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                          {formatCurrency(point.breakeven)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
-                          {formatCurrency(point.ventesParDiagnostiqueur)}
-                        </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
-                          ecart !== null 
-                            ? (isPositive ? 'text-green-600' : 'text-red-600')
-                            : 'text-gray-500'
-                        }`}>
-                          {ecart !== null 
-                            ? `${isPositive ? '+' : ''}${formatCurrency(ecart)}`
-                            : 'N/A'
-                          }
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Jours dispo / ETP commercial</label>
+              <input type="number" value={joursDispoComm2026} onChange={(e) => setJoursDispoComm2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">CA cible {currentYear} CORE (€/an)</label>
+              <input type="number" value={caCible2026} onChange={(e) => setCaCible2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Taux variable v {currentYear}</label>
+              <input type="number" step="0.01" min="0" max="1" value={tauxVariable2026} onChange={(e) => setTauxVariable2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Budget insertions (€/mois)</label>
+              <input type="number" value={budgetInsertions2026} onChange={(e) => setBudgetInsertions2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Budget logiciels (€/mois)</label>
+              <input type="number" value={budgetLogiciels2026} onChange={(e) => setBudgetLogiciels2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Masse salariale {currentYear} (€/an)</label>
+              <input type="number" value={masseSalariale2026} onChange={(e) => setMasseSalariale2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Direction (€/an)</label>
+              <input type="number" value={direction2026} onChange={(e) => setDirection2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Freelances (€/an)</label>
+              <input type="number" value={freelances2026} onChange={(e) => setFreelances2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Autres charges fixes (€/an)</label>
+              <input type="number" value={autresChargesFixes2026} onChange={(e) => setAutresChargesFixes2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Autres produits {currentYear} (€/an)</label>
+              <input type="number" value={autresProduits2026} onChange={(e) => setAutresProduits2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+          </div>
+
+          <h2 className="text-lg font-semibold text-gray-900 mt-8 mb-4">Upsell amiante</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Activer (0=non, 1=oui)</label>
+              <input type="number" min="0" max="1" value={upsellAmiante} onChange={(e) => setUpsellAmiante(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">CA amiante / diag / mois (HT)</label>
+              <input type="number" value={caAmianteParDiag} onChange={(e) => setCaAmianteParDiag(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Marge amiante / diag / mois (HT)</label>
+              <input type="number" value={margeAmianteParDiag} onChange={(e) => setMargeAmianteParDiag(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+            </div>
+          </div>
+        </section>
+
+        {/* ——— 2025 Données & KPIs ——— */}
+        <section className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">{yearRef} — Données & KPIs</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200">
+                <tr><td className="py-2 text-gray-700">Ventes (706) {yearRef}</td><td className="py-2 font-medium">{formatCurrency(ventes2025)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Autres produits</td><td className="py-2 font-medium">{formatCurrency(autresProd2025)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Charges totales</td><td className="py-2 font-medium">{formatCurrency(charges2025)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Insertions (6231)</td><td className="py-2 font-medium">{formatCurrency(insertions2025)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Variables hors insertions</td><td className="py-2 font-medium">{formatCurrency(variables2025)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Fixes</td><td className="py-2 font-medium">{formatCurrency(fixes2025)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Jours diag vendables</td><td className="py-2 font-medium">{Math.round(joursDiagVendables2025)}</td></tr>
+                <tr><td className="py-2 text-gray-700">TJM diag réalisé</td><td className="py-2 font-medium">{formatCurrency(tjmDiagRealise2025)}</td></tr>
+                <tr><td className="py-2 text-gray-700">TJM entreprise</td><td className="py-2 font-medium">{formatCurrency(tjmEntreprise2025)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Résultat</td><td className="py-2 font-medium">{formatCurrency(resultat2025)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Marge</td><td className="py-2 font-medium">{formatPercent(marge2025)}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          {Object.keys(etpByService2025).length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">ETP par service ({yearRef}, calculés depuis Payfit)</h3>
+              <ul className="text-sm text-gray-600">
+                {Object.entries(etpByService2025).map(([service, etp]) => (
+                  <li key={service}>{service}: {etp}</li>
+                ))}
+              </ul>
             </div>
           )}
-        </div>
+        </section>
+
+        {/* ——— Seuils 2025 ——— */}
+        <section className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Seuils {yearRef} — CA & TJM par marge cible</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Marge cible</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">CA ventes requis</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">TJM diag requis</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">TJM entreprise</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {MARGES_CIBLES.map((m) => {
+                  const caRequis = (fixes2025 + insertions2025 - autresProduits2025) / (1 - tauxVariable2025 - m)
+                  const tjmDiagRequis = joursDiagVendables2025 > 0 ? caRequis / joursDiagVendables2025 : 0
+                  const tjmEntRequis = joursOuverture > 0 ? caRequis / joursOuverture : 0
+                  return (
+                    <tr key={m}>
+                      <td className="px-4 py-2">{formatPercent(m)}</td>
+                      <td className="px-4 py-2 text-right">{formatCurrency(caRequis)}</td>
+                      <td className="px-4 py-2 text-right">{formatCurrency(tjmDiagRequis)}</td>
+                      <td className="px-4 py-2 text-right">{formatCurrency(tjmEntRequis)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* ——— 2026 Projection ——— */}
+        <section className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">{currentYear} — Projection</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200">
+                <tr><td className="py-2 text-gray-700">CA total (core + amiante)</td><td className="py-2 font-medium">{formatCurrency(caTotal2026)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Jours diag vendables</td><td className="py-2 font-medium">{Math.round(joursDiag2026)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Jours commerciaux</td><td className="py-2 font-medium">{Math.round(joursComm2026)}</td></tr>
+                <tr><td className="py-2 text-gray-700">TJM diag</td><td className="py-2 font-medium">{formatCurrency(tjmDiag2026)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Résultat au CA cible</td><td className="py-2 font-medium">{formatCurrency(resultat2026Simpl)}</td></tr>
+                <tr><td className="py-2 text-gray-700">Marge</td><td className="py-2 font-medium">{formatPercent(marge2026)}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* ——— Seuils 2026 ——— */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Seuils {currentYear} — CA & TJM par marge cible</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Marge cible</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">CA total requis</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">TJM diag requis</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">TJM entreprise</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {MARGES_CIBLES.map((m) => {
+                  const chargesFixes = masseSalariale2026 + direction2026 + freelances2026 + autresChargesFixes2026 + budgetLogiciels2026 * 12 + budgetInsertions2026 * 12
+                  const caRequis = (chargesFixes - autresProduits2026 - margeAmiante2026) / (1 - tauxVariable2026 - m)
+                  const tjmDiagRequis = joursDiag2026 > 0 ? caRequis / joursDiag2026 : 0
+                  const tjmEntRequis = joursOuverture > 0 ? caRequis / joursOuverture : 0
+                  return (
+                    <tr key={m}>
+                      <td className="px-4 py-2">{formatPercent(m)}</td>
+                      <td className="px-4 py-2 text-right">{formatCurrency(caRequis)}</td>
+                      <td className="px-4 py-2 text-right">{formatCurrency(tjmDiagRequis)}</td>
+                      <td className="px-4 py-2 text-right">{formatCurrency(tjmEntRequis)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
   )
