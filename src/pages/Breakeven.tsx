@@ -98,260 +98,141 @@ const Breakeven: React.FC = () => {
   const resultat2026Simpl = caTotal2026 * (1 - tauxVariable2026) + margeAmiante2026 + autresProduits2026 - budgetInsertions2026 * 12 - (masseSalariale2026 + direction2026 + freelances2026 + autresChargesFixes2026 + budgetLogiciels2026 * 12)
   const marge2026 = caTotal2026 !== 0 ? resultat2026Simpl / caTotal2026 : 0
 
+  const inputCls = 'block w-full rounded border border-gray-300 px-2 py-1 text-sm'
+  const labelCls = 'block text-xs font-medium text-gray-600 mb-0.5'
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Seuil de rentabilité & TJM</h1>
-        <p className="text-gray-600 mb-8">Modèle TJM et projection annuelle (données BDD + hypothèses modifiables).</p>
+    <div className="min-h-screen bg-gray-50 py-4 px-3 sm:px-4 lg:px-6">
+      <div className="max-w-[1600px] mx-auto">
+        <h1 className="text-xl font-bold text-gray-900 mb-1">Seuil de rentabilité & TJM</h1>
+        <p className="text-sm text-gray-600 mb-4">Hypothèses à gauche, résultats à droite — feedback instantané.</p>
 
-        {loading && <p className="text-gray-500">Chargement des données {yearRef}…</p>}
-        {error && <p className="text-red-600 mb-4">Erreur : {error}</p>}
+        {loading && <p className="text-sm text-gray-500">Chargement {yearRef}…</p>}
+        {error && <p className="text-sm text-red-600 mb-2">Erreur : {error}</p>}
 
-        {/* ——— Inputs ——— */}
-        <section className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Hypothèses globales</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Jours d'ouverture société (JO)</label>
-              <input
-                type="number"
-                value={joursOuverture}
-                onChange={(e) => setJoursOuverture(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-              />
+        <div className="grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-4 xl:gap-6">
+          <aside className="xl:sticky xl:top-4 xl:self-start space-y-4">
+            <section className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Global</h2>
+              <div><label className={labelCls}>JO (jours ouverture)</label><input type="number" value={joursOuverture} onChange={(e) => setJoursOuverture(Number(e.target.value))} className={inputCls} /></div>
+            </section>
+
+            <section className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Feedback {yearRef}</h2>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className={labelCls}>ETP diag</label><input type="number" step="0.1" value={etpDiag2025} onChange={(e) => setEtpDiag2025(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Jours/ETP diag</label><input type="number" value={joursDispoDiag2025} onChange={(e) => setJoursDispoDiag2025(Number(e.target.value))} className={inputCls} /></div>
+                <div className="col-span-2"><label className={labelCls}>Taux variable v</label><input type="number" step="0.01" min="0" max="1" value={tauxVariable2025} onChange={(e) => setTauxVariable2025(Number(e.target.value))} className={inputCls} /></div>
+                <div className="col-span-2"><label className={labelCls}>Autres produits (€/an)</label><input type="number" value={autresProduits2025} onChange={(e) => setAutresProduits2025(Number(e.target.value))} className={inputCls} /></div>
+              </div>
+            </section>
+
+            <section className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Hypothèses {currentYear}</h2>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className={labelCls}>ETP diag</label><input type="number" step="0.1" value={etpDiag2026} onChange={(e) => setEtpDiag2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>ETP comm</label><input type="number" step="0.1" value={etpComm2026} onChange={(e) => setEtpComm2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Jours/ETP diag</label><input type="number" value={joursDispoDiag2026} onChange={(e) => setJoursDispoDiag2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Jours/ETP comm</label><input type="number" value={joursDispoComm2026} onChange={(e) => setJoursDispoComm2026(Number(e.target.value))} className={inputCls} /></div>
+                <div className="col-span-2"><label className={labelCls}>CA cible CORE (€/an)</label><input type="number" value={caCible2026} onChange={(e) => setCaCible2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Taux variable v</label><input type="number" step="0.01" min="0" max="1" value={tauxVariable2026} onChange={(e) => setTauxVariable2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Insertions (€/mois)</label><input type="number" value={budgetInsertions2026} onChange={(e) => setBudgetInsertions2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Logiciels (€/mois)</label><input type="number" value={budgetLogiciels2026} onChange={(e) => setBudgetLogiciels2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Masse sal. (€/an)</label><input type="number" value={masseSalariale2026} onChange={(e) => setMasseSalariale2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Direction (€/an)</label><input type="number" value={direction2026} onChange={(e) => setDirection2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Freelances (€/an)</label><input type="number" value={freelances2026} onChange={(e) => setFreelances2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Autres fixes (€/an)</label><input type="number" value={autresChargesFixes2026} onChange={(e) => setAutresChargesFixes2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>Autres produits (€/an)</label><input type="number" value={autresProduits2026} onChange={(e) => setAutresProduits2026(Number(e.target.value))} className={inputCls} /></div>
+              </div>
+            </section>
+
+            <section className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Upsell amiante</h2>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className={labelCls}>Activer (0/1)</label><input type="number" min="0" max="1" value={upsellAmiante} onChange={(e) => setUpsellAmiante(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>CA/diag/mois (€)</label><input type="number" value={caAmianteParDiag} onChange={(e) => setCaAmianteParDiag(Number(e.target.value))} className={inputCls} /></div>
+                <div className="col-span-2"><label className={labelCls}>Marge/diag/mois (€)</label><input type="number" value={margeAmianteParDiag} onChange={(e) => setMargeAmianteParDiag(Number(e.target.value))} className={inputCls} /></div>
+              </div>
+            </section>
+          </aside>
+
+          <div className="min-w-0 space-y-4">
+            <section className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+              <h2 className="text-sm font-semibold text-emerald-800 mb-3">Scénario {currentYear} — Résumé</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div><span className="text-gray-600">CA total</span><p className="font-semibold text-gray-900">{formatCurrency(caTotal2026)}</p></div>
+                <div><span className="text-gray-600">Résultat</span><p className={`font-semibold ${resultat2026Simpl >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{formatCurrency(resultat2026Simpl)}</p></div>
+                <div><span className="text-gray-600">Marge</span><p className="font-semibold text-gray-900">{formatPercent(marge2026)}</p></div>
+                <div><span className="text-gray-600">TJM diag</span><p className="font-semibold text-gray-900">{formatCurrency(tjmDiag2026)}</p></div>
+              </div>
+            </section>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <section className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+                <h2 className="text-sm font-semibold text-gray-900 mb-3">{yearRef} — Données & KPIs</h2>
+                <table className="min-w-full text-sm">
+                  <tbody className="divide-y divide-gray-100">
+                    <tr><td className="py-1 text-gray-600">Ventes (706)</td><td className="py-1 text-right font-medium">{formatCurrency(ventes2025)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Autres produits</td><td className="py-1 text-right font-medium">{formatCurrency(autresProd2025)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Charges / Insertions</td><td className="py-1 text-right font-medium">{formatCurrency(charges2025)} / {formatCurrency(insertions2025)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Variables / Fixes</td><td className="py-1 text-right font-medium">{formatCurrency(variables2025)} / {formatCurrency(fixes2025)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Jours diag vendables</td><td className="py-1 text-right font-medium">{Math.round(joursDiagVendables2025)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">TJM diag réalisé</td><td className="py-1 text-right font-medium">{formatCurrency(tjmDiagRealise2025)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">TJM entreprise</td><td className="py-1 text-right font-medium">{formatCurrency(tjmEntreprise2025)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Résultat</td><td className="py-1 text-right font-medium">{formatCurrency(resultat2025)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Marge</td><td className="py-1 text-right font-medium">{formatPercent(marge2025)}</td></tr>
+                  </tbody>
+                </table>
+                {Object.keys(etpByService2025).length > 0 && (
+                  <p className="mt-2 text-xs text-gray-500">ETP Payfit: {Object.entries(etpByService2025).map(([s, e]) => `${s}: ${e}`).join(', ')}</p>
+                )}
+              </section>
+
+              <section className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+                <h2 className="text-sm font-semibold text-gray-900 mb-3">{currentYear} — Projection</h2>
+                <table className="min-w-full text-sm">
+                  <tbody className="divide-y divide-gray-100">
+                    <tr><td className="py-1 text-gray-600">CA total (core + amiante)</td><td className="py-1 text-right font-medium">{formatCurrency(caTotal2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Jours diag / comm</td><td className="py-1 text-right font-medium">{Math.round(joursDiag2026)} / {Math.round(joursComm2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">TJM diag</td><td className="py-1 text-right font-medium">{formatCurrency(tjmDiag2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Résultat</td><td className="py-1 text-right font-medium">{formatCurrency(resultat2026Simpl)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Marge</td><td className="py-1 text-right font-medium">{formatPercent(marge2026)}</td></tr>
+                  </tbody>
+                </table>
+              </section>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <section className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 overflow-x-auto">
+                <h2 className="text-sm font-semibold text-gray-900 mb-2">Seuils {yearRef}</h2>
+                <table className="min-w-full text-xs">
+                  <thead className="bg-gray-50"><tr><th className="px-2 py-1.5 text-left text-gray-500">Marge</th><th className="px-2 py-1.5 text-right text-gray-500">CA requis</th><th className="px-2 py-1.5 text-right text-gray-500">TJM diag</th></tr></thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {MARGES_CIBLES.map((m) => {
+                      const caRequis = (fixes2025 + insertions2025 - autresProduits2025) / (1 - tauxVariable2025 - m)
+                      const tjmDiagRequis = joursDiagVendables2025 > 0 ? caRequis / joursDiagVendables2025 : 0
+                      return (<tr key={m}><td className="px-2 py-1">{formatPercent(m)}</td><td className="px-2 py-1 text-right">{formatCurrency(caRequis)}</td><td className="px-2 py-1 text-right">{formatCurrency(tjmDiagRequis)}</td></tr>)
+                    })}
+                  </tbody>
+                </table>
+              </section>
+              <section className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 overflow-x-auto">
+                <h2 className="text-sm font-semibold text-gray-900 mb-2">Seuils {currentYear}</h2>
+                <table className="min-w-full text-xs">
+                  <thead className="bg-gray-50"><tr><th className="px-2 py-1.5 text-left text-gray-500">Marge</th><th className="px-2 py-1.5 text-right text-gray-500">CA requis</th><th className="px-2 py-1.5 text-right text-gray-500">TJM diag</th></tr></thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {MARGES_CIBLES.map((m) => {
+                      const chargesFixes = masseSalariale2026 + direction2026 + freelances2026 + autresChargesFixes2026 + budgetLogiciels2026 * 12 + budgetInsertions2026 * 12
+                      const caRequis = (chargesFixes - autresProduits2026 - margeAmiante2026) / (1 - tauxVariable2026 - m)
+                      const tjmDiagRequis = joursDiag2026 > 0 ? caRequis / joursDiag2026 : 0
+                      return (<tr key={m}><td className="px-2 py-1">{formatPercent(m)}</td><td className="px-2 py-1 text-right">{formatCurrency(caRequis)}</td><td className="px-2 py-1 text-right">{formatCurrency(tjmDiagRequis)}</td></tr>)
+                    })}
+                  </tbody>
+                </table>
+              </section>
             </div>
           </div>
-
-          <h2 className="text-lg font-semibold text-gray-900 mt-8 mb-4">Feedback {yearRef}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">ETP diagnostiqueurs {yearRef}</label>
-              <input
-                type="number"
-                step="0.1"
-                value={etpDiag2025}
-                onChange={(e) => setEtpDiag2025(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Jours disponibles / ETP diag {yearRef}</label>
-              <input
-                type="number"
-                value={joursDispoDiag2025}
-                onChange={(e) => setJoursDispoDiag2025(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Taux variable v {yearRef} (hors insertions)</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="1"
-                value={tauxVariable2025}
-                onChange={(e) => setTauxVariable2025(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Autres produits {yearRef} (€/an)</label>
-              <input
-                type="number"
-                value={autresProduits2025}
-                onChange={(e) => setAutresProduits2025(Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-              />
-            </div>
-          </div>
-
-          <h2 className="text-lg font-semibold text-gray-900 mt-8 mb-4">Hypothèses {currentYear}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">ETP diagnostiqueurs</label>
-              <input type="number" step="0.1" value={etpDiag2026} onChange={(e) => setEtpDiag2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">ETP commerciaux</label>
-              <input type="number" step="0.1" value={etpComm2026} onChange={(e) => setEtpComm2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Jours dispo / ETP diag</label>
-              <input type="number" value={joursDispoDiag2026} onChange={(e) => setJoursDispoDiag2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Jours dispo / ETP commercial</label>
-              <input type="number" value={joursDispoComm2026} onChange={(e) => setJoursDispoComm2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">CA cible {currentYear} CORE (€/an)</label>
-              <input type="number" value={caCible2026} onChange={(e) => setCaCible2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Taux variable v {currentYear}</label>
-              <input type="number" step="0.01" min="0" max="1" value={tauxVariable2026} onChange={(e) => setTauxVariable2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Budget insertions (€/mois)</label>
-              <input type="number" value={budgetInsertions2026} onChange={(e) => setBudgetInsertions2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Budget logiciels (€/mois)</label>
-              <input type="number" value={budgetLogiciels2026} onChange={(e) => setBudgetLogiciels2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Masse salariale {currentYear} (€/an)</label>
-              <input type="number" value={masseSalariale2026} onChange={(e) => setMasseSalariale2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Direction (€/an)</label>
-              <input type="number" value={direction2026} onChange={(e) => setDirection2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Freelances (€/an)</label>
-              <input type="number" value={freelances2026} onChange={(e) => setFreelances2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Autres charges fixes (€/an)</label>
-              <input type="number" value={autresChargesFixes2026} onChange={(e) => setAutresChargesFixes2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Autres produits {currentYear} (€/an)</label>
-              <input type="number" value={autresProduits2026} onChange={(e) => setAutresProduits2026(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-          </div>
-
-          <h2 className="text-lg font-semibold text-gray-900 mt-8 mb-4">Upsell amiante</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Activer (0=non, 1=oui)</label>
-              <input type="number" min="0" max="1" value={upsellAmiante} onChange={(e) => setUpsellAmiante(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">CA amiante / diag / mois (HT)</label>
-              <input type="number" value={caAmianteParDiag} onChange={(e) => setCaAmianteParDiag(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Marge amiante / diag / mois (HT)</label>
-              <input type="number" value={margeAmianteParDiag} onChange={(e) => setMargeAmianteParDiag(Number(e.target.value))} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
-            </div>
-          </div>
-        </section>
-
-        {/* ——— 2025 Données & KPIs ——— */}
-        <section className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">{yearRef} — Données & KPIs</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <tbody className="divide-y divide-gray-200">
-                <tr><td className="py-2 text-gray-700">Ventes (706) {yearRef}</td><td className="py-2 font-medium">{formatCurrency(ventes2025)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Autres produits</td><td className="py-2 font-medium">{formatCurrency(autresProd2025)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Charges totales</td><td className="py-2 font-medium">{formatCurrency(charges2025)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Insertions (6231)</td><td className="py-2 font-medium">{formatCurrency(insertions2025)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Variables hors insertions</td><td className="py-2 font-medium">{formatCurrency(variables2025)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Fixes</td><td className="py-2 font-medium">{formatCurrency(fixes2025)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Jours diag vendables</td><td className="py-2 font-medium">{Math.round(joursDiagVendables2025)}</td></tr>
-                <tr><td className="py-2 text-gray-700">TJM diag réalisé</td><td className="py-2 font-medium">{formatCurrency(tjmDiagRealise2025)}</td></tr>
-                <tr><td className="py-2 text-gray-700">TJM entreprise</td><td className="py-2 font-medium">{formatCurrency(tjmEntreprise2025)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Résultat</td><td className="py-2 font-medium">{formatCurrency(resultat2025)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Marge</td><td className="py-2 font-medium">{formatPercent(marge2025)}</td></tr>
-              </tbody>
-            </table>
-          </div>
-          {Object.keys(etpByService2025).length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">ETP par service ({yearRef}, calculés depuis Payfit)</h3>
-              <ul className="text-sm text-gray-600">
-                {Object.entries(etpByService2025).map(([service, etp]) => (
-                  <li key={service}>{service}: {etp}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-
-        {/* ——— Seuils 2025 ——— */}
-        <section className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Seuils {yearRef} — CA & TJM par marge cible</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Marge cible</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">CA ventes requis</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">TJM diag requis</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">TJM entreprise</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {MARGES_CIBLES.map((m) => {
-                  const caRequis = (fixes2025 + insertions2025 - autresProduits2025) / (1 - tauxVariable2025 - m)
-                  const tjmDiagRequis = joursDiagVendables2025 > 0 ? caRequis / joursDiagVendables2025 : 0
-                  const tjmEntRequis = joursOuverture > 0 ? caRequis / joursOuverture : 0
-                  return (
-                    <tr key={m}>
-                      <td className="px-4 py-2">{formatPercent(m)}</td>
-                      <td className="px-4 py-2 text-right">{formatCurrency(caRequis)}</td>
-                      <td className="px-4 py-2 text-right">{formatCurrency(tjmDiagRequis)}</td>
-                      <td className="px-4 py-2 text-right">{formatCurrency(tjmEntRequis)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* ——— 2026 Projection ——— */}
-        <section className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">{currentYear} — Projection</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <tbody className="divide-y divide-gray-200">
-                <tr><td className="py-2 text-gray-700">CA total (core + amiante)</td><td className="py-2 font-medium">{formatCurrency(caTotal2026)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Jours diag vendables</td><td className="py-2 font-medium">{Math.round(joursDiag2026)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Jours commerciaux</td><td className="py-2 font-medium">{Math.round(joursComm2026)}</td></tr>
-                <tr><td className="py-2 text-gray-700">TJM diag</td><td className="py-2 font-medium">{formatCurrency(tjmDiag2026)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Résultat au CA cible</td><td className="py-2 font-medium">{formatCurrency(resultat2026Simpl)}</td></tr>
-                <tr><td className="py-2 text-gray-700">Marge</td><td className="py-2 font-medium">{formatPercent(marge2026)}</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* ——— Seuils 2026 ——— */}
-        <section className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Seuils {currentYear} — CA & TJM par marge cible</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Marge cible</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">CA total requis</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">TJM diag requis</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">TJM entreprise</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {MARGES_CIBLES.map((m) => {
-                  const chargesFixes = masseSalariale2026 + direction2026 + freelances2026 + autresChargesFixes2026 + budgetLogiciels2026 * 12 + budgetInsertions2026 * 12
-                  const caRequis = (chargesFixes - autresProduits2026 - margeAmiante2026) / (1 - tauxVariable2026 - m)
-                  const tjmDiagRequis = joursDiag2026 > 0 ? caRequis / joursDiag2026 : 0
-                  const tjmEntRequis = joursOuverture > 0 ? caRequis / joursOuverture : 0
-                  return (
-                    <tr key={m}>
-                      <td className="px-4 py-2">{formatPercent(m)}</td>
-                      <td className="px-4 py-2 text-right">{formatCurrency(caRequis)}</td>
-                      <td className="px-4 py-2 text-right">{formatCurrency(tjmDiagRequis)}</td>
-                      <td className="px-4 py-2 text-right">{formatCurrency(tjmEntRequis)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        </div>
       </div>
     </div>
   )
