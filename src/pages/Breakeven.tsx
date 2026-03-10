@@ -26,6 +26,7 @@ const Breakeven: React.FC = () => {
     charges: number
     autres_produits: number
     insertions_6231: number
+    masse_salariale?: number
   } | null>(null)
   const [etpByService2025, setEtpByService2025] = useState<Record<string, number>>({})
 
@@ -76,6 +77,7 @@ const Breakeven: React.FC = () => {
             setEtpComm2025(comm)
             setEtpComm2026(comm)
           }
+          if (data.balance?.masse_salariale != null) setMasseSalariale2026(Math.round(data.balance.masse_salariale))
         }
       })
       .catch((err) => {
@@ -151,7 +153,17 @@ const Breakeven: React.FC = () => {
                 <div><label className={labelCls}>Taux variable v</label><input type="number" step="0.01" min="0" max="1" value={tauxVariable2026} onChange={(e) => setTauxVariable2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Insertions (€/mois)</label><input type="number" value={budgetInsertions2026} onChange={(e) => setBudgetInsertions2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Logiciels (€/mois)</label><input type="number" value={budgetLogiciels2026} onChange={(e) => setBudgetLogiciels2026(Number(e.target.value))} className={inputCls} /></div>
-                <div><label className={labelCls}>Masse sal. (€/an)</label><input type="number" value={masseSalariale2026} onChange={(e) => setMasseSalariale2026(Number(e.target.value))} className={inputCls} /></div>
+                <div>
+                  <label className={labelCls}>Masse sal. (€/an)</label>
+                  <input
+                    type="number"
+                    readOnly
+                    disabled
+                    value={masseSalariale2026}
+                    className={`${inputCls} bg-gray-100 text-gray-600 cursor-not-allowed`}
+                    title="Masse salariale globale année N-1 (lecture seule)"
+                  />
+                </div>
                 <div><label className={labelCls}>Direction (€/an)</label><input type="number" value={direction2026} onChange={(e) => setDirection2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Freelances (€/an)</label><input type="number" value={freelances2026} onChange={(e) => setFreelances2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Autres fixes (€/an)</label><input type="number" value={autresChargesFixes2026} onChange={(e) => setAutresChargesFixes2026(Number(e.target.value))} className={inputCls} /></div>

@@ -90,12 +90,14 @@ module.exports = async function handler(req, res) {
     let charges = 0
     let revenus_totaux = 0
     let insertions_6231 = 0
+    let masse_salariale = 0
 
     for (const row of rows.rows || []) {
       const kpis = row.kpis || {}
       ventes_706 += parseFloat(kpis.ventes_706) || 0
       charges += parseFloat(kpis.charges) || 0
       revenus_totaux += parseFloat(kpis.revenus_totaux) || 0
+      masse_salariale += parseFloat(kpis.charges_salariales) || 0
       const tb = row.trial_balance || {}
       const items = tb.items || []
       for (const item of items) {
@@ -143,7 +145,8 @@ module.exports = async function handler(req, res) {
         ventes_706,
         charges,
         autres_produits,
-        insertions_6231
+        insertions_6231,
+        masse_salariale
       },
       etpByService,
       joursByService
