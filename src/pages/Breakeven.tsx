@@ -42,20 +42,20 @@ const Breakeven: React.FC = () => {
   const [joursDispoComm2025, setJoursDispoComm2025] = useState(JOURS_COMM_DEFAULT)
   const [tauxVariable2025, setTauxVariable2025] = useState(0.06)
 
-  const [etpDiag2026, setEtpDiag2026] = useState(35)
-  const [etpComm2026, setEtpComm2026] = useState(13)
-  const [etpBackOffice2026, setEtpBackOffice2026] = useState(12)
-  const [joursDispoDiag2026, setJoursDispoDiag2026] = useState(213)
+  const [etpDiag2026, setEtpDiag2026] = useState(37.45)
+  const [etpComm2026, setEtpComm2026] = useState(18.88)
+  const [etpBackOffice2026, setEtpBackOffice2026] = useState(13.31)
+  const [joursDispoDiag2026, setJoursDispoDiag2026] = useState(210)
   const [joursDispoComm2026, setJoursDispoComm2026] = useState(JOURS_COMM_DEFAULT)
   const [caCible2026, setCaCible2026] = useState(5_520_000)
-  const [tauxVariable2026, setTauxVariable2026] = useState(0.07)
+  const [tauxVariable2026, setTauxVariable2026] = useState(0.25)
   const [budgetInsertions2026, setBudgetInsertions2026] = useState(41_000)
   const [budgetLogiciels2026, setBudgetLogiciels2026] = useState(15_000)
   const [masseSalarialeBase, setMasseSalarialeBase] = useState<number | null>(null) // Masse sal. N-1 (module Salaires), base pour prorata ETP
   const [direction2026, setDirection2026] = useState(182_000)
-  const [freelances2026, setFreelances2026] = useState(121_000)
-  const [autresChargesFixes2026, setAutresChargesFixes2026] = useState(340_000)
-  const [autresProduits2026, setAutresProduits2026] = useState(60_000)
+  const [freelances2026, setFreelances2026] = useState(125_000)
+  const [autresChargesFixes2026, setAutresChargesFixes2026] = useState(0)
+  const [autresProduits2026, setAutresProduits2026] = useState(0)
 
   const [upsellAmiante, setUpsellAmiante] = useState(0)
   const [caAmianteParDiag, setCaAmianteParDiag] = useState(245)
@@ -171,12 +171,12 @@ const Breakeven: React.FC = () => {
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Hypothèses</h2>
               <div className="grid grid-cols-2 gap-2">
                 <div><label className={labelCls}>ETP diag</label><input type="number" step="0.1" value={etpDiag2026} onChange={(e) => setEtpDiag2026(Number(e.target.value))} className={inputCls} /></div>
-                <div><label className={labelCls}>ETP comm</label><input type="number" step="0.1" value={etpComm2026} onChange={(e) => setEtpComm2026(Number(e.target.value))} className={inputCls} /></div>
-                <div><label className={labelCls}>ETP back office</label><input type="number" step="0.1" value={etpBackOffice2026} onChange={(e) => setEtpBackOffice2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Jours/ETP diag</label><input type="number" value={joursDispoDiag2026} onChange={(e) => setJoursDispoDiag2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>ETP comm</label><input type="number" step="0.1" value={etpComm2026} onChange={(e) => setEtpComm2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Jours/ETP comm</label><input type="number" value={joursDispoComm2026} onChange={(e) => setJoursDispoComm2026(Number(e.target.value))} className={inputCls} /></div>
-                <div className="col-span-2"><label className={labelCls}>CA cible CORE (€/an)</label><input type="number" value={caCible2026} onChange={(e) => setCaCible2026(Number(e.target.value))} className={inputCls} /></div>
-                <div><label className={labelCls}>Taux variable v</label><input type="number" step="0.01" min="0" max="1" value={tauxVariable2026} onChange={(e) => setTauxVariable2026(Number(e.target.value))} className={inputCls} /></div>
+                <div><label className={labelCls}>ETP back office</label><input type="number" step="0.1" value={etpBackOffice2026} onChange={(e) => setEtpBackOffice2026(Number(e.target.value))} className={inputCls} /></div>
+                <div className="col-span-2"><label className={labelCls}>CA cible (€/an)</label><input type="number" value={caCible2026} onChange={(e) => setCaCible2026(Number(e.target.value))} className={inputCls} /></div>
+                <div className="col-span-2"><label className={labelCls}>Taux variable v</label><input type="number" step="0.01" min="0" max="1" value={tauxVariable2026} onChange={(e) => setTauxVariable2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Insertions (€/mois)</label><input type="number" value={budgetInsertions2026} onChange={(e) => setBudgetInsertions2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>Logiciels (€/mois)</label><input type="number" value={budgetLogiciels2026} onChange={(e) => setBudgetLogiciels2026(Number(e.target.value))} className={inputCls} /></div>
                 <div>
