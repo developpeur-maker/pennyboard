@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 
 const JO_DEFAULT = 251
-const JOURS_DIAG_DEFAULT = 216
-const JOURS_COMM_DEFAULT = 216
+const JOURS_DIAG_DEFAULT = 210
+const JOURS_COMM_DEFAULT = 222
 const MARGES_CIBLES = [0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.2]
 
 const formatCurrency = (value: number | null | undefined) => {
@@ -32,16 +32,15 @@ const Breakeven: React.FC = () => {
 
   // Inputs modifiables (hypothèses globales + 2025 + 2026)
   const [joursOuverture, setJoursOuverture] = useState(JO_DEFAULT)
-  const [etpDiag2025, setEtpDiag2025] = useState(35)
-  const [etpComm2025, setEtpComm2025] = useState(13)
-  const [etpBackOffice2025, setEtpBackOffice2025] = useState(12) // ETP back office N-1 (référence, hors diag + comm)
-  const [pctMsDiag, setPctMsDiag] = useState(0.6) // % MS diagnostiqueurs (ex. 60 %)
+  const [etpDiag2025, setEtpDiag2025] = useState(37.45)
+  const [etpComm2025, setEtpComm2025] = useState(18.88)
+  const [etpBackOffice2025, setEtpBackOffice2025] = useState(13.31) // ETP back office N-1 (référence, hors diag + comm)
+  const [pctMsDiag, setPctMsDiag] = useState(0.59) // % MS diagnostiqueurs (ex. 60 %)
   const [pctMsComm, setPctMsComm] = useState(0.2) // % MS commerciaux (ex. 20 %)
-  const [pctMsBackOffice, setPctMsBackOffice] = useState(0.2) // % MS back office (ex. 20 %)
+  const [pctMsBackOffice, setPctMsBackOffice] = useState(0.21) // % MS back office (ex. 20 %)
   const [joursDispoDiag2025, setJoursDispoDiag2025] = useState(JOURS_DIAG_DEFAULT)
   const [joursDispoComm2025, setJoursDispoComm2025] = useState(JOURS_COMM_DEFAULT)
   const [tauxVariable2025, setTauxVariable2025] = useState(0.06)
-  const [autresProduits2025, setAutresProduits2025] = useState(0)
 
   const [etpDiag2026, setEtpDiag2026] = useState(35)
   const [etpComm2026, setEtpComm2026] = useState(13)
@@ -111,7 +110,7 @@ const Breakeven: React.FC = () => {
   const joursComm2025 = etpComm2025 * joursDispoComm2025
   const tjmDiagRealise2025 = joursDiagVendables2025 > 0 ? ventes2025 / joursDiagVendables2025 : 0
   const tjmEntreprise2025 = joursOuverture > 0 ? ventes2025 / joursOuverture : 0
-  const resultat2025 = ventes2025 * (1 - tauxVariable2025) + autresProduits2025 - insertions2025 - fixes2025
+  const resultat2025 = ventes2025 * (1 - tauxVariable2025) + autresProd2025 - insertions2025 - fixes2025
   const marge2025 = ventes2025 !== 0 ? resultat2025 / ventes2025 : 0
 
   // Masse salariale 2026 = prorata par poste : chaque poste a son % MS et son ETP de référence (poids / coût par ETP différent)
@@ -149,7 +148,7 @@ const Breakeven: React.FC = () => {
           <aside className="xl:sticky xl:top-4 xl:self-start space-y-4">
             <section className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Global</h2>
-              <div><label className={labelCls}>JO (jours ouverture)</label><input type="number" value={joursOuverture} onChange={(e) => setJoursOuverture(Number(e.target.value))} className={inputCls} /></div>
+              <div><label className={labelCls}>Jours ouvrables</label><input type="number" value={joursOuverture} onChange={(e) => setJoursOuverture(Number(e.target.value))} className={inputCls} /></div>
             </section>
 
             <section className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
@@ -165,12 +164,11 @@ const Breakeven: React.FC = () => {
                 <div><label className={labelCls}>% MS back off.</label><input type="number" step="0.01" min="0" max="1" value={pctMsBackOffice} onChange={(e) => setPctMsBackOffice(Number(e.target.value))} className={inputCls} title="Part masse sal. back office (ex. 0,2 = 20 %)" /></div>
                 <div className="col-span-2 text-xs text-gray-500">Σ % MS = {formatPercent(pctMsDiag + pctMsComm + pctMsBackOffice)} (viser 100 %)</div>
                 <div className="col-span-2"><label className={labelCls}>Charges variable v</label><input type="number" step="0.01" min="0" max="1" value={tauxVariable2025} onChange={(e) => setTauxVariable2025(Number(e.target.value))} className={inputCls} /></div>
-                <div className="col-span-2"><label className={labelCls}>Autres produits (€/an)</label><input type="number" value={autresProduits2025} onChange={(e) => setAutresProduits2025(Number(e.target.value))} className={inputCls} /></div>
               </div>
             </section>
 
             <section className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Hypothèses {currentYear}</h2>
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Hypothèses</h2>
               <div className="grid grid-cols-2 gap-2">
                 <div><label className={labelCls}>ETP diag</label><input type="number" step="0.1" value={etpDiag2026} onChange={(e) => setEtpDiag2026(Number(e.target.value))} className={inputCls} /></div>
                 <div><label className={labelCls}>ETP comm</label><input type="number" step="0.1" value={etpComm2026} onChange={(e) => setEtpComm2026(Number(e.target.value))} className={inputCls} /></div>
@@ -270,7 +268,7 @@ const Breakeven: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {MARGES_CIBLES.map((m) => {
-                      const caRequis = (fixes2025 + insertions2025 - autresProduits2025) / (1 - tauxVariable2025 - m)
+                      const caRequis = (fixes2025 + insertions2025 - autresProd2025) / (1 - tauxVariable2025 - m)
                       const tjmDiagRequis = joursDiagVendables2025 > 0 ? caRequis / joursDiagVendables2025 : 0
                       const caParJourComm = joursComm2025 > 0 ? caRequis / joursComm2025 : null
                       const tjmEntRequis = joursOuverture > 0 ? caRequis / joursOuverture : 0
