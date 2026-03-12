@@ -48,7 +48,7 @@ const Breakeven: React.FC = () => {
   const [joursDispoDiag2026, setJoursDispoDiag2026] = useState(210)
   const [joursDispoComm2026, setJoursDispoComm2026] = useState(JOURS_COMM_DEFAULT)
   const [caCible2026, setCaCible2026] = useState(5_520_000)
-  const [tauxVariable2026, setTauxVariable2026] = useState(0.25)
+  const [tauxVariable2026, setTauxVariable2026] = useState(0.246)
   const [budgetInsertions2026, setBudgetInsertions2026] = useState(41_000)
   const [budgetLogiciels2026, setBudgetLogiciels2026] = useState(15_000)
   const [masseSalarialeBase, setMasseSalarialeBase] = useState<number | null>(null) // Masse sal. N-1 (module Salaires), base pour prorata ETP
