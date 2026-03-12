@@ -128,8 +128,13 @@ const Breakeven: React.FC = () => {
   const margeAmiante2026 = upsellAmiante ? etpDiag2026 * 12 * margeAmianteParDiag : 0
   const joursDiag2026 = etpDiag2026 * joursDispoDiag2026
   const joursComm2026 = etpComm2026 * joursDispoComm2026
+  const insertions2026 = budgetInsertions2026 * 12
+  const variables2026 = caTotal2026 * tauxVariable2026
+  const fixes2026 = masseSalariale2026 + direction2026 + freelances2026 + autresChargesFixes2026 + budgetLogiciels2026 * 12
+  const charges2026 = variables2026 + insertions2026 + fixes2026
   const tjmDiag2026 = joursDiag2026 > 0 ? caTotal2026 / joursDiag2026 : 0
-  const resultat2026Simpl = caTotal2026 * (1 - tauxVariable2026) + margeAmiante2026 + autresProduits2026 - budgetInsertions2026 * 12 - (masseSalariale2026 + direction2026 + freelances2026 + autresChargesFixes2026 + budgetLogiciels2026 * 12)
+  const tjmEntreprise2026 = joursOuverture > 0 ? caTotal2026 / joursOuverture : 0
+  const resultat2026Simpl = caTotal2026 * (1 - tauxVariable2026) + margeAmiante2026 + autresProduits2026 - insertions2026 - fixes2026
   const marge2026 = caTotal2026 !== 0 ? resultat2026Simpl / caTotal2026 : 0
 
   const inputCls = 'block w-full rounded border border-gray-300 px-2 py-1 text-sm'
@@ -243,13 +248,18 @@ const Breakeven: React.FC = () => {
                 <h2 className="text-sm font-semibold text-gray-900 mb-3">{currentYear} — Projection</h2>
                 <table className="min-w-full text-sm">
                   <tbody className="divide-y divide-gray-100">
-                    <tr><td className="py-1 text-gray-600">CA total (core + amiante)</td><td className="py-1 text-right font-medium">{formatCurrency(caTotal2026)}</td></tr>
-                    <tr><td className="py-1 text-gray-600">Jours diag / comm</td><td className="py-1 text-right font-medium">{Math.round(joursDiag2026)} / {Math.round(joursComm2026)}</td></tr>
-                    <tr><td className="py-1 text-gray-600">TJM diag</td><td className="py-1 text-right font-medium">{formatCurrency(tjmDiag2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Ventes (706)</td><td className="py-1 text-right font-medium">{formatCurrency(caTotal2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Autres produits</td><td className="py-1 text-right font-medium">{formatCurrency(autresProduits2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Charges / Insertions</td><td className="py-1 text-right font-medium">{formatCurrency(charges2026)} / {formatCurrency(insertions2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Variables / Fixes</td><td className="py-1 text-right font-medium">{formatCurrency(variables2026)} / {formatCurrency(fixes2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Jours diag vendables</td><td className="py-1 text-right font-medium">{Math.round(joursDiag2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">TJM diag réalisé</td><td className="py-1 text-right font-medium">{formatCurrency(tjmDiag2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">TJM entreprise</td><td className="py-1 text-right font-medium">{formatCurrency(tjmEntreprise2026)}</td></tr>
                     <tr><td className="py-1 text-gray-600">Résultat</td><td className="py-1 text-right font-medium">{formatCurrency(resultat2026Simpl)}</td></tr>
                     <tr><td className="py-1 text-gray-600">Marge</td><td className="py-1 text-right font-medium">{formatPercent(marge2026)}</td></tr>
                   </tbody>
                 </table>
+                <p className="mt-2 text-xs text-gray-500">ETP (hyp.) : Diag. {etpDiag2026}, Comm. {etpComm2026}, Back off. {etpBackOffice2026}</p>
               </section>
             </div>
 
