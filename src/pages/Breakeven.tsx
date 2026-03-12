@@ -248,11 +248,12 @@ const Breakeven: React.FC = () => {
                 <h2 className="text-sm font-semibold text-gray-900 mb-3">{currentYear} — Projection</h2>
                 <table className="min-w-full text-sm">
                   <tbody className="divide-y divide-gray-100">
-                    <tr><td className="py-1 text-gray-600">Ventes (706)</td><td className="py-1 text-right font-medium">{formatCurrency(caTotal2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">CA total (core + amiante)</td><td className="py-1 text-right font-medium">{formatCurrency(caTotal2026)}</td></tr>
                     <tr><td className="py-1 text-gray-600">Autres produits</td><td className="py-1 text-right font-medium">{formatCurrency(autresProduits2026)}</td></tr>
                     <tr><td className="py-1 text-gray-600">Charges / Insertions</td><td className="py-1 text-right font-medium">{formatCurrency(charges2026)} / {formatCurrency(insertions2026)}</td></tr>
                     <tr><td className="py-1 text-gray-600">Variables / Fixes</td><td className="py-1 text-right font-medium">{formatCurrency(variables2026)} / {formatCurrency(fixes2026)}</td></tr>
                     <tr><td className="py-1 text-gray-600">Jours diag vendables</td><td className="py-1 text-right font-medium">{Math.round(joursDiag2026)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Jours comm</td><td className="py-1 text-right font-medium">{Math.round(joursComm2026)}</td></tr>
                     <tr><td className="py-1 text-gray-600">TJM diag réalisé</td><td className="py-1 text-right font-medium">{formatCurrency(tjmDiag2026)}</td></tr>
                     <tr><td className="py-1 text-gray-600">TJM entreprise</td><td className="py-1 text-right font-medium">{formatCurrency(tjmEntreprise2026)}</td></tr>
                     <tr><td className="py-1 text-gray-600">Résultat</td><td className="py-1 text-right font-medium">{formatCurrency(resultat2026Simpl)}</td></tr>
