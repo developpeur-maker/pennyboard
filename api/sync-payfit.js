@@ -89,14 +89,35 @@ async function enrichEmployeesWithContractDates(companyId, employeesList, cacheD
   })
 }
 
-// Jours travaillés par mois : 18 j/mois, prorata si arrivée ou départ en cours de mois
-const JOURS_TRAVAILLES_MOIS = 18
+// Jours travaillés par mois : base 18,5 j (non-tech) ou 17,5 j (tech), prorata si arrivée/départ en cours de mois
+const JOURS_TRAVAILLES_MOIS_NON_TECH = 18.5
+const JOURS_TRAVAILLES_MOIS_TECH = 17.5
+const BASE_ETP_REF = 18.5 // référence pour calcul effectif moyen (1 ETP = 18,5 j/mois)
+
+function getTagFromEmployee(emp) {
+  const ops = emp.operations || []
+  for (const op of ops) {
+    const codes = op.analyticCodes || []
+    for (const c of codes) {
+      const t = (c.type || '').toLowerCase()
+      if (t === 'équipe' || t === 'equipe' || t === 'team') {
+        return (c.value || '').trim()
+      }
+    }
+  }
+  return null
+}
+
+function isTech(tag) {
+  return tag && String(tag).toUpperCase().includes('TECH')
+}
 
 function getLastDayOfMonth(year, monthNumber) {
   return new Date(year, monthNumber, 0).getDate()
 }
 
-function computeJoursTravaillesForMonth(year, monthNumber, contractStartDate, contractEndDate) {
+function computeJoursTravaillesForMonth(year, monthNumber, contractStartDate, contractEndDate, isTech) {
+  const baseJours = isTech ? JOURS_TRAVAILLES_MOIS_TECH : JOURS_TRAVAILLES_MOIS_NON_TECH
   const lastDay = getLastDayOfMonth(year, monthNumber)
   const firstDayOfMonth = new Date(year, monthNumber - 1, 1)
   const lastDayOfMonth = new Date(year, monthNumber - 1, lastDay)
@@ -129,14 +150,18 @@ function computeJoursTravaillesForMonth(year, monthNumber, contractStartDate, co
 
   const daysInRange = Math.max(0, effectiveLast - effectiveFirst + 1)
   const prorata = daysInRange / lastDay
-  return Math.round(JOURS_TRAVAILLES_MOIS * prorata * 100) / 100
+  return Math.round(baseJours * prorata * 100) / 100
 }
 
 function addJoursTravaillesToEmployees(employees, year, monthNumber) {
-  return employees.map((emp) => ({
-    ...emp,
-    joursTravailles: computeJoursTravaillesForMonth(year, monthNumber, emp.contractStartDate, emp.contractEndDate)
-  }))
+  return employees.map((emp) => {
+    const tag = getTagFromEmployee(emp)
+    const tech = isTech(tag)
+    return {
+      ...emp,
+      joursTravailles: computeJoursTravaillesForMonth(year, monthNumber, emp.contractStartDate, emp.contractEndDate, tech)
+    }
+  })
 }
 
 // Fonction pour traiter les données et calculer les salaires/cotisations par collaborateur

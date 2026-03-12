@@ -494,6 +494,12 @@ const Salaries: React.FC = () => {
   const percentContributions = Math.round((totalContributions / globalTotalBrut) * 1000) / 10
   const percentTotal = Math.round((totalGrossCost / globalTotalBrut) * 1000) / 10
 
+  // Effectif moyen (référence 18,5 j/mois) : total jours / 18,5 ; théorique = nb employés × 18,5
+  const BASE_ETP_JOURS = 18.5
+  const totalJoursTravailles = filteredTotals.totalJoursTravailles ?? 0
+  const effectifMoyen = BASE_ETP_JOURS > 0 ? totalJoursTravailles / BASE_ETP_JOURS : 0
+  const theoriqueJours = filteredAndSortedEmployees.length * BASE_ETP_JOURS
+
   // Formater la période affichée
   const formatPeriod = () => {
     if (isFullYear) {
@@ -652,7 +658,7 @@ const Salaries: React.FC = () => {
       </div>
 
       {/* Statistiques globales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -710,6 +716,21 @@ const Salaries: React.FC = () => {
               </p>
             </div>
             <Users className="w-8 h-8 text-purple-600" />
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Effectif moyen</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {effectifMoyen.toFixed(2)}
+              </p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Jours : {totalJoursTravailles.toFixed(2)} / théorique {theoriqueJours.toFixed(1)} j
+              </p>
+            </div>
+            <Users className="w-8 h-8 text-teal-600" />
           </div>
         </div>
       </div>
