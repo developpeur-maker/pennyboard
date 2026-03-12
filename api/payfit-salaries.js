@@ -1,5 +1,46 @@
 const { Pool } = require('pg')
 
+// Même logique ETP/jours que breakeven-data : Tech = indemnités 6414/6417 ÷ 9,9 ; autres = titres 6476 ÷ 3,2
+const PREFIX_INDEMNITES = ['6414', '6417']
+const PREFIX_TITRES = ['6476']
+
+function getTagFromEmployee(emp) {
+  const ops = emp.operations || []
+  for (const op of ops) {
+    const codes = op.analyticCodes || []
+    for (const c of codes) {
+      const t = (c.type || '').toLowerCase()
+      if (t === 'équipe' || t === 'equipe' || t === 'team') {
+        return (c.value || '').trim()
+      }
+    }
+  }
+  return null
+}
+
+function isTech(tag) {
+  return tag && String(tag).toUpperCase().includes('TECH')
+}
+
+function joursFromOperations(operations, tag) {
+  let indemnites = 0
+  let titres = 0
+  for (const op of operations || []) {
+    const accountId = String(op.accountId || '')
+    const amount = Math.abs(op.debit || op.credit || 0)
+    if (PREFIX_INDEMNITES.some((p) => accountId.startsWith(p))) indemnites += amount
+    if (PREFIX_TITRES.some((p) => accountId.startsWith(p))) titres += amount
+  }
+  if (isTech(tag)) return indemnites > 0 ? indemnites / 9.9 : 0
+  return titres > 0 ? titres / 3.2 : 0
+}
+
+function enrichEmployeeWithJours(emp) {
+  const tag = getTagFromEmployee(emp)
+  const jours = joursFromOperations(emp.operations, tag)
+  return { ...emp, joursTravailles: Math.round(jours * 100) / 100 }
+}
+
 // API Route pour récupérer les données de salaires depuis la base de données
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -71,7 +112,7 @@ export default async function handler(req, res) {
       }
 
       const data = result.rows[0]
-      employees = data.employees_data || []
+      employees = (data.employees_data || []).map(enrichEmployeeWithJours)
       totalSalaryPaid = parseFloat(data.total_salaries) || 0
       totalPrimes = employees.reduce((sum, emp) => sum + (emp.totalPrimes || 0), 0)
       totalContributions = parseFloat(data.total_contributions) || 0
@@ -147,7 +188,7 @@ export default async function handler(req, res) {
           aggregated.totalContributions += emp.totalContributions || 0
           aggregated.totalGrossCost += emp.totalGrossCost || 0
 
-          // Fusionner les opérations
+          // Fusionner les opérations (pour calcul jours travaillés)
           if (emp.operations && Array.isArray(emp.operations)) {
             aggregated.operations.push(...emp.operations)
           }
@@ -159,8 +200,8 @@ export default async function handler(req, res) {
         totalGrossCost += parseFloat(row.total_cost) || 0
       })
 
-      // Convertir la Map en tableau
-      employees = Array.from(employeesMap.values())
+      // Convertir la Map en tableau et enrichir avec jours travaillés
+      employees = Array.from(employeesMap.values()).map(enrichEmployeeWithJours)
       totalPrimes = employees.reduce((sum, emp) => sum + (emp.totalPrimes || 0), 0)
       employeesSet = new Set(employees.map(emp => `${emp.employeeName}_${emp.contractId || 'unknown'}`))
     }

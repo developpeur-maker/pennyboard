@@ -23,6 +23,8 @@ interface EmployeeSalaryData {
   totalContributions: number    // Tous les comptes de cotisations
   totalGrossCost: number        // Masse salariale (tous les comptes de charges)
   operations: PayfitAccountingOperation[]
+  /** Jours travaillés (même calcul ETP : Tech = indemnités/9,9 ; autres = titres 6476/3,2) */
+  joursTravailles?: number
 }
 
 interface UsePayfitSalariesResult {
