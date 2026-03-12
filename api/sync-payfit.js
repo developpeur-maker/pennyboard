@@ -67,19 +67,20 @@ async function fetchPayfitContract(companyId, contractId) {
   }
 }
 
-// Enrichir la liste des employés avec les dates de contrat (début/fin)
-async function enrichEmployeesWithContractDates(companyId, employeesList) {
+// Enrichir la liste des employés avec les dates de contrat (début/fin).
+// cacheDates: Map optionnelle partagée entre les mois pour n'appeler l'API Contract qu'une fois par contrat.
+async function enrichEmployeesWithContractDates(companyId, employeesList, cacheDates = new Map()) {
   const uniqueContractIds = [...new Set(employeesList.map((e) => e.contractId).filter(Boolean))]
-  const contractDatesMap = new Map()
 
   for (const contractId of uniqueContractIds) {
+    if (cacheDates.has(contractId)) continue
     const info = await fetchPayfitContract(companyId, contractId)
-    if (info) contractDatesMap.set(contractId, info)
+    cacheDates.set(contractId, info || { startDate: null, endDate: null })
     await new Promise((r) => setTimeout(r, 150))
   }
 
   return employeesList.map((emp) => {
-    const dates = contractDatesMap.get(emp.contractId)
+    const dates = cacheDates.get(emp.contractId)
     return {
       ...emp,
       contractStartDate: dates?.startDate ?? null,
@@ -397,6 +398,8 @@ export default async function handler(req, res) {
     const results = []
     let successCount = 0
     let errorCount = 0
+    // Cache des dates de contrat : une seule fois par contractId sur toute la sync (évite des centaines d'appels en boucle)
+    const contractDatesCache = new Map()
 
     // Synchroniser chaque mois avec un délai pour éviter les rate limits
     for (const { month, year, monthNumber } of monthsToSync) {
@@ -410,8 +413,8 @@ export default async function handler(req, res) {
         // Traiter les données
         const processedData = processPayfitData(accountingData)
         
-        // Enrichir avec les dates de contrat (début/fin) via l'API Contract — scope contracts:read requis
-        const employeesEnriched = await enrichEmployeesWithContractDates(companyId, processedData.employees)
+        // Enrichir avec les dates de contrat (réutilise le cache : appel API Contract uniquement pour les nouveaux contractIds)
+        const employeesEnriched = await enrichEmployeesWithContractDates(companyId, processedData.employees, contractDatesCache)
         // Jours travaillés : 18 j/mois, prorata si arrivée/départ en cours de mois
         const employeesWithJours = addJoursTravaillesToEmployees(employeesEnriched, year, monthNumber)
         
