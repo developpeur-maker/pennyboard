@@ -34,6 +34,110 @@ async function fetchPayfitAccounting(companyId, date) {
   }
 }
 
+// Récupérer les infos d'un contrat (début/fin) — nécessite le scope contracts:read
+async function fetchPayfitContract(companyId, contractId) {
+  if (!contractId || contractId === 'unknown') return null
+  const url = `${PAYFIT_CONFIG.BASE_URL}/companies/${companyId}/contracts-fr/${contractId}`
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${process.env.PAYFIT_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        console.warn(`⚠️ Scope contracts:read manquant ou contrat ${contractId} non accessible`)
+      }
+      return null
+    }
+
+    const data = await response.json()
+    return {
+      startDate: data.startDate ?? null,
+      endDate: data.endDate ?? null
+    }
+  } catch (error) {
+    console.warn(`⚠️ Erreur récupération contrat ${contractId}:`, error.message)
+    return null
+  }
+}
+
+// Enrichir la liste des employés avec les dates de contrat (début/fin)
+async function enrichEmployeesWithContractDates(companyId, employeesList) {
+  const uniqueContractIds = [...new Set(employeesList.map((e) => e.contractId).filter(Boolean))]
+  const contractDatesMap = new Map()
+
+  for (const contractId of uniqueContractIds) {
+    const info = await fetchPayfitContract(companyId, contractId)
+    if (info) contractDatesMap.set(contractId, info)
+    await new Promise((r) => setTimeout(r, 150))
+  }
+
+  return employeesList.map((emp) => {
+    const dates = contractDatesMap.get(emp.contractId)
+    return {
+      ...emp,
+      contractStartDate: dates?.startDate ?? null,
+      contractEndDate: dates?.endDate ?? null
+    }
+  })
+}
+
+// Jours travaillés par mois : 18 j/mois, prorata si arrivée ou départ en cours de mois
+const JOURS_TRAVAILLES_MOIS = 18
+
+function getLastDayOfMonth(year, monthNumber) {
+  return new Date(year, monthNumber, 0).getDate()
+}
+
+function computeJoursTravaillesForMonth(year, monthNumber, contractStartDate, contractEndDate) {
+  const lastDay = getLastDayOfMonth(year, monthNumber)
+  const firstDayOfMonth = new Date(year, monthNumber - 1, 1)
+  const lastDayOfMonth = new Date(year, monthNumber - 1, lastDay)
+
+  if (contractEndDate) {
+    const end = new Date(contractEndDate)
+    if (end < firstDayOfMonth) return 0 // contrat terminé avant ce mois
+  }
+  if (contractStartDate) {
+    const start = new Date(contractStartDate)
+    if (start > lastDayOfMonth) return 0 // contrat commence après ce mois
+  }
+
+  let effectiveFirst = 1
+  let effectiveLast = lastDay
+
+  if (contractStartDate) {
+    const start = new Date(contractStartDate)
+    if (start.getFullYear() === year && start.getMonth() + 1 === monthNumber) {
+      effectiveFirst = start.getDate()
+    }
+  }
+
+  if (contractEndDate) {
+    const end = new Date(contractEndDate)
+    if (end.getFullYear() === year && end.getMonth() + 1 === monthNumber) {
+      effectiveLast = end.getDate()
+    }
+  }
+
+  const daysInRange = Math.max(0, effectiveLast - effectiveFirst + 1)
+  const prorata = daysInRange / lastDay
+  return Math.round(JOURS_TRAVAILLES_MOIS * prorata * 100) / 100
+}
+
+function addJoursTravaillesToEmployees(employees, year, monthNumber) {
+  return employees.map((emp) => ({
+    ...emp,
+    joursTravailles: computeJoursTravaillesForMonth(year, monthNumber, emp.contractStartDate, emp.contractEndDate)
+  }))
+}
+
 // Fonction pour traiter les données et calculer les salaires/cotisations par collaborateur
 function processPayfitData(accountingData) {
   const employeesMap = new Map()
@@ -306,6 +410,11 @@ export default async function handler(req, res) {
         // Traiter les données
         const processedData = processPayfitData(accountingData)
         
+        // Enrichir avec les dates de contrat (début/fin) via l'API Contract — scope contracts:read requis
+        const employeesEnriched = await enrichEmployeesWithContractDates(companyId, processedData.employees)
+        // Jours travaillés : 18 j/mois, prorata si arrivée/départ en cours de mois
+        const employeesWithJours = addJoursTravaillesToEmployees(employeesEnriched, year, monthNumber)
+        
         // Déterminer si c'est le mois en cours
         const isCurrentMonth = year === currentYear && monthNumber === currentDate.getMonth() + 1
         
@@ -356,7 +465,7 @@ export default async function handler(req, res) {
         `, [
           month, year, monthNumber,
           JSON.stringify(accountingData),
-          JSON.stringify(processedData.employees),
+          JSON.stringify(employeesWithJours),
           processedData.totals.totalSalaryPaid,  // Utilisé pour total_salaries (salaire versé)
           processedData.totals.totalContributions,
           processedData.totals.totalGrossCost,    // Utilisé pour total_cost (masse salariale)

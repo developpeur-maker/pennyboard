@@ -20,11 +20,15 @@ interface EmployeeSalaryData {
   contractId: string | null
   salaryPaid: number           // 421 + 425 (salaire réellement versé)
   totalPrimes: number           // 6413000 uniquement
-  totalContributions: number    // Tous les comptes de cotisations
-  totalGrossCost: number        // Masse salariale (tous les comptes de charges)
+  totalContributions: number   // Tous les comptes de cotisations
+  totalGrossCost: number       // Masse salariale (tous les comptes de charges)
   operations: PayfitAccountingOperation[]
-  /** Jours travaillés (même calcul ETP : Tech = indemnités/9,9 ; autres = titres 6476/3,2) */
+  /** Jours travaillés du mois (18 j base, prorata si arrivée/départ en cours de mois) */
   joursTravailles?: number
+  /** Date de début de contrat (API Contract Payfit, scope contracts:read) */
+  contractStartDate?: string | null
+  /** Date de fin de contrat (nullable si en cours) */
+  contractEndDate?: string | null
 }
 
 interface UsePayfitSalariesResult {
