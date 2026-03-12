@@ -494,11 +494,15 @@ const Salaries: React.FC = () => {
   const percentContributions = Math.round((totalContributions / globalTotalBrut) * 1000) / 10
   const percentTotal = Math.round((totalGrossCost / globalTotalBrut) * 1000) / 10
 
-  // Effectif moyen (référence 18,5 j/mois) : total jours / 18,5 ; théorique = nb employés × 18,5
+  // Effectif moyen (référence 18,5 j/mois) : vue mois = total jours / 18,5 ; vue exercice = total jours / (18,5 × 12)
   const BASE_ETP_JOURS = 18.5
   const totalJoursTravailles = filteredTotals.totalJoursTravailles ?? 0
-  const effectifMoyen = BASE_ETP_JOURS > 0 ? totalJoursTravailles / BASE_ETP_JOURS : 0
-  const theoriqueJours = filteredAndSortedEmployees.length * BASE_ETP_JOURS
+  const effectifMoyen = BASE_ETP_JOURS > 0
+    ? (isFullYear ? totalJoursTravailles / (BASE_ETP_JOURS * 12) : totalJoursTravailles / BASE_ETP_JOURS)
+    : 0
+  const theoriqueJours = isFullYear
+    ? filteredAndSortedEmployees.length * BASE_ETP_JOURS * 12
+    : filteredAndSortedEmployees.length * BASE_ETP_JOURS
 
   // Formater la période affichée
   const formatPeriod = () => {
