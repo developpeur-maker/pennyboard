@@ -233,6 +233,7 @@ const Breakeven: React.FC = () => {
                     <tr><td className="py-1 text-gray-600">Charges / Insertions</td><td className="py-1 text-right font-medium">{formatCurrency(charges2025)} / {formatCurrency(insertions2025)}</td></tr>
                     <tr><td className="py-1 text-gray-600">Variables / Fixes</td><td className="py-1 text-right font-medium">{formatCurrency(variables2025)} / {formatCurrency(fixes2025)}</td></tr>
                     <tr><td className="py-1 text-gray-600">Jours diag vendables</td><td className="py-1 text-right font-medium">{Math.round(joursDiagVendables2025)}</td></tr>
+                    <tr><td className="py-1 text-gray-600">Jours comm</td><td className="py-1 text-right font-medium">{Math.round(joursComm2025)}</td></tr>
                     <tr><td className="py-1 text-gray-600">TJM diag réalisé</td><td className="py-1 text-right font-medium">{formatCurrency(tjmDiagRealise2025)}</td></tr>
                     <tr><td className="py-1 text-gray-600">TJM entreprise</td><td className="py-1 text-right font-medium">{formatCurrency(tjmEntreprise2025)}</td></tr>
                     <tr><td className="py-1 text-gray-600">Résultat</td><td className="py-1 text-right font-medium">{formatCurrency(resultat2025)}</td></tr>
